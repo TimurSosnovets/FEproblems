@@ -30,7 +30,15 @@ class Point {
         }
         double distance_to (const Point& p) const {
             return sqrt(pow(x-p.x,2.0f)+pow(y-p.y,2.0f));
-        };
+        }
+
+        double coord_x() const {
+            return x;
+        }
+
+        double coord_y() const {
+            return y;
+        }
 };
 
 Point operator+ (const Point& p1, const Point& p2) {
@@ -43,3 +51,7 @@ Vector operator- (const Point& p1, const Point& p2) {
       return Vector (p1.x-p2.x, p1.y-p2.y);
 };        
 
+bool compare_by_x(const Point& p1, const Point& p2) {
+    if (p1.coord_x() == p2.coord_x()) return (p1.coord_y() < p2.coord_y());
+    return (p1.coord_x() < p2.coord_x());
+}

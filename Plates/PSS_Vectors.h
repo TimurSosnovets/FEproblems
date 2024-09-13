@@ -1,74 +1,68 @@
 #pragma once
-#include "../2dGeometry/2dVectors.h"
+#include <Eigen/Dense>
 #include <vector>
 
 // Вектор перемещений
-class Displacement: public Vector {
+class Displacement2d {
     private:
-        std::vector<double> _coord;
-    public:
-        Displacement(const double _u, const double _v): Vector (_u, _v) {
-            _coord[0] = _u;
-            _coord[1] = _v;
-        } 
+        Eigen::Vector2d _coord;
 
-        double U() const {
-            return u;
+    public: 
+        Displacement2d(const double u, const double v) {
+            _coord << u, v;
         }
 
-        double V() const {
-            return v;
+        double u() const {
+            return _coord[0];
+        }
+
+        double v() const {
+            return _coord[1];
+        }
+
+        Eigen::Vector2d coord() const {
+            return _coord;
         }
 };
 
-// Вектор напряжений 
-class Stress: public Vector {
+
+// Вектор напряжений
+class Stress2d {
     private:
-        double _sigma_x;
-        double _sigma_y;
-        double _tau_xy;
-        std::vector<double> _coord;
+        Eigen::Vector3d _coord;
         std::pair<double, double> _sigma_principal;
 
- // Вспомогательная функция для вычисления главных напряжений
-        std::pair<double, double> calculate_principal_stresses() {
-            double sigma_1 = 0.5 * (_sigma_x + _sigma_y + sqrt(pow(_sigma_x - _sigma_y, 2.0) + 4 * pow(_tau_xy, 2.0)));
-            double sigma_2 = 0.5 * (_sigma_x + _sigma_y - sqrt(pow(_sigma_x - _sigma_y, 2.0) + 4 * pow(_tau_xy, 2.0)));
-            return std::make_pair(sigma_1, sigma_2);
-        }
-
+  
     public:
-        Stress(const std::vector<double> stresses):
-         _coord(stresses),
-         _sigma_x(_coord[0]),
-         _sigma_y(_coord[1]),
-         _tau_xy(_coord[2]),
-         _sigma_principal(calculate_principal_stresses()), 
-         Vector(_sigma_principal.first, _sigma_principal.second) 
-         {
-            // _sigma_principal.first = (1/2) * (_sigma_x + _sigma_y + sqrt(pow(_sigma_x - _sigma_y, 2.0) + 4 * pow(_tau_xy, 2.0)));
-            // _sigma_principal.second = (1/2) * (_sigma_x + _sigma_y - sqrt(pow(_sigma_x - _sigma_y, 2.0) + 4 * pow(_tau_xy, 2.0)));
-            // u = _sigma_principal.first;
-            // v = _sigma_principal.second;
+        Stress2d(const std::vector<double> stresses) {
+            if (stresses.size() != 3) throw std::invalid_argument("Stresses must have exactly 3 values.");
+            _coord << stresses[0], stresses[1], stresses[2];
+            _sigma_principal.first = 0.5 * (_coord[0] + _coord[1] + sqrt(pow(_coord[0] - _coord[1], 2.0) + 4 * pow(_coord[2], 2.0)));
+            _sigma_principal.second = 0.5 * (_coord[0] + _coord[1] - sqrt(pow(_coord[0] - _coord[1], 2.0) + 4 * pow(_coord[2], 2.0)));
         }
 
         double sigma_x() const {
-            return _sigma_x;
+            return _coord[0];
         }
 
         double sigma_y() const {
-            return _sigma_y;
+            return _coord[1];
         }
 
         double tau_xy() const {
-            return _tau_xy;
-        }
-        
-        std::pair<double,double> principal_stresses() const {
-            return _sigma_principal;
+            return _coord[3];
         }
 
-        double equivalent_stress() {
+        Eigen::Vector3d coord() const {
+            return _coord;
+        }
+
+        std::pair<double, double> sigma_principal() const {
+            return _sigma_principal;
+        }
+        
+        double equivalent_stress() const{
             return ((1 / sqrt(2)) * sqrt(pow(_sigma_principal.first, 2.0) + pow(_sigma_principal.second, 2.0) + pow(_sigma_principal.first - _sigma_principal.second, 2.0)));
         }
+        
 };
