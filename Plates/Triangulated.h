@@ -64,8 +64,7 @@ class Plate_triangulated {
         double _sideY; // Длина стороны, параллельной OY
         Material _material; // Материал пластины
         double _h; // Толщина пластины
-        std::vector<std::pair<Point, unsigned int>> _nodes; // Узлы и их глобальная нумерация
-        std::vector<std::pair<Displacement2d, unsigned int>> _nodal_disp; // Узловые перемещения и номер узла 
+        std::vector<std::pair<Point, unsigned int>> _nodes; // Узлы и их глобальная нумерация        
         std::vector<std::pair<TriangleFE, unsigned int>> _finite_el; // Конечные элементы и их номера
         unsigned int _DoF; // Степени свободы (размер глобальной матрицы жесткости)
         Eigen::MatrixXd _global_SM; // Глобальная матрица жесткости
@@ -75,13 +74,11 @@ class Plate_triangulated {
             _DoF = 2 * (m+1) * (n+1);
 
             // Создание узлов
-            _nodes.reserve(_DoF);
-            _nodal_disp.reserve(_DoF);
+            _nodes.reserve(_DoF);            
             unsigned int k = 1;
             for (int i = 0; i < m+1; ++i) {
                 for (int j = 0; j < n+1; ++j) {
-                    _nodes.emplace_back(std::make_pair(Point(_sideX/m * i, _sideY/n * j), k));
-                    _nodal_disp[k].second = k;
+                    _nodes.emplace_back(std::make_pair(Point(_sideX/m * i, _sideY/n * j), k));                    
                     k++;
                 }
             }
@@ -131,4 +128,35 @@ class Plate_triangulated {
 
             Gnn.shrink_to_fit();
         }
+
+        // Узловые перемещения
+        Eigen::VectorXd Dsplmnt(std::vector<std::tuple<int, bool, bool>> LBC_dof, std::vector<std::tuple<int, double, double>> LBC_force) { 
+            // Заполнение вектора нагрузок          
+            Eigen::VectorXd F = Eigen::VectorXd::Zero(_DoF); // Вектор узловых нагрузок
+            for (auto& nd_force : LBC_force) {
+                int& nbr = std::get<0>(nd_force);
+                F[2 * nbr] = std::get<1>(nd_force);
+                F[2 * nbr + 1] = std::get<2>(nd_force);
+            }
+
+            // Закрепление узлов в матрице жесткости
+            auto K = _global_SM;
+            for (auto& nd_dof : LBC_dof) {
+                int& nbr = std::get<0>(nd_dof);
+                if (std::get<1>(nd_dof)) {
+                    K.row(2 * nbr) = Eigen::RowVectorXd::Zero(_DoF);
+                    K.col(2 * nbr) = Eigen::VectorXd::Zero(_DoF);
+                    K[2 * nbr, 2 * nbr] = 1;
+                }
+                if (std::get<2>(nd_dof)) {
+                    K.row(2 * nbr + 1) = Eigen::RowVectorXd::Zero(_DoF);
+                    K.col(2 * nbr + 1) = Eigen::VectorXd::Zero(_DoF);
+                    K[2 * nbr + 1, 2 * nbr + 1] = 1;
+                }
+            }
+
+            return K.colPivHouseholderQr().solve(F);
+        }
+
+        
 };
