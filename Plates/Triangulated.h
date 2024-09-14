@@ -102,5 +102,33 @@ class Plate_triangulated {
                     k++;
                 }
             }
+
+            // Ассамблирование
+            _global_SM = Eigen::MatrixXd::Zero(_DoF, _DoF);
+
+            std::vector<int> Gnn; // Вектор индексов коэффициентов в глобальной матрице
+            Gnn.reserve(6);
+
+            for (const auto& FE: _finite_el) {
+
+                // Заполняем вектор (учитывается, что номера начинались с единицы)
+                for (const auto& node : FE.first.verts()) {
+                    Gnn.emplace_back(2 * (node.second - 1));
+                    Gnn.emplace_back(2 * (node.second - 1) + 1);
+                }
+
+                // Заполнение глобальной матрицы
+                double* K_ij = FE.first.K().data();
+                for (const auto& colm : Gnn) {
+                    for (const auto& row : Gnn) {
+                        _global_SM [row, colm] = *K_ij;
+                        ++K_ij;
+                    }
+                }
+
+                Gnn.clear(); // Очищаем вектор
+            }
+
+            Gnn.shrink_to_fit();
         }
 };
