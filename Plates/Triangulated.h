@@ -163,7 +163,7 @@ class Plate_triangulated {
             return FE.first.B() * Vertice_displacements;
         }
 
-        // Вектор напряжений в каждой точке треуголього КЭ при ПНС
+        // Вектор напряжений в каждой точке треугольного КЭ при ПНС
         Stress2d Stress(const Eigen::Vector3d& Strain) {
             Eigen::Vector3d strs = _material.D() * Strain;
             return Stress2d({strs[0], strs[1], strs[2]});
