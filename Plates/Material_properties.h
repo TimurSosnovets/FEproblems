@@ -12,6 +12,7 @@ class Material {
             _D << 1, nu, 0,
                   nu, 1, 0,
                   0, 0, (1-nu)/2;
+            _D = (_E/(1 - pow(_nu, 2))) * _D;
         }
 
         double E() const {
