@@ -65,7 +65,7 @@ class Plate_triangulated {
         Material _material; // Материал пластины
         double _h; // Толщина пластины
         std::vector<std::pair<Point, unsigned int>> _nodes; // Узлы и их глобальная нумерация        
-        std::vector<std::pair<TriangleFE, unsigned int>> _finite_el; // Конечные элементы и их номера
+        std::vector<std::pair<TriangleFE, unsigned int>> _finite_els; // Конечные элементы и их номера
         unsigned int _DoF; // Степени свободы (размер глобальной матрицы жесткости)
         Eigen::MatrixXd _global_SM; // Глобальная матрица жесткости
 
@@ -88,14 +88,14 @@ class Plate_triangulated {
              for (int i = 0; i < m; ++i) {
                 for (int j = 0; j < n; ++j) {
                     // unsigned int t = i * (n+1) + j;
-                    // _finite_el.emplace_back(std::make_pair(TriangleFE({_nodes[t], _nodes[t+1], _nodes[t+1+n]}, _material, _h), k));
+                    // _finite_els.emplace_back(std::make_pair(TriangleFE({_nodes[t], _nodes[t+1], _nodes[t+1+n]}, _material, _h), k));
                     // k++;
-                    // _finite_el.emplace_back(std::make_pair(TriangleFE({_nodes[t+1], _nodes[t+2+n], _nodes[t+1+n]}, _material, _h), k));
+                    // _finite_els.emplace_back(std::make_pair(TriangleFE({_nodes[t+1], _nodes[t+2+n], _nodes[t+1+n]}, _material, _h), k));
                     // k++;
                     std::pair<Point, unsigned int>* p_ptr = &_nodes [i * (n+1) + j]; // Указатель на нижний левый узел квадрата
-                     _finite_el.emplace_back(std::make_pair(TriangleFE({*p_ptr, *(p_ptr + 1), *(p_ptr + n + 1)}, _material, _h), k));
+                     _finite_els.emplace_back(std::make_pair(TriangleFE({*p_ptr, *(p_ptr + 1), *(p_ptr + n + 1)}, _material, _h), k));
                      k++;
-                    _finite_el.emplace_back(std::make_pair(TriangleFE({*(p_ptr + 1), *(p_ptr + n + 1), *(p_ptr + n + 2)}, _material, _h), k));
+                    _finite_els.emplace_back(std::make_pair(TriangleFE({*(p_ptr + 1), *(p_ptr + n + 1), *(p_ptr + n + 2)}, _material, _h), k));
                     k++;
                 }
             }
@@ -106,7 +106,7 @@ class Plate_triangulated {
             std::vector<int> Gnn; // Вектор индексов коэффициентов в глобальной матрице
             Gnn.reserve(6);
 
-            for (const auto& FE: _finite_el) {
+            for (const auto& FE: _finite_els) {
 
                 // Заполняем вектор (учитывается, что номера начинались с единицы)
                 for (const auto& node : FE.first.verts()) {
@@ -130,13 +130,13 @@ class Plate_triangulated {
         }
 
         // Узловые перемещения
-        Eigen::VectorXd Dsplmnt(std::vector<std::tuple<int, bool, bool>> LBC_dof, std::vector<std::tuple<int, double, double>> LBC_force) { 
+        Eigen::VectorXd Ndl_Dsplcmnts(std::vector<std::tuple<int, bool, bool>> LBC_dof, std::vector<std::tuple<int, double, double>> LBC_force) { 
             // Заполнение вектора нагрузок          
             Eigen::VectorXd F = Eigen::VectorXd::Zero(_DoF); // Вектор узловых нагрузок
             for (auto& nd_force : LBC_force) {
                 int& nbr = std::get<0>(nd_force);
-                F[2 * nbr] = std::get<1>(nd_force);
-                F[2 * nbr + 1] = std::get<2>(nd_force);
+                F[2 * (nbr - 1)] = std::get<1>(nd_force);
+                F[2 * (nbr - 1) + 1] = std::get<2>(nd_force);
             }
 
             // Закрепление узлов в матрице жесткости
@@ -144,19 +144,59 @@ class Plate_triangulated {
             for (auto& nd_dof : LBC_dof) {
                 int& nbr = std::get<0>(nd_dof);
                 if (std::get<1>(nd_dof)) {
-                    K.row(2 * nbr) = Eigen::RowVectorXd::Zero(_DoF);
-                    K.col(2 * nbr) = Eigen::VectorXd::Zero(_DoF);
-                    K[2 * nbr, 2 * nbr] = 1;
+                    K.row(2 * (nbr - 1)) = Eigen::RowVectorXd::Zero(_DoF);
+                    K.col(2 * (nbr - 1)) = Eigen::VectorXd::Zero(_DoF);
+                    K[2 * (nbr - 1), 2 * (nbr - 1)] = 1;
                 }
                 if (std::get<2>(nd_dof)) {
-                    K.row(2 * nbr + 1) = Eigen::RowVectorXd::Zero(_DoF);
-                    K.col(2 * nbr + 1) = Eigen::VectorXd::Zero(_DoF);
-                    K[2 * nbr + 1, 2 * nbr + 1] = 1;
+                    K.row(2 * (nbr - 1) + 1) = Eigen::RowVectorXd::Zero(_DoF);
+                    K.col(2 * (nbr - 1) + 1) = Eigen::VectorXd::Zero(_DoF);
+                    K[2 * (nbr - 1) + 1, 2 * (nbr - 1) + 1] = 1;
                 }
             }
 
             return K.colPivHouseholderQr().solve(F);
         }
 
-        
+        // Вектор деформаций в каждой точке треугольного КЭ при ПНС 
+        Eigen::Vector3d Strain(const Eigen::VectorXd& Vertice_displacements, const std::pair<TriangleFE, unsigned int>& FE) {
+            return FE.first.B() * Vertice_displacements;
+        }
+
+        // Вектор напряжений в каждой точке треуголього КЭ при ПНС
+        Stress2d Stress(const Eigen::Vector3d& Strain) {
+            Eigen::Vector3d strs = _material.D() * Strain;
+            return Stress2d({strs[0], strs[1], strs[2]});
+        }
+
+        // Полное решение задачи (Узловые перемещения, векторы деформаций и напряжений для всех КЭ при ПНС)
+        std::tuple<Eigen::VectorXd, std::vector<std::pair<Eigen::Vector3d, unsigned int>>, std::vector<std::pair<Stress2d, unsigned int>>>
+         solve(const std::vector<std::tuple<int, bool, bool>> LBC_dof, const std::vector<std::tuple<int, double, double>> LBC_force) {
+           
+            Eigen::VectorXd nodal_displacements = Ndl_Dsplcmnts(LBC_dof, LBC_force);
+            std::vector<std::pair<Eigen::Vector3d, unsigned int>> strains; // Вектор деформаций (в любой точке) каждого КЭ
+            std::vector<std::pair<Stress2d, unsigned int>> stresses; // Вектор напряжений (в любой точке) каждого КЭ
+            strains.reserve(_finite_els.size());
+            stresses.reserve(_finite_els.size());
+            
+            for (const auto& FE : _finite_els) {
+                // Получение перемещений вершин КЭ
+                Eigen::VectorXd vertices_displacements(6); // Узловые перемещения КЭ (ЛВУОП)
+                double* v_d = vertices_displacements.data(); // Указатель на первый элемент ЛВУОП
+                for (const auto& node : FE.first.verts()) {
+                    int* nbr = new int(node.second);                
+                    *v_d = nodal_displacements[2 * (*nbr - 1)];
+                    ++v_d;
+                    *v_d = nodal_displacements[2 * (*nbr - 1) +1];
+                    ++v_d;
+                    delete nbr;
+                }
+
+                strains.emplace_back(std::make_pair(Strain(vertices_displacements, FE), FE.second));
+                stresses.emplace_back(std::make_pair(Stress(strains[FE.second - 1].first), FE.second));
+            }
+
+            return std::make_tuple(nodal_displacements, strains, stresses);
+        }
+
 };
