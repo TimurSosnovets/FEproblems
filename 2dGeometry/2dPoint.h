@@ -19,10 +19,6 @@ class Point {
         friend Vector operator- (const Point& p1, const Point& p2);
         friend bool operator== (const Point& p1, const Point& p2);
         
-        void get_info () {
-            cout << "Point: " << "(" << x << ", " << y << ").";
-        }
-
         explicit Point(double x, double y) : x(x), y(y) { }
 
         Point displaced (const Vector& V, double times=1.0f) const {
@@ -39,6 +35,10 @@ class Point {
         double coord_y() const {
             return y;
         }
+
+        void get_info () {
+            cout << "Point: " << "(" << coord_x() << ", " << coord_y() << ").";
+        }
 };
 
 Point operator+ (const Point& p1, const Point& p2) {
@@ -51,7 +51,4 @@ Vector operator- (const Point& p1, const Point& p2) {
       return Vector (p1.x-p2.x, p1.y-p2.y);
 };        
 
-bool compare_by_x(const Point& p1, const Point& p2) {
-    if (p1.coord_x() == p2.coord_x()) return (p1.coord_y() < p2.coord_y());
-    return (p1.coord_x() < p2.coord_x());
-}
+
