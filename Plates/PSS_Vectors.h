@@ -1,5 +1,5 @@
 #pragma once
-#include <Eigen/Dense>
+#include "../toolbox/eigen-3.4.0/Eigen/Dense"
 #include <vector>
 
 // Вектор перемещений
