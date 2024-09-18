@@ -94,7 +94,7 @@ class Plate_triangulated {
         Eigen::MatrixXd _global_SM; // Глобальная матрица жесткости
 
     public:
-        Plate_triangulated(const double lenX, const double lenY, const unsigned int m, const unsigned int n, Material mater): _sideX(lenX), _sideY(lenY), _material(mater) {
+        Plate_triangulated(const double lenX, const double lenY, const unsigned int m, const unsigned int n, const double thick, const Material mater): _sideX(lenX), _sideY(lenY), _material(mater), _h(thick) {
             _DoF = 2 * (m+1) * (n+1);
 
             // Создание узлов
@@ -137,7 +137,7 @@ class Plate_triangulated {
                 double* K_ij = FE.first.K().data();
                 for (const auto& colm : Gnn) {
                     for (const auto& row : Gnn) {
-                        _global_SM (row, colm) = *K_ij;
+                        _global_SM (row, colm) += *K_ij;
                         ++K_ij;
                     }
                 }

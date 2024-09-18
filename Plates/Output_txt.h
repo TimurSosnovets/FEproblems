@@ -2,7 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include <Eigen/Dense>
+#include "../toolbox/eigen-3.4.0/Eigen/Dense"
 #include <string>
 #include "PSS_Vectors.h"
 
@@ -19,22 +19,21 @@ void center_output(std::ofstream& outFile, const std::string& str, int width) {
 
 
 // Создание текстового файла с решением
-        void solution_txt(std::tuple<Eigen::VectorXd, std::vector<std::pair<Eigen::Vector3d, unsigned int>>, std::vector<std::pair<Stress2d, unsigned int>>>& solution, int prs) {
-            // Ввод имени файла
-            std::cout << "Enter file's name (with .txt extention):\n";
-            std::string filename;
-            
+        void solution_txt(std::tuple<Eigen::VectorXd, std::vector<std::pair<Eigen::Vector3d, unsigned int>>, std::vector<std::pair<Stress2d, unsigned int>>>& solution, int prs, std::string filename) {
+                        
             std::ofstream file(filename);
 
             if (file.is_open()) {
                 file << std::scientific << std::setprecision(prs);
 
                 // Вывод узловых перемещений
-                std::string Column1 = "Node number", Column2 = "Disp. X", Column3 = "Disp. Y";
-                int width1 = 14, width2 = 14, width3 = 14; 
+                std::vector<std::string> Headline;
+                Headline[0] = "Node number"; Headline[1] = "Disp. X"; Headline[2] = "Disp. Y";
+                std::vector<int> Hwidth(4);
+                Hwidth[0] = 14; Hwidth[1] = 14; Hwidth[2] = 14; 
 
-                file << "|"; center_output(file, Column1, width1); file << "|"; center_output(file, Column2, width2); file << "|";  center_output(file, Column3, width3); file << "|\n"; 
-                file << std::setw(width1 + width2 + width3 + 4) << std::setfill('-') << "" << std::endl;
+                file << "|"; center_output(file, Headline[0], Hwidth[0]); file << "|"; center_output(file, Headline[1], Hwidth[1]); file << "|";  center_output(file, Headline[2], Hwidth[2]); file << "|\n"; 
+                file << std::setw(Hwidth[0] + Hwidth[1] + Hwidth[2] + 4) << std::setfill('-') << "" << std::endl;
 
                 for (int i = 0; i < std::get<0>(solution).size(); i+=2) {
                     std::ostringstream number; // Номер i-го узла
@@ -48,7 +47,7 @@ void center_output(std::ofstream& outFile, const std::string& str, int width) {
                     std::ostringstream Displ_Y;
                     Displ_Y << std::scientific << std::setprecision(prs) << *(ptr + i + 1);
 
-                    file << "|"; center_output(file, number.str(), width1); file << "|"; center_output(file, Displ_X.str(), width2); file << "|";  center_output(file, Displ_Y.str(), width3); file << "|";
+                    file << "|"; center_output(file, number.str(), Hwidth[0]); file << "|"; center_output(file, Displ_X.str(), Hwidth[1]); file << "|";  center_output(file, Displ_Y.str(), Hwidth[2]); file << "|";
                 
                  // Очищение строк
                     number.str("");        // Clear the buffer
@@ -58,15 +57,19 @@ void center_output(std::ofstream& outFile, const std::string& str, int width) {
                     Displ_Y.str("");        
                     Displ_Y.clear();                   
                 }
+                Headline.clear();
+                Hwidth.clear();
 
                 file << std::endl << std::endl << std::endl;
 
-                // Вывод векторов деформаций и напряжений
-                std::string Column1 = "Node number", Column2 = "Strain vector (transposed)", Column3 = "Stress vector (transposed)", Column4 = "Von Mises (σ1, σ2)";
-                int width1 = 14, width2 = 45, width3 = 45, width4 = 30;
 
-                file << "|"; center_output(file, Column1, width1); file << "|"; center_output(file, Column2, width2); file << "|";  center_output(file, Column3, width3); file << "|"; center_output(file, Column4, width4); file << "|\n";
-                file << std::setw(width1 + width2 + width3 + width4 + 5) << std::setfill('-') << "" << std::endl;
+                // Вывод векторов деформаций и напряжений
+                
+                Headline[0] = "Node number"; Headline[1] = "Strain vector (transposed)"; Headline[2] = "Stress vector (transposed)"; Headline[3] = "Von Mises (σ1, σ2)";
+                Hwidth[0] = 14; Hwidth[1] = 45; Hwidth[2] = 45; Hwidth[3] = 30;
+
+                file << "|"; center_output(file, Headline[0], Hwidth[0]); file << "|"; center_output(file, Headline[1], Hwidth[1]); file << "|";  center_output(file, Headline[2], Hwidth[2]); file << "|"; center_output(file, Headline[3], Hwidth[3]); file << "|\n";
+                file << std::setw(Hwidth[0] + Hwidth[1] + Hwidth[2] + Hwidth[3] + 5) << std::setfill('-') << "" << std::endl;
 
                 for (int i = 0; i < std::get<1>(solution).size(); ++i) {
 
@@ -88,7 +91,7 @@ void center_output(std::ofstream& outFile, const std::string& str, int width) {
                     delete ptr_von;
 
                     // Непосредственно строка
-                    file << "|"; center_output(file, number.str(), width1); file << "|"; center_output(file, strain.str(), width2); file << "|";  center_output(file, stress.str(), width3); file << "|"; center_output(file, Von_Mises.str(), width4); file << "|\n";                                    
+                    file << "|"; center_output(file, number.str(), Hwidth[0]); file << "|"; center_output(file, strain.str(), Hwidth[1]); file << "|";  center_output(file, stress.str(), Hwidth[2]); file << "|"; center_output(file, Von_Mises.str(), Hwidth[3]); file << "|\n";                                    
 
                     // Очищение строк
                     number.str("");        // Clear the buffer

@@ -1,0 +1,30 @@
+a 1.5
+b 1.5
+n 6
+m 6
+t 0.2
+E 10000000000
+nu 0.33
+
+Fix_x 1
+Fix_x 8
+Fix_x 15
+Fix_x 22
+Fix_x 29
+Fix_x 36
+Fix_x 43
+Fix_y 1
+Fix_y 2
+Fix_y 3
+Fix_y 4
+Fix_y 5
+Fix_y 6
+Fix_y 7
+
+Load_y 43 1500
+Load_y 44 3000
+Load_y 45 3000
+Load_y 46 3000
+Load_y 47 3000
+Load_y 48 3000
+Load_y 49 1500
