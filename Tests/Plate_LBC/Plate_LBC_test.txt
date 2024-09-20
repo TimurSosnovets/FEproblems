@@ -1,0 +1,22 @@
+Fix_y 1
+Fix_y 8
+Fix_y 15
+Fix_y 22
+Fix_y 29
+Fix_y 36
+Fix_y 43
+Fix_x 1
+Fix_x 2
+Fix_x 3
+Fix_x 4
+Fix_x 5
+Fix_x 6
+Fix_x 7
+
+Load_y 7 1500
+Load_y 14 3000
+Load_y 21 3000
+Load_y 28 3000
+Load_y 35 3000
+Load_y 42 3000
+Load_y 49 1500

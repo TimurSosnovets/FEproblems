@@ -1,4 +1,4 @@
-#include "../2dGeometry/2dCircles.h"
+#include "../../2dGeometry/2dCircles.h"
 
 // Точки
 Point center = Point(0,0);

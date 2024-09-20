@@ -1,4 +1,4 @@
-#include "../2dGeometry/2dSegment.h"
+#include "../../2dGeometry/2dSegment.h"
 
 using namespace std;
 

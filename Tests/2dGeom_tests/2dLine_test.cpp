@@ -1,4 +1,4 @@
-#include "../2dGeometry/2dLine.h"
+#include "../../2dGeometry/2dLine.h"
 
 // Линии
 Line l1 = Line(Point(0,0), Vector(1,1));

@@ -1,6 +1,6 @@
-#include "../2dGeometry/2dPoint.h"
-#include "../2dGeometry/2dVector.h"
-#include "../2dGeometry/2dVectors.h"
+#include "../../2dGeometry/2dPoint.h"
+#include "../../2dGeometry/2dVector.h"
+#include "../../2dGeometry/2dVectors.h"
 
 Vector V1 = Vector(1,2);
 Vector V2 = Vector(4,6);

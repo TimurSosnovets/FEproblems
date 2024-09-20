@@ -60,19 +60,19 @@ void test_plate_triangulated() {
 }
 
 int main() {
-    test_triangle_fe();    
-    Plate_triangulated Plate(1.5, 1.5, 6, 6, 0.2, Test_mat);
+   // test_triangle_fe();    
+    Plate_triangulated Plate(2, 2, 6, 6, 0.1, Test_mat);
 
     std::vector<std::tuple<int, bool, bool>> LBC_dof;
     std::vector<std::tuple<int, double, double>> LBC_force;
 
-    Parser::parse_file("Plate_LBC_test.txt", LBC_dof, LBC_force);
+    Parser::parse_file("Plate_LBC/Plate_LBC_test.txt", LBC_dof, LBC_force);
 
-    std::cout << "dof size" << LBC_dof.size() << "   force size" << LBC_force.size() << std::endl; 
+    //std::cout << "dof size " << LBC_dof.size() << "   force size " << LBC_force.size() << std::endl; 
 
     auto Plate_solution = Plate.solve(LBC_dof, LBC_force);
-    std::cout << "Nodal displacements: \n" <<std::get<0>(Plate_solution);
-    // std::string filename = "test_solution.txt";
-    // solution_txt(Plate_solution, 5, filename);
+    // std::cout << "Nodal displacements: \n" <<std::get<0>(Plate_solution);
+    std::string filename = "Plate_Femap.txt";
+    solution_txt(Plate_solution, 5, filename);
     return 0;
 }

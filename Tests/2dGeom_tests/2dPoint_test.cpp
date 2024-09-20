@@ -1,5 +1,5 @@
-#include "../2dGeometry/2dPoint.h"
-#include "../2dGeometry/2dVector.h"
+#include "../../2dGeometry/2dPoint.h"
+#include "../../2dGeometry/2dVector.h"
 
 Point p1 = Point(1,2);
 Point p2 = Point(4,6);
