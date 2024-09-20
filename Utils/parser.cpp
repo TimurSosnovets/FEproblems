@@ -1,4 +1,6 @@
+#include <iostream>
 #include "parser.h"
+
 
 void Parser::parse_file(const std::string& filename,
                         std::vector<std::tuple<int, bool, bool>>& LBC_dof,
@@ -16,6 +18,7 @@ void Parser::parse_file(const std::string& filename,
             LBC_force.push_back(force_entry);
         }
     }
+    std::cout << std::endl << "Data from file " << filename << " parsed successfully!" << std::endl;
 }
 
 bool Parser::parse_fix_x(const std::string& line, std::tuple<int, bool, bool>& result) {
