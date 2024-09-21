@@ -55,9 +55,7 @@ void test_triangle_fe() {
     std::cout << "Triangle_FE: All tests passed!" << std::endl;
 }
 
-void test_plate_triangulated() {
-    
-}
+
 
 int main() {
    // test_triangle_fe();    
@@ -68,10 +66,7 @@ int main() {
 
     Parser::parse_file("Plate_LBC/Plate_LBC_test.txt", LBC_dof, LBC_force);
 
-    //std::cout << "dof size " << LBC_dof.size() << "   force size " << LBC_force.size() << std::endl; 
-
-    auto Plate_solution = Plate.solve(LBC_dof, LBC_force);
-    // std::cout << "Nodal displacements: \n" <<std::get<0>(Plate_solution);
+    auto Plate_solution = solve(Plate, LBC_dof, LBC_force);
     std::string filename = "Plate_Femap.txt";
     solution_txt(Plate_solution, 5, filename);
     return 0;

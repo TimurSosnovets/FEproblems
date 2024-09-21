@@ -28,4 +28,7 @@ class Material {
             return _D;
         }
 
+        double CLTE() const {
+            return _alpha;
+        }
 };

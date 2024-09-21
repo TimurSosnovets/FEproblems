@@ -2,8 +2,9 @@
 #include "PSS_Vectors.h"
 #include "FEtypes/Triangle_2dof.h"
 
+class Plate_triangulated;
 // Разбиение на узлы
-void Nodes_creation(std::vector<std::pair<Point, unsigned int>> Nodes, const int DoF, const double a, const double b, const int m, const int n) {
+void Nodes_creation(std::vector<std::pair<Point, unsigned int>>& Nodes, const int DoF, const double a, const double b, const int m, const int n) {
     Nodes.reserve(DoF);            
         unsigned int k = 1;
         for (int i = 0; i < m+1; ++i) {
@@ -79,20 +80,20 @@ Eigen::VectorXd Ndl_Dsplcmnts(const Eigen::MatrixXd& GSM, std::vector<std::tuple
             return K.partialPivLu().solve(F);
         }
 
-// Вектор деформаций в каждой точке треугольного КЭ при ПНС
-// template <typename T>
-// typename std::enable_if<std::is_same<T, TriangleFE>::value, Eigen::Vector3d>::type 
-// Eigen::Vector3d Strain(const Eigen::VectorXd& Vertice_displacements, const std::pair<TriangleFE, unsigned int>& FE) {
-//     return FE.first.B() * Vertice_displacements;
-// }
+//Вектор деформаций в каждой точке треугольного КЭ при ПНС
+template <typename T>
+typename std::enable_if<std::is_same<T, TriangleFE>::value, Eigen::Vector3d>::type 
+Strain(const Eigen::VectorXd& Vertice_displacements, const std::pair<T, unsigned int>& FE) {
+    return FE.first.B() * Vertice_displacements;
+}
 
-// Вектор напряжений в каждой точке треугольного КЭ при ПНС
-// template <typename T>
-// typename std::enable_if<std::is_same<T, TriangleFE>::value, Stress2d>::type 
-// Stress2d Stress(const Eigen::VectorXd& Vertice_displacements, const std::pair<TriangleFE, unsigned int>& FE) {
-//     Eigen::Vector3d strs = FE.first.Mat().D() * Strain(Vertice_displacements, FE);
-//     return Stress2d({strs[0], strs[1], strs[2]});
-// }
+//Вектор напряжений в каждой точке треугольного КЭ при ПНС
+template <typename T>
+typename std::enable_if<std::is_same<T, TriangleFE>::value, Stress2d>::type 
+Stress(const Eigen::VectorXd& Vertice_displacements, const std::pair<T, unsigned int>& FE) {
+    Eigen::Vector3d strs = FE.first.Mat().D() * Strain(Vertice_displacements, FE);
+    return Stress2d({strs[0], strs[1], strs[2]});
+}
 
 // Структура решения задачи
 struct Solution {
@@ -105,40 +106,37 @@ struct Solution {
 };
 
 // Полное решение задачи (Узловые перемещения, векторы деформаций и напряжений для всех КЭ при ПНС)
-// template <typename T>
-// typename std::enable_if<std::is_same<T, Plate_triangulated>::value, Solution>::type
-// Solution solve(Plate_triangulated& Plate, const std::vector<std::tuple<int, bool, bool>> LBC_dof, const std::vector<std::tuple<int, double, double>> LBC_force) {           
-//     Eigen::VectorXd nodal_displacements = Ndl_Dsplcmnts(Plate.GSM(), LBC_dof, LBC_force);
-//     std::vector<std::pair<Eigen::Vector3d, unsigned int>> strains; // Вектор деформаций (в любой точке) каждого КЭ
-//     std::vector<std::pair<Stress2d, unsigned int>> stresses; // Вектор напряжений (в любой точке) каждого КЭ
-//     strains.reserve(Plate.FEs().size());
-//     stresses.reserve(Plate.FEs().size());
+template <typename T>
+typename std::enable_if<std::is_same<T, Plate_triangulated>::value, Solution>::type
+solve(T& Plate, const std::vector<std::tuple<int, bool, bool>> LBC_dof, const std::vector<std::tuple<int, double, double>> LBC_force) {           
+    Eigen::VectorXd nodal_displacements = Ndl_Dsplcmnts(Plate.GSM(), LBC_dof, LBC_force);
+    std::vector<std::pair<Eigen::Vector3d, unsigned int>> strains; // Вектор деформаций (в любой точке) каждого КЭ
+    std::vector<std::pair<Stress2d, unsigned int>> stresses; // Вектор напряжений (в любой точке) каждого КЭ
+    strains.reserve(Plate.FEs().size());
+    stresses.reserve(Plate.FEs().size());
 
-//     int NDoF = 6;
-//     // if constexpr (std::is_same<T, Plate_triangulated>::value) {
-//     //     NDoF = 6;
-//     // }
-//     // if constexpr (std::is_same<T, Plate_quadr>::value) {
-//     //     int n = 8;
-//     // }        
+    int NDoF = 6;
+    // if constexpr (std::is_same<T, Plate_triangulated>::value) {
+    //     NDoF = 6;
+    // }      
     
-//     for (const auto& FE : Plate.FEs()) {
-//         // Получение перемещений вершин КЭ       
-//         Eigen::VectorXd vertices_displacements(NDoF); // Узловые перемещения КЭ (ЛВУОП)
-//         double* v_d = vertices_displacements.data(); // Указатель на первый элемент ЛВУОП
-//         for (const auto& node : FE.first.verts()) {
-//             int* nbr = new int(node.second);                
-//             *v_d = nodal_displacements[2 * (*nbr - 1)];
-//             ++v_d;
-//             *v_d = nodal_displacements[2 * (*nbr - 1) +1];
-//             ++v_d;
-//             delete nbr;
-//         }
+    for (const auto& FE : Plate.FEs()) {
+        // Получение перемещений вершин КЭ       
+        Eigen::VectorXd vertices_displacements(NDoF); // Узловые перемещения КЭ (ЛВУОП)
+        double* v_d = vertices_displacements.data(); // Указатель на первый элемент ЛВУОП
+        for (const auto& node : FE.first.verts()) {
+            int* nbr = new int(node.second);                
+            *v_d = nodal_displacements[2 * (*nbr - 1)];
+            ++v_d;
+            *v_d = nodal_displacements[2 * (*nbr - 1) +1];
+            ++v_d;
+            delete nbr;
+        }
 
-//         strains.emplace_back(std::make_pair(Strain(vertices_displacements, FE), FE.second));
-//         stresses.emplace_back(std::make_pair(Stress(vertices_displacements, FE), FE.second));
-//     }
+        strains.emplace_back(std::make_pair(Strain(vertices_displacements, FE), FE.second));
+        stresses.emplace_back(std::make_pair(Stress(vertices_displacements, FE), FE.second));
+    }
                     
-//     return Solution(nodal_displacements, strains, stresses);
-// };
+    return Solution(nodal_displacements, strains, stresses);
+};
 
