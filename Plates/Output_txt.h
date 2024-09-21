@@ -36,7 +36,7 @@ void center_output(std::ofstream& outFile, const std::string& str, int width) {
             
             std::ofstream file(full_path);
             if (file.is_open()) {
-             std::cout << std::endl << std::endl << "File " << filename << " opened successfully." << std::endl;
+             std::cout << std::endl << "File " << filename << " opened successfully." << std::endl;
             } else {
              std::cerr << "Unable to open file " << filename << "!" << std::endl << std::endl;
             }
