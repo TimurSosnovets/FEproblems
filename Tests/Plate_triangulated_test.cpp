@@ -12,8 +12,8 @@ void compare_matrices(const Eigen::MatrixXd& mat1, const Eigen::MatrixXd& mat2, 
 }
 
 // Материалы 
-Material Steel(2e11, 0.3), AMg6(7e10, 0.33);
-Material Test_mat(10000000000, 0.33);
+Material Steel(2e11, 0.3, 13e-6), AMg6(7e10, 0.33, 24.7e-6);
+Material Test_mat(10000000000, 0.33, 13e-6);
 
 // Тест создания треугольного элемента
 void test_triangle_fe() {

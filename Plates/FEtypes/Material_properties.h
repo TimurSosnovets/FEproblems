@@ -6,9 +6,10 @@ class Material {
         double _E; // Модуль упругости
         double _nu; // Коэффициент Пуассона
         Eigen::Matrix3d _D; // Матрица жесткости изотропного материала
+        double _alpha; // КЛТР
     
     public:
-        Material(const double E, const double nu): _E(E), _nu(nu) {
+        Material(const double E, const double nu, const double a): _E(E), _nu(nu), _alpha(a) {
             _D << 1, nu, 0,
                   nu, 1, 0,
                   0, 0, (1-nu)/2;

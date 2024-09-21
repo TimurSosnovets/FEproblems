@@ -6,8 +6,8 @@
 #include "../Utils/parser.h"
 
 // Материалы 
-Material Steel(2e11, 0.3), AMg6(7e10, 0.33);
-Material Test_mat(10000000000, 0.33);
+Material Steel(2e11, 0.3, 13e-6), AMg6(7e10, 0.33, 24.7e-6);
+Material Test_mat(10000000000, 0.33, 13e-6);
 
 int main() {
    // test_triangle_fe();    
@@ -17,7 +17,7 @@ int main() {
     std::vector<std::tuple<int, double, double>> LBC_force;
 
     Parser::parse_file("Plate_simple_LBC.txt", LBC_dof, LBC_force);
-    auto Plate_solution = Plate.solve(LBC_dof, LBC_force);
+    auto Plate_solution = solve(Plate, LBC_dof, LBC_force);
     
     std::string filename = "Plate_simple_solution.txt";
     solution_txt(Plate_solution, 5, filename);

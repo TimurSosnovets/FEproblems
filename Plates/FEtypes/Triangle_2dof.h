@@ -26,6 +26,9 @@ class TriangleFE {
             return _B;
         }
 
+        Material Mat() const {
+            return _material;
+        }
         
         TriangleFE(const std::vector<std::pair<Point, unsigned int>> Vertices, const Material material, const double h): _vertices(Vertices), _material(material), _h(h) {
             if (Vertices.size() != 3) throw std::invalid_argument("The triangle must have exactly 3 vertices");
