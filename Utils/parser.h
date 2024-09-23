@@ -7,12 +7,11 @@
 #include <tuple>
 #include <vector>
 #include <string>
+#include "../Plates/Structs.h"
 
 class Parser {
 public:
-    static void parse_file(const std::string& filename,
-                           std::vector<std::tuple<int, bool, bool>>& LBC_dof,
-                           std::vector<std::tuple<int, double, double>>& LBC_force);
+    static void parse_file(const std::string& filename, LBC& LBC);
 
 private:
     static bool parse_fix_x(const std::string& line, std::tuple<int, bool, bool>& result);

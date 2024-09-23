@@ -2,20 +2,18 @@
 #include "parser.h"
 
 
-void Parser::parse_file(const std::string& filename,
-                        std::vector<std::tuple<int, bool, bool>>& LBC_dof,
-                        std::vector<std::tuple<int, double, double>>& LBC_force) {
+void Parser::parse_file(const std::string& filename, LBC& LBC) {
     std::ifstream file(filename);
-    std::string line;
+    std::string line;    
 
     while (std::getline(file, line)) {
         std::tuple<int, bool, bool> dof_entry;
         std::tuple<int, double, double> force_entry;
 
         if (parse_fix_x(line, dof_entry) || parse_fix_y(line, dof_entry)) {
-            LBC_dof.push_back(dof_entry);
+            LBC.DOF.push_back(dof_entry);
         } else if (parse_load_x(line, force_entry) || parse_load_y(line, force_entry)) {
-            LBC_force.push_back(force_entry);
+            LBC.Forces.push_back(force_entry);
         }
     }
     std::cout << std::endl << "Data from file " << filename << " parsed successfully!" << std::endl;

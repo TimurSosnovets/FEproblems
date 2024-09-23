@@ -1,6 +1,6 @@
 #pragma once
-#include "PSS_Vectors.h"
 #include "FEtypes/Triangle_2dof.h"
+#include "Structs.h"
 
 class Plate_triangulated;
 // Разбиение на узлы
@@ -51,11 +51,40 @@ Assembly (Eigen::MatrixXd& GSM, const int& DoF, const std::vector<std::pair<T, u
     Gnn.shrink_to_fit();
 };
 
+
 // Узловые перемещения
-Eigen::VectorXd Ndl_Dsplcmnts(const Eigen::MatrixXd& GSM, std::vector<std::tuple<int, bool, bool>> LBC_dof, std::vector<std::tuple<int, double, double>> LBC_force) { 
+// Eigen::VectorXd Ndl_Dsplcmnts(const Eigen::MatrixXd& GSM, std::vector<std::tuple<int, bool, bool>> LBC_dof, std::vector<std::tuple<int, double, double>> LBC_force) { 
+//             // Заполнение вектора нагрузок          
+//             Eigen::VectorXd F = Eigen::VectorXd::Zero(GSM.rows()); // Вектор узловых нагрузок
+//             for (auto& nd_force : LBC_force) {
+//                 int& nbr = std::get<0>(nd_force);
+//                 F[2 * (nbr - 1)] = std::get<1>(nd_force);
+//                 F[2 * (nbr - 1) + 1] = std::get<2>(nd_force);
+//             }
+
+//             // Закрепление узлов в матрице жесткости
+//             auto K = GSM;
+//             for (auto& nd_dof : LBC_dof) {
+//                 int& nbr = std::get<0>(nd_dof);
+//                 if (std::get<1>(nd_dof)) {
+//                     K.row(2 * (nbr - 1)) = Eigen::RowVectorXd::Zero(GSM.rows());
+//                     K.col(2 * (nbr - 1)) = Eigen::VectorXd::Zero(GSM.rows());
+//                     K(2 * (nbr - 1), 2 * (nbr - 1)) = 1;
+//                 }
+//                 if (std::get<2>(nd_dof)) {
+//                     K.row(2 * (nbr - 1) + 1) = Eigen::RowVectorXd::Zero(GSM.rows());
+//                     K.col(2 * (nbr - 1) + 1) = Eigen::VectorXd::Zero(GSM.rows());
+//                     K(2 * (nbr - 1) + 1, 2 * (nbr - 1) + 1) = 1;
+//                 }
+//             }
+//             //return K.colPivHouseholderQr().solve(F);
+//             return K.partialPivLu().solve(F);
+// }
+
+Eigen::VectorXd Ndl_Dsplcmnts(const Eigen::MatrixXd& GSM, LBC LBC) { 
             // Заполнение вектора нагрузок          
             Eigen::VectorXd F = Eigen::VectorXd::Zero(GSM.rows()); // Вектор узловых нагрузок
-            for (auto& nd_force : LBC_force) {
+            for (auto& nd_force : LBC.Forces) {
                 int& nbr = std::get<0>(nd_force);
                 F[2 * (nbr - 1)] = std::get<1>(nd_force);
                 F[2 * (nbr - 1) + 1] = std::get<2>(nd_force);
@@ -63,7 +92,7 @@ Eigen::VectorXd Ndl_Dsplcmnts(const Eigen::MatrixXd& GSM, std::vector<std::tuple
 
             // Закрепление узлов в матрице жесткости
             auto K = GSM;
-            for (auto& nd_dof : LBC_dof) {
+            for (auto& nd_dof : LBC.DOF) {
                 int& nbr = std::get<0>(nd_dof);
                 if (std::get<1>(nd_dof)) {
                     K.row(2 * (nbr - 1)) = Eigen::RowVectorXd::Zero(GSM.rows());
@@ -95,21 +124,13 @@ Stress(const Eigen::VectorXd& Vertice_displacements, const std::pair<T, unsigned
     return Stress2d({strs[0], strs[1], strs[2]});
 }
 
-// Структура решения задачи
-struct Solution {
-    Eigen::VectorXd Nd_Dspl; //Узловые перемещения
-    std::vector<std::pair<Eigen::Vector3d, unsigned int>> FE_Strains; // Вектор деформаций для (центральной точки) каждого КЭ 
-    std::vector<std::pair<Stress2d, unsigned int>> FE_Stresses; // Вектор напряжений для (центральной точки) каждого КЭ
 
-    Solution(const Eigen::VectorXd Dspl, const std::vector<std::pair<Eigen::Vector3d, unsigned int>> Strains, const std::vector<std::pair<Stress2d, unsigned int>> Stresses)
-    : Nd_Dspl(Dspl), FE_Strains(Strains), FE_Stresses(Stresses) {} 
-};
 
 // Полное решение задачи (Узловые перемещения, векторы деформаций и напряжений для всех КЭ при ПНС)
 template <typename T>
 typename std::enable_if<std::is_same<T, Plate_triangulated>::value, Solution>::type
-solve(T& Plate, const std::vector<std::tuple<int, bool, bool>> LBC_dof, const std::vector<std::tuple<int, double, double>> LBC_force) {           
-    Eigen::VectorXd nodal_displacements = Ndl_Dsplcmnts(Plate.GSM(), LBC_dof, LBC_force);
+solve(T& Plate, const LBC LBC) {           
+    Eigen::VectorXd nodal_displacements = Ndl_Dsplcmnts(Plate.GSM(), LBC);
     std::vector<std::pair<Eigen::Vector3d, unsigned int>> strains; // Вектор деформаций (в любой точке) каждого КЭ
     std::vector<std::pair<Stress2d, unsigned int>> stresses; // Вектор напряжений (в любой точке) каждого КЭ
     strains.reserve(Plate.FEs().size());

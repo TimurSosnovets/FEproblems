@@ -60,13 +60,11 @@ void test_triangle_fe() {
 int main() {
    // test_triangle_fe();    
     Plate_triangulated Plate(2, 2, 6, 6, 0.1, Test_mat);
+        
+    LBC LBC;    
+    Parser::parse_file("Plate_LBC/Plate_LBC_test.txt", LBC);
 
-    std::vector<std::tuple<int, bool, bool>> LBC_dof;
-    std::vector<std::tuple<int, double, double>> LBC_force;
-
-    Parser::parse_file("Plate_LBC/Plate_LBC_test.txt", LBC_dof, LBC_force);
-
-    auto Plate_solution = solve(Plate, LBC_dof, LBC_force);
+    auto Plate_solution = solve(Plate, LBC);
     std::string filename = "Plate_Femap.txt";
     solution_txt(Plate_solution, 5, filename);
     return 0;
