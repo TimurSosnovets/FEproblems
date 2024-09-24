@@ -22,7 +22,7 @@ void center_output(std::ofstream& outFile, const std::string& str, int width) {
 // Создание текстового файла с решением
         void solution_txt(Solution& solution, int prs, std::string filename) {
                         
-            std::string directory = "./results/";
+            std::string directory = "./Results/";
 
             // Create the full path by concatenating the directory and the user-provided filename
             std::string full_path = directory + filename;

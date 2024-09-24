@@ -88,11 +88,11 @@ Ndl_Dsplcmnts(const T& Plate, LBC LBC) {
              // Переводим температуру элемента в узловые силы
             Eigen::Vector3d Temp_Strain;
             Eigen::VectorXd Temp_Forces(6);
-            for (unsigned int i = 0; i = Plate.FEs().size() - 1; ++i) {
+            for (unsigned int i = 0; i < Plate.FEs().size(); ++i) {
                 double a = Plate.FEs()[i].first.Mat().CLTE(); // КЛТР
                 Temp_Strain << a * Temp[i], a * Temp[i], 0;
                 Temp_Forces = (-Plate.thickness()) * (Plate.FEs()[i].first.Square()) * (Plate.FEs()[i].first.B().transpose() * Plate.FEs()[i].first.Mat().D() * Temp_Strain);
-                for (int j = 0; j = 2; ++j) {
+                for (int j = 0; j < 3; ++j) {
                     F[2 * (Plate.FEs()[i].first.verts()[j].second - 1)] += Temp_Forces[2 * j];
                     F[2 * (Plate.FEs()[i].first.verts()[j].second - 1) + 1] += Temp_Forces[2 * j + 1];
                 }
