@@ -53,4 +53,8 @@ class Plate_triangulated {
             return _global_SM;
         }
 
+        double thickness() const {
+            return _h;
+        }
+
 };

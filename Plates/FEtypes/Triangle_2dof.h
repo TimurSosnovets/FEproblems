@@ -12,6 +12,7 @@ class TriangleFE {
         Eigen::Matrix<double, 3, 6> _B; // Матрица функций деформаций 
         Material _material; // Материал элемента
         double _h; // Толщина
+        double _square; // Площадь 
 
     public:
         std::vector<std::pair<Point, unsigned int>> verts() const {
@@ -29,11 +30,13 @@ class TriangleFE {
         Material Mat() const {
             return _material;
         }
+
+        double Square() const {
+            return _square;
+        }
         
         TriangleFE(const std::vector<std::pair<Point, unsigned int>> Vertices, const Material material, const double h): _vertices(Vertices), _material(material), _h(h) {
-            if (Vertices.size() != 3) throw std::invalid_argument("The triangle must have exactly 3 vertices");
-           
-            
+            if (Vertices.size() != 3) throw std::invalid_argument("The triangle must have exactly 3 vertices");                
             
             std::vector<double*> X, Y; // Массив указалтелей на координаты точек
             for (const auto& node : _vertices) {
@@ -64,6 +67,7 @@ class TriangleFE {
                 }
             }
 
+            _square = Delta / 2;
 
             _B << *Y[1]-*Y[2], 0, *Y[2]-*Y[0], 0, *Y[0]-*Y[1], 0,
                   0, *X[2]-*X[1], 0, *X[0]-*X[2], 0, *X[1]-*X[0],
@@ -82,4 +86,5 @@ class TriangleFE {
             Y.clear();
         }
         
+
 };
