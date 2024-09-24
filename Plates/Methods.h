@@ -71,10 +71,10 @@ Ndl_Dsplcmnts(const T& Plate, LBC LBC) {
             int n = 3;
             for (const auto& FE : Plate.FEs()) {
                 for (const auto& Ndl_T : LBC.Nodal_Temp) {
-                    auto it = std::find_if(FE.verts().begin(), FE.verts().end(), [Ndl_T.second] (const std::pair<Point, unsigned int>& vert) {
+                    auto it = std::find_if(FE.first.verts().begin(), FE.first.verts().end(), [Ndl_T] (const std::pair<Point, unsigned int>& vert) {
                         return vert.second == Ndl_T.second;
                     });
-                    if (it != FE.verts().end()) {
+                    if (it != FE.first.verts().end()) {
                         Temp[(*it).second - 1] += (Ndl_T.first - NTemp) / n;
                     }    
                 }
@@ -89,12 +89,12 @@ Ndl_Dsplcmnts(const T& Plate, LBC LBC) {
             Eigen::Vector3d Temp_Strain;
             Eigen::VectorXd Temp_Forces(6);
             for (unsigned int i = 0; i = Plate.FEs().size() - 1; ++i) {
-                double& a = Plate.FEs()[i].first.Mat().CLTE(); // КЛТР
+                double a = Plate.FEs()[i].first.Mat().CLTE(); // КЛТР
                 Temp_Strain << a * Temp[i], a * Temp[i], 0;
-                Temp_Forces = (-Plate.thickness()) * (Plate.FEs()[i].Square()) * (Plate.FEs()[i].B().transpose() * Plate.FEs()[i].Mat().D() * Temp_Strain);
+                Temp_Forces = (-Plate.thickness()) * (Plate.FEs()[i].first.Square()) * (Plate.FEs()[i].first.B().transpose() * Plate.FEs()[i].first.Mat().D() * Temp_Strain);
                 for (int j = 0; j = 2; ++j) {
-                    F[2 * (Plate.FEs()[i].verts()[j].second - 1)] += Temp_Forces[2 * j];
-                    F[2 * (Plate.FEs()[i].verts()[j].second - 1) + 1] += Temp_Forces[2 * j + 1];
+                    F[2 * (Plate.FEs()[i].first.verts()[j].second - 1)] += Temp_Forces[2 * j];
+                    F[2 * (Plate.FEs()[i].first.verts()[j].second - 1) + 1] += Temp_Forces[2 * j + 1];
                 }
             }
             // Закрепление узлов в матрице жесткости
