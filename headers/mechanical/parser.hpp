@@ -16,4 +16,6 @@ private:
     static bool parse_fix_y(const std::string& line, std::tuple<int, bool, bool>& result);
     static bool parse_load_x(const std::string& line, std::tuple<int, double, double>& result);
     static bool parse_load_y(const std::string& line, std::tuple<int, double, double>& result);
+    static bool parse_nodal_temp(const std::string& line, std::pair<int, double>& result);
+    static bool parse_element_temp(const std::string& line, std::pair<int, double>& result);
 };

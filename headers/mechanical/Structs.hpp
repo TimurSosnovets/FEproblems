@@ -6,8 +6,8 @@
 struct LBC {
 std::vector<std::tuple<int, bool, bool>> DOF;
 std::vector<std::tuple<int, double, double>> Forces;
-std::vector<std::pair<double, unsigned int>> Nodal_Temp;
-std::vector<std::pair<double, unsigned int>> Element_Temp;
+std::vector<std::pair<int, double>> Nodal_Temp;
+std::vector<std::pair<int, double>> Element_Temp;
 
 LBC() {};
 };

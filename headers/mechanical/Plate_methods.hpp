@@ -1,6 +1,7 @@
 #pragma once
 #include "Triangle_2dof.hpp"
 #include "Structs.hpp"
+#include <iostream>
 
 
 class Plate_triangulated;
@@ -72,26 +73,27 @@ Ndl_Dsplcmnts(const T& Plate, LBC LBC) {
             for (const auto& FE : Plate.FEs()) {
                 for (const auto& Ndl_T : LBC.Nodal_Temp) {
                     auto it = std::find_if(FE.first.verts().begin(), FE.first.verts().end(), [Ndl_T] (const std::pair<Point, unsigned int>& vert) {
-                        return vert.second == Ndl_T.second;
+                        return vert.second == Ndl_T.first;
                     });
                     if (it != FE.first.verts().end()) {
-                        Temp[(*it).second - 1] += (Ndl_T.first - NTemp) / n;
+                        Temp[FE.second - 1] += (Ndl_T.second - NTemp) / n;
                     }    
                 }
             }
              // Вытаскиваем температуры элементов
             for (const auto& Elt_T : LBC.Element_Temp) {
-                if (Temp[Elt_T.second - 1] < (Elt_T.first - NTemp)) {
-                    Temp[Elt_T.second - 1] = Elt_T.first - NTemp;
+                if (Temp[Elt_T.first - 1] < (Elt_T.second - NTemp)) {
+                    Temp[Elt_T.first - 1] = Elt_T.second - NTemp;
                 }
             }
+            std::cout << "Elements temperature vector:\n" << Temp << std::endl << std::endl;
              // Переводим температуру элемента в узловые силы
             Eigen::Vector3d Temp_Strain;
             Eigen::VectorXd Temp_Forces(6);
             for (unsigned int i = 0; i < Plate.FEs().size(); ++i) {
                 double a = Plate.FEs()[i].first.Mat().CLTE(); // КЛТР
                 Temp_Strain << a * Temp[i], a * Temp[i], 0;
-                Temp_Forces = (-Plate.thickness()) * (Plate.FEs()[i].first.Square()) * (Plate.FEs()[i].first.B().transpose() * Plate.FEs()[i].first.Mat().D() * Temp_Strain);
+                Temp_Forces = ((-1) * Plate.thickness()) * (Plate.FEs()[i].first.Square()) * (Plate.FEs()[i].first.B().transpose() * Plate.FEs()[i].first.Mat().D() * Temp_Strain);
                 for (int j = 0; j < 3; ++j) {
                     F[2 * (Plate.FEs()[i].first.verts()[j].second - 1)] += Temp_Forces[2 * j];
                     F[2 * (Plate.FEs()[i].first.verts()[j].second - 1) + 1] += Temp_Forces[2 * j + 1];
