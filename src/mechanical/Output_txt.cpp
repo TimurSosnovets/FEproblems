@@ -1,11 +1,4 @@
-#pragma once
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <filesystem>
-#include <string>
-#include "../toolbox/eigen-3.4.0/Eigen/Dense"
-#include "PSS_Vectors.h"
+#include "../../headers/mechanical/Output_txt.hpp"
 
 // Вывод по центру области
 void center_output(std::ofstream& outFile, const std::string& str, int width) {

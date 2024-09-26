@@ -1,9 +1,5 @@
-#pragma once
-#include "FEtypes/Triangle_2dof.h"
-#include "Structs.h"
+#include  "../../headers/mechanical/Plate_methods.hpp"
 
-class Plate_triangulated;
-class Point;
 // Разбиение на узлы
 void Nodes_creation(std::vector<std::pair<Point, unsigned int>>& Nodes, const int DoF, const double a, const double b, const int m, const int n) {
     Nodes.reserve(DoF);            
@@ -166,4 +162,3 @@ solve(T& Plate, const LBC LBC) {
                     
     return Solution(nodal_displacements, strains, stresses);
 };
-

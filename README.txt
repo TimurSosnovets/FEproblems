@@ -1,0 +1,1 @@
+g++ .\Plate_triangulated_test.cpp -o main ../src/mechanical/*.cpp

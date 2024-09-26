@@ -1,6 +1,5 @@
 #include <iostream>
-#include "parser.h"
-
+#include "../../headers/mechanical/parser.hpp"
 
 void Parser::parse_file(const std::string& filename, LBC& LBC) {
     std::ifstream file(filename);

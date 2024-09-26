@@ -1,10 +1,7 @@
-#include "../Plates/Triangulated.h"
-#include "../Plates/Output_txt.h"
-#include <iostream>
+#include "../headers/mechanical/Plate_types.hpp"
+#include "../headers/mechanical/Output_txt.hpp"
+#include "../headers/mechanical/parser.hpp"
 #include <cassert>
-#include <cmath>
-#include "../Utils/parser.h"
-
 
 // Функция сравнения матриц
 void compare_matrices(const Eigen::MatrixXd& mat1, const Eigen::MatrixXd& mat2, double tol = 1e-6) {
@@ -12,8 +9,8 @@ void compare_matrices(const Eigen::MatrixXd& mat1, const Eigen::MatrixXd& mat2, 
 }
 
 // Материалы 
-Material Steel(2e11, 0.3, 13e-6), AMg6(7e10, 0.33, 24.7e-6);
-Material Test_mat(10000000000, 0.33, 13e-6);
+Isotropic Steel(2e11, 0.3, 13e-6), AMg6(7e10, 0.33, 24.7e-6);
+Isotropic Test_mat(10000000000, 0.33, 13e-6);
 
 // Тест создания треугольного элемента
 void test_triangle_fe() {
@@ -54,8 +51,6 @@ void test_triangle_fe() {
         
     std::cout << "Triangle_FE: All tests passed!" << std::endl;
 }
-
-
 
 int main() {
    // test_triangle_fe();    

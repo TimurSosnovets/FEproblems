@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "PSS_Vectors.h"
+#include "2dStress(PSS).hpp"
 
 // Структура граничных условий
 struct LBC {

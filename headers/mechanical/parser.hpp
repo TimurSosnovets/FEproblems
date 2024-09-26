@@ -1,13 +1,11 @@
-#ifndef PARSER_H
-#define PARSER_H
-
+#pragma once
 #include <iostream>
 #include <fstream>
 #include <regex>
 #include <tuple>
 #include <vector>
 #include <string>
-#include "../Plates/Structs.h"
+#include "Structs.hpp"
 
 class Parser {
 public:
@@ -19,5 +17,3 @@ private:
     static bool parse_load_x(const std::string& line, std::tuple<int, double, double>& result);
     static bool parse_load_y(const std::string& line, std::tuple<int, double, double>& result);
 };
-
-#endif // PARSER_H
