@@ -15,7 +15,7 @@ Isotropic Test_mat(10000000000, 0.33, 13e-6);
 // Тест создания треугольного элемента
 void test_triangle_fe() {
     // Define test data
-    std::vector<std::pair<Point, unsigned int>> vertices = {
+    std::vector<std::pair<Point, int>> vertices = {
         {Point(0.0, 0.0), 0},
         {Point(0.0, 1.0), 1},
         {Point(1.0, 0.0), 2}
@@ -57,10 +57,14 @@ int main() {
     Plate_triangulated Plate(2, 2, 6, 6, 0.1, Test_mat);
         
     LBC LBC;    
-    Parser::parse_file("Plate_LBC/Plate_LBC_test.txt", LBC);
+    Parser::parse_file("Plate_LBC/Plate_LBC_temp.txt", LBC);
+    // Дебаж
+    for (const auto& Ndl_T : LBC.Nodal_Temp) {
+        std::cout << "Nodal_Temp: Node " << Ndl_T.first << " Temp " << Ndl_T.second << std::endl;
+    }
 
     auto Plate_solution = solve(Plate, LBC);
-    std::string filename = "Plate_Femap.txt";
-    solution_txt(Plate_solution, 5, filename);
+    std::string filename = "Plate_temp.txt";
+    solution_txt(Plate_solution, 4, filename);
     return 0;
 }

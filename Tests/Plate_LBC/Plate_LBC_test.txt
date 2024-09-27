@@ -21,7 +21,8 @@ Load_y 35 3000
 Load_y 42 3000
 Load_y 49 1500
 
-Element_temp 1 393
+
 Node_temp 1 393
 Node_temp 2 393
 Node_temp 8 393
+Element_temp 1 393

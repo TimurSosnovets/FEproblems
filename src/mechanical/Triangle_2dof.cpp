@@ -1,6 +1,6 @@
 #include  "../../headers/mechanical/Triangle_2dof.hpp"
 
-TriangleFE::TriangleFE(const std::vector<std::pair<Point, unsigned int>> Vertices, const Isotropic material, const double h): _vertices(Vertices), _material(material), _h(h) {
+TriangleFE::TriangleFE(const std::vector<std::pair<Point, int>> Vertices, const Isotropic material, const double h): _vertices(Vertices), _material(material), _h(h) {
     if (Vertices.size() != 3) throw std::invalid_argument("The triangle must have exactly 3 vertices");                
 
     std::vector<double*> X, Y; // Массив указалтелей на координаты точек
@@ -19,7 +19,7 @@ TriangleFE::TriangleFE(const std::vector<std::pair<Point, unsigned int>> Vertice
         std::swap(_vertices[1], _vertices[2]);
         Delta = -Delta;
         // Удаляем указатели с неверной ориентацией
-        for (unsigned int i = 0; i < 3; ++i) {
+        for (int i = 0; i < 3; ++i) {
             delete X[i];
             delete Y[i];
         }
@@ -42,7 +42,7 @@ TriangleFE::TriangleFE(const std::vector<std::pair<Point, unsigned int>> Vertice
     _K = 0.5 * Delta * _h * (_B.transpose() * _material.D() * _B);
 
     //Очистка памяти
-    for (unsigned int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; ++i) {
         delete X[i];
         delete Y[i];
     }
@@ -50,7 +50,7 @@ TriangleFE::TriangleFE(const std::vector<std::pair<Point, unsigned int>> Vertice
     Y.clear();
 }
 
-std::vector<std::pair<Point, unsigned int>> TriangleFE::verts() const {
+std::vector<std::pair<Point, int>> TriangleFE::verts() const {
     return _vertices;
 }
 

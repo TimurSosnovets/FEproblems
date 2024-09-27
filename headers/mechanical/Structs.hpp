@@ -15,9 +15,9 @@ LBC() {};
 // Структура решения задачи
 struct Solution {
     Eigen::VectorXd Nd_Dspl; //Узловые перемещения
-    std::vector<std::pair<Eigen::Vector3d, unsigned int>> FE_Strains; // Вектор деформаций для (центральной точки) каждого КЭ 
-    std::vector<std::pair<Stress2d, unsigned int>> FE_Stresses; // Вектор напряжений для (центральной точки) каждого КЭ
+    std::vector<std::pair<Eigen::Vector3d, int>> FE_Strains; // Вектор деформаций для (центральной точки) каждого КЭ 
+    std::vector<std::pair<Stress2d, int>> FE_Stresses; // Вектор напряжений для (центральной точки) каждого КЭ
 
-    Solution(const Eigen::VectorXd Dspl, const std::vector<std::pair<Eigen::Vector3d, unsigned int>> Strains, const std::vector<std::pair<Stress2d, unsigned int>> Stresses)
+    Solution(const Eigen::VectorXd Dspl, const std::vector<std::pair<Eigen::Vector3d, int>> Strains, const std::vector<std::pair<Stress2d, int>> Stresses)
     : Nd_Dspl(Dspl), FE_Strains(Strains), FE_Stresses(Stresses) {} 
 };
