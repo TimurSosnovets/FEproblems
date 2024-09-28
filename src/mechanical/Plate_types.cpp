@@ -16,7 +16,7 @@ Plate_triangulated::Plate_triangulated(const double lenX, const double lenY, con
             std::pair<Point, int>* p_ptr = &_nodes [i * (n+1) + j]; // Указатель на нижний левый узел квадрата
             _finite_els.emplace_back(std::make_pair(TriangleFE({*p_ptr, *(p_ptr + 1 + n), *(p_ptr + 1)}, _material, _h), k));
             k++;
-            _finite_els.emplace_back(std::make_pair(TriangleFE({*(p_ptr + 1), *(p_ptr + n + 1), *(p_ptr + n + 2)}, _material, _h), k));
+            _finite_els.emplace_back(std::make_pair(TriangleFE({*(p_ptr + n + 2), *(p_ptr + 1), *(p_ptr + n + 1)}, _material, _h), k));
             k++;
         }
     }
