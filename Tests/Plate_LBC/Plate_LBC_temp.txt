@@ -13,4 +13,4 @@ Fix_x 5
 Fix_x 6
 Fix_x 7
 
-Node_temp 24 393
+Node_temp 25 393

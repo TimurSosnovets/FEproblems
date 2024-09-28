@@ -1,0 +1,9 @@
+Fix_x 1
+Fix_x 2
+Fix_y 1
+Fix_y 3
+
+Node_temp 1 393
+Node_temp 2 393
+Node_temp 3 393
+Node_temp 4 393

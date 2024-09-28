@@ -67,7 +67,7 @@ Ndl_Dsplcmnts(const T& Plate, LBC LBC) {
 
     // Вектор узловых сил от температурных деформаций
     double NTemp = 293; // Температура при НУ
-    Eigen::VectorXd Temp = Eigen::VectorXd::Zero(Plate.GSM().rows()); // Вектор относительных температур элементов
+    Eigen::VectorXd Temp = Eigen::VectorXd::Zero(Plate.FEs().size()); // Вектор относительных температур элементов
     // Вытаскиваем узловые температуры            
     int n = 3;
     for (const auto& FE : Plate.FEs()) {                                   
@@ -86,19 +86,20 @@ Ndl_Dsplcmnts(const T& Plate, LBC LBC) {
             Temp[Elt_T.first - 1] = Elt_T.second - NTemp;
         }
     }
-    std::cout << "Elements temperature vector:\n" << Temp << std::endl << std::endl;
+//std::cout << "Elements temperature vector:\n" << Temp << std::endl << std::endl;
     // Переводим температуру элемента в узловые силы
     Eigen::Vector3d Temp_Strain;
     Eigen::VectorXd Temp_Forces(6);
     for (int i = 0; i < Plate.FEs().size(); ++i) {
         double a = Plate.FEs()[i].first.Mat().CLTE(); // КЛТР
         Temp_Strain << a * Temp[i], a * Temp[i], 0;
-        Temp_Forces = ((-1) * Plate.thickness()) * (Plate.FEs()[i].first.Square()) * (Plate.FEs()[i].first.B().transpose() * Plate.FEs()[i].first.Mat().D() * Temp_Strain);
+        Temp_Forces = (Plate.thickness()) * (Plate.FEs()[i].first.Square()) * (Plate.FEs()[i].first.B().transpose() * Plate.FEs()[i].first.Mat().D() * Temp_Strain);
         for (int j = 0; j < 3; ++j) {
             F[2 * (Plate.FEs()[i].first.verts()[j].second - 1)] += Temp_Forces[2 * j];
             F[2 * (Plate.FEs()[i].first.verts()[j].second - 1) + 1] += Temp_Forces[2 * j + 1];
         }
     }
+//std::cout << "Forces vector:\n" << F << "\n\n";
     // Закрепление узлов в матрице жесткости
     auto K = Plate.GSM();
     for (auto& nd_dof : LBC.DOF) {
@@ -107,13 +108,16 @@ Ndl_Dsplcmnts(const T& Plate, LBC LBC) {
             K.row(2 * (nbr - 1)) = Eigen::RowVectorXd::Zero(Plate.GSM().rows());
             K.col(2 * (nbr - 1)) = Eigen::VectorXd::Zero(Plate.GSM().rows());
             K(2 * (nbr - 1), 2 * (nbr - 1)) = 1;
+            F[2 * (nbr - 1)] = 0;
         }
         if (std::get<2>(nd_dof)) {
             K.row(2 * (nbr - 1) + 1) = Eigen::RowVectorXd::Zero(Plate.GSM().rows());
             K.col(2 * (nbr - 1) + 1) = Eigen::VectorXd::Zero(Plate.GSM().rows());
             K(2 * (nbr - 1) + 1, 2 * (nbr - 1) + 1) = 1;
+            F[2 * (nbr - 1) +1] = 0;
         }
     }
+//std::cout << "Right hand vector:\n" << F;
     //return K.colPivHouseholderQr().solve(F);
     return K.partialPivLu().solve(F);
 }
