@@ -16,7 +16,7 @@ double Stress2d::sigma_y() const {
 }
 
 double Stress2d::tau_xy() const {
-    return _coord[3];
+    return _coord[2];
 }
 
 Eigen::Vector3d Stress2d::coord() const {

@@ -85,7 +85,7 @@ solve(T& Plate, const LBC LBC) {
             Temp[Elt_T.first - 1] = Elt_T.second - NTemp;
         }
     }
-//std::cout << "Elements temperature vector:\n" << Temp << std::endl << std::endl;
+
     // Переводим температуру элемента в узловые силы
     Eigen::Vector3d Temp_Strain;
     Eigen::VectorXd Temp_Forces(6);
@@ -98,7 +98,7 @@ solve(T& Plate, const LBC LBC) {
             F[2 * (Plate.FEs()[i].first.verts()[j].second - 1) + 1] += Temp_Forces[2 * j + 1];
         }
     }
-//std::cout << "Forces vector:\n" << F << "\n\n";
+
     // Закрепление узлов в матрице жесткости
     auto K = Plate.GSM();
     for (auto& nd_dof : LBC.DOF) {
@@ -116,8 +116,7 @@ solve(T& Plate, const LBC LBC) {
             F[2 * (nbr2 - 1) +1] = 0;
         }
     }
-//std::cout << "Right hand vector:\n" << F;
-    //auto nodal_displacements = K.colPivHouseholderQr().solve(F);
+    
     Eigen::VectorXd nodal_displacements = K.partialPivLu().solve(F); // Глобальный ВУОП
 
     // Массивы векторов напряжений и деформаций
@@ -129,7 +128,8 @@ solve(T& Plate, const LBC LBC) {
     int NDoF = 6;
     // if constexpr (std::is_same<T, Plate_triangulated>::value) {
     //     NDoF = 6;
-    // }      
+    // } 
+         
     int el = 0; // Номер конечного элемента (нужен для вектора температур)
     for (const auto& FE : Plate.FEs()) {
         // Получение перемещений вершин КЭ       
@@ -148,10 +148,8 @@ solve(T& Plate, const LBC LBC) {
         Eigen::Vector3d el_strain = FE.first.B() * vertices_displacements;
         Eigen::Vector3d el_temp_strain;
         el_temp_strain << FE.first.Mat().CLTE() * Temp[el], FE.first.Mat().CLTE() * Temp[el], 0;  
-        Eigen::Vector3d el_stress = FE.first.Mat().D() * (el_strain - el_temp_strain);
-        //Eigen::Vector3d el_stress = FE.first.Mat().D() * (el_strain);
+        Eigen::Vector3d el_stress = FE.first.Mat().D() * (el_strain - el_temp_strain);        
         ++el;
-        std::cout << "Number of elements: " << el << std::endl;
         strains.emplace_back(std::make_pair(el_strain, FE.second));
         stresses.emplace_back(std::make_pair(Stress2d(el_stress), FE.second));
     }

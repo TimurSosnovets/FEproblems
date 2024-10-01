@@ -13,8 +13,5 @@ int main() {
     auto Plate_solution = solve(Plate, LBC);
     std::string filename = "Plate4report_result.txt";
     solution_txt(Plate_solution, 7, filename);
-    for (const auto& FE : Plate.FEs()){
-        std::cout << "\n" << FE.second << "   " << Plate_solution.FE_Stresses[FE.second - 1].first.equivalent_stress();
-    }
     return 0;
 }
