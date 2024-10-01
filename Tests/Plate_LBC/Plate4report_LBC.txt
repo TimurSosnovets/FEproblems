@@ -1,0 +1,21 @@
+Fix_y 1
+Fix_y 7
+Fix_y 13
+Fix_y 19
+
+Fix_x 1
+Fix_x 2
+Fix_x 3
+Fix_x 4
+Fix_x 5
+Fix_x 6
+
+Load_y 6 150
+Load_y 12 300
+Load_y 18 300
+Load_y 24 150
+
+Node_temp 9 393
+Node_temp 10 393
+Node_temp 15 393
+Node_temp 16 393
