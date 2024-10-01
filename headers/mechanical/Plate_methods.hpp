@@ -53,16 +53,15 @@ Assembly (Eigen::MatrixXd& GSM, const int& DoF, const std::vector<std::pair<T, i
     Gnn.shrink_to_fit();
 };
 
-// Получение узловых перемещений
 template <typename T>
-typename std::enable_if<std::is_same<T, Plate_triangulated>::value, Eigen::VectorXd>::type
-Ndl_Dsplcmnts(const T& Plate, LBC LBC) { 
+typename std::enable_if<std::is_same<T, Plate_triangulated>::value, Solution>::type
+solve(T& Plate, const LBC LBC) {
     // Заполнение вектора нагрузок          
     Eigen::VectorXd F = Eigen::VectorXd::Zero(Plate.GSM().rows()); // Вектор узловых нагрузок
     for (auto& nd_force : LBC.Forces) {
-        int& nbr = std::get<0>(nd_force);
-        F[2 * (nbr - 1)] = std::get<1>(nd_force);
-        F[2 * (nbr - 1) + 1] = std::get<2>(nd_force);
+        const int& nbr1 = std::get<0>(nd_force);
+        F[2 * (nbr1 - 1)] = std::get<1>(nd_force);
+        F[2 * (nbr1 - 1) + 1] = std::get<2>(nd_force);
     }
 
     // Вектор узловых сил от температурных деформаций
@@ -103,46 +102,25 @@ Ndl_Dsplcmnts(const T& Plate, LBC LBC) {
     // Закрепление узлов в матрице жесткости
     auto K = Plate.GSM();
     for (auto& nd_dof : LBC.DOF) {
-        int& nbr = std::get<0>(nd_dof);
+        const int& nbr2 = std::get<0>(nd_dof);
         if (std::get<1>(nd_dof)) {
-            K.row(2 * (nbr - 1)) = Eigen::RowVectorXd::Zero(Plate.GSM().rows());
-            K.col(2 * (nbr - 1)) = Eigen::VectorXd::Zero(Plate.GSM().rows());
-            K(2 * (nbr - 1), 2 * (nbr - 1)) = 1;
-            F[2 * (nbr - 1)] = 0;
+            K.row(2 * (nbr2 - 1)) = Eigen::RowVectorXd::Zero(Plate.GSM().rows());
+            K.col(2 * (nbr2 - 1)) = Eigen::VectorXd::Zero(Plate.GSM().rows());
+            K(2 * (nbr2 - 1), 2 * (nbr2 - 1)) = 1;
+            F[2 * (nbr2 - 1)] = 0;
         }
         if (std::get<2>(nd_dof)) {
-            K.row(2 * (nbr - 1) + 1) = Eigen::RowVectorXd::Zero(Plate.GSM().rows());
-            K.col(2 * (nbr - 1) + 1) = Eigen::VectorXd::Zero(Plate.GSM().rows());
-            K(2 * (nbr - 1) + 1, 2 * (nbr - 1) + 1) = 1;
-            F[2 * (nbr - 1) +1] = 0;
+            K.row(2 * (nbr2 - 1) + 1) = Eigen::RowVectorXd::Zero(Plate.GSM().rows());
+            K.col(2 * (nbr2 - 1) + 1) = Eigen::VectorXd::Zero(Plate.GSM().rows());
+            K(2 * (nbr2 - 1) + 1, 2 * (nbr2 - 1) + 1) = 1;
+            F[2 * (nbr2 - 1) +1] = 0;
         }
     }
 //std::cout << "Right hand vector:\n" << F;
-    //return K.colPivHouseholderQr().solve(F);
-    return K.partialPivLu().solve(F);
-}
+    //auto nodal_displacements = K.colPivHouseholderQr().solve(F);
+    Eigen::VectorXd nodal_displacements = K.partialPivLu().solve(F); // Глобальный ВУОП
 
-
-//Вектор деформаций в каждой точке треугольного КЭ при ПНС
-template <typename T>
-typename std::enable_if<std::is_same<T, TriangleFE>::value, Eigen::Vector3d>::type 
-Strain(const Eigen::VectorXd& Vertice_displacements, const std::pair<T, int>& FE) {
-    return FE.first.B() * Vertice_displacements;
-}
-
-//Вектор напряжений в каждой точке треугольного КЭ при ПНС
-template <typename T>
-typename std::enable_if<std::is_same<T, TriangleFE>::value, Stress2d>::type 
-Stress(const Eigen::VectorXd& Vertice_displacements, const std::pair<T, int>& FE) {
-    Eigen::Vector3d strs = FE.first.Mat().D() * Strain(Vertice_displacements, FE);
-    return Stress2d({strs[0], strs[1], strs[2]});
-}
-
-// Полное решение задачи (Узловые перемещения, векторы деформаций и напряжений для всех КЭ при ПНС)
-template <typename T>
-typename std::enable_if<std::is_same<T, Plate_triangulated>::value, Solution>::type
-solve(T& Plate, const LBC LBC) {           
-    Eigen::VectorXd nodal_displacements = Ndl_Dsplcmnts(Plate, LBC);
+    // Массивы векторов напряжений и деформаций
     std::vector<std::pair<Eigen::Vector3d, int>> strains; // Вектор деформаций (в любой точке) каждого КЭ
     std::vector<std::pair<Stress2d, int>> stresses; // Вектор напряжений (в любой точке) каждого КЭ
     strains.reserve(Plate.FEs().size());
@@ -152,23 +130,31 @@ solve(T& Plate, const LBC LBC) {
     // if constexpr (std::is_same<T, Plate_triangulated>::value) {
     //     NDoF = 6;
     // }      
-    
+    int el = 0; // Номер конечного элемента (нужен для вектора температур)
     for (const auto& FE : Plate.FEs()) {
         // Получение перемещений вершин КЭ       
         Eigen::VectorXd vertices_displacements(NDoF); // Узловые перемещения КЭ (ЛВУОП)
         double* v_d = vertices_displacements.data(); // Указатель на первый элемент ЛВУОП
         for (const auto& node : FE.first.verts()) {
-            int* nbr = new int(node.second);                
-            *v_d = nodal_displacements[2 * (*nbr - 1)];
+            int* nbr3 = new int(node.second);                
+            *v_d = nodal_displacements[2 * (*nbr3 - 1)];
             ++v_d;
-            *v_d = nodal_displacements[2 * (*nbr - 1) +1];
+            *v_d = nodal_displacements[2 * (*nbr3 - 1) +1];
             ++v_d;
-            delete nbr;
+            delete nbr3;
         }
 
-        strains.emplace_back(std::make_pair(Strain(vertices_displacements, FE), FE.second));
-        stresses.emplace_back(std::make_pair(Stress(vertices_displacements, FE), FE.second));
+        // Вычисление векторов полной деформации и напряжения (в центральной точке) каждого КЭ
+        Eigen::Vector3d el_strain = FE.first.B() * vertices_displacements;
+        Eigen::Vector3d el_temp_strain;
+        el_temp_strain << FE.first.Mat().CLTE() * Temp[el], FE.first.Mat().CLTE() * Temp[el], 0;  
+        Eigen::Vector3d el_stress = FE.first.Mat().D() * (el_strain - el_temp_strain);
+        //Eigen::Vector3d el_stress = FE.first.Mat().D() * (el_strain);
+        ++el;
+        std::cout << "Number of elements: " << el << std::endl;
+        strains.emplace_back(std::make_pair(el_strain, FE.second));
+        stresses.emplace_back(std::make_pair(Stress2d(el_stress), FE.second));
     }
-                    
-    return Solution(nodal_displacements, strains, stresses);
+
+return Solution(nodal_displacements, strains, stresses);
 };

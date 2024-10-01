@@ -1,8 +1,8 @@
 #include "../../headers/mechanical/2dStress(PSS).hpp"
 
-Stress2d::Stress2d(const std::vector<double> stresses) {
+Stress2d::Stress2d(const Eigen::Vector3d& stresses) {
     if (stresses.size() != 3) throw std::invalid_argument("Stresses must have exactly 3 values.");
-    _coord << stresses[0], stresses[1], stresses[2];
+    _coord = stresses;
     _sigma_principal.first = 0.5 * (_coord[0] + _coord[1] + sqrt(pow(_coord[0] - _coord[1], 2.0) + 4 * pow(_coord[2], 2.0)));
     _sigma_principal.second = 0.5 * (_coord[0] + _coord[1] - sqrt(pow(_coord[0] - _coord[1], 2.0) + 4 * pow(_coord[2], 2.0)));
 }

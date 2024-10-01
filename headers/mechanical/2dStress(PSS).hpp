@@ -8,7 +8,7 @@ class Stress2d {
         Eigen::Vector3d _coord;
         std::pair<double, double> _sigma_principal;  
     public:
-        Stress2d(const std::vector<double> stresses);
+        Stress2d(const Eigen::Vector3d& stresses);
         double sigma_x() const;
         double sigma_y() const;
         double tau_xy() const;
