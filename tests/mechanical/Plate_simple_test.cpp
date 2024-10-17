@@ -1,6 +1,6 @@
-#include "../headers/mechanical/Plate_types.hpp"
-#include "../headers/mechanical/Output_txt.hpp"
-#include "../headers/mechanical/parser.hpp"
+#include "../../headers/mechanical/Plate_types.hpp"
+#include "../../headers/mechanical/Output_txt.hpp"
+#include "../../headers/mechanical/parser.hpp"
 #include <cassert>
 
 Isotropic Steel(2e11, 0.3, 13e-6), AMg6(7e10, 0.33, 24.7e-6);

@@ -1,6 +1,6 @@
-#include "../headers/mechanical/Plate_types.hpp"
-#include "../headers/mechanical/Output_txt.hpp"
-#include "../headers/mechanical/parser.hpp"
+#include "../../headers/mechanical/Plate_types.hpp"
+#include "../../headers/mechanical/Output_txt.hpp"
+#include "../../headers/mechanical/parser.hpp"
 
 
 Isotropic Steel(2e11, 0.3, 13e-6);
@@ -12,6 +12,6 @@ int main() {
     
     auto Plate_solution = solve(Plate, LBC);
     std::string filename = "Plate4report_result.txt";
-    solution_txt(Plate_solution, 7, filename);
+    solution_txt(Plate_solution, 6, filename);
     return 0;
 }

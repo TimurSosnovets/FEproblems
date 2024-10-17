@@ -1,6 +1,6 @@
-#include "../headers/mechanical/Plate_types.hpp"
-#include "../headers/mechanical/Output_txt.hpp"
-#include "../headers/mechanical/parser.hpp"
+#include "../../headers/mechanical/Plate_types.hpp"
+#include "../../headers/mechanical/Output_txt.hpp"
+#include "../../headers/mechanical/parser.hpp"
 #include <cassert>
 
 // Функция сравнения матриц
