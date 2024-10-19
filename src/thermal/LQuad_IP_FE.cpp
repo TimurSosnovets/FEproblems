@@ -117,6 +117,7 @@ const Eigen::Matrix<double, 4, 4>& LQuad::Cond_Mat() const
     return _H;
 }
 
+// Температура в точке элемента
 double LQuad::Temperature(const double xi, const double eta, const double& T1, const double& T2, const double& T3, const double& T4)
 {
     Eigen::RowVector<double, 4> N = Shape_Func(xi, eta);
