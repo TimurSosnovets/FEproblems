@@ -62,6 +62,7 @@ void DM_FEmodel::nodes_creation(std::vector<std::pair<Point, int>>& Nodes, const
     int nbr = 1; // Номер узла
     
     enum OuterState {CIRCLE, FIRST_CONE, SECOND_CONE, CYLINDER}; // Итерации по длине
+    const double step_CR = geometry.x_cr() / N_cr, step_CN1 = (geometry.x_cn1() - geometry.x_cr()) / N_cn1, step_CN2 = (geometry.x_cn2() - geometry.x_cn1()) / N_cn2, step_CL = (geometry.x_cl() - geometry.x_cn2()) / N_cl; // Шаг по длине
     enum InnerState {GLASSY_CARBON, TZMK, AMg_6}; // Итерации по радиусу
     const double step_GC = h_GC / N_gc, step_TZMK = h_TZMK / N_tzmk; // Шаг по слою
     double x, y; // Координаты точки 
@@ -73,32 +74,33 @@ void DM_FEmodel::nodes_creation(std::vector<std::pair<Point, int>>& Nodes, const
     
     OuterState OcurrentSt = CIRCLE;
     InnerState IcurrentSt = GLASSY_CARBON;
+    std::cout << "CIRCLE\n";
 
     for (int OX = 0; OX < N_cr + N_cn1 + N_cn2 + N_cl +1; ++OX) 
     {
         switch (OcurrentSt) // Выбирается способ расчета координат, в зависимости от кривой
         {
             case CIRCLE:
-                x_coord = [this, OX, N_cr](std::optional<double> X_origin) 
-                { return X_origin.value() + ((geometry.x_cr() - X_origin.value()) / N_cr) * OX; };
+                x_coord = [this, OX, N_cr, step_CR](std::optional<double> X_origin) 
+                { return X_origin.value() + (step_CR - X_origin.value() / N_cr) * OX; };
                 y_coord = [this](double x, double h) { return DM_Geom2d::circle(x, geometry.r_cr() - h); };
             break;
 
             case FIRST_CONE:
-                x_coord = [this, OX, N_cr, N_cn1](std::optional<double> X_origin) 
-                { return geometry.x_cr() + ((geometry.x_cn1() - geometry.x_cr()) / N_cn1) * (OX - N_cr); };
+                x_coord = [this, OX, N_cr, N_cn1, step_CN1](std::optional<double> X_origin) 
+                { return geometry.x_cr() + step_CN1 * (OX - N_cr); };
                 y_coord = [this](double x, double h) { return DM_Geom2d::line(x, Point(geometry.x_cr(), -(geometry.r_cr() - h / cos(21 / 180.0 * M_PI))), Point(geometry.x_cn1(), -(geometry.r_cn1() - h / cos(21 / 180.0 * M_PI)))); };
             break;
 
             case SECOND_CONE:
-                x_coord = [this, OX, N_cr, N_cn1, N_cn2](std::optional<double> X_origin) 
-                { return geometry.x_cn1() + ((geometry.x_cn2() - geometry.x_cn1()) / N_cn2) * (OX - N_cr - N_cn1); };
+                x_coord = [this, OX, N_cr, N_cn1, N_cn2, step_CN2](std::optional<double> X_origin) 
+                { return geometry.x_cn1() + step_CN2 * (OX - N_cr - N_cn1); };
                 y_coord = [this](double x, double h) { return DM_Geom2d::line(x, Point(geometry.x_cn1(), -(geometry.r_cn1() - h / cos(8 / 180.0 * M_PI))), Point(geometry.x_cn2(), -(geometry.r_cn2() - h / cos(8 / 180.0 * M_PI)))); };
             break;
 
             case CYLINDER:
-                x_coord = [this, OX, N_cr, N_cn1, N_cn2, N_cl](std::optional<double> X_origin) 
-                { return geometry.x_cn2() + ((geometry.x_cl() - geometry.x_cn2()) / N_cl) * (OX - N_cr - N_cn1 - N_cl); };
+                x_coord = [this, OX, N_cr, N_cn1, N_cn2, N_cl, step_CL](std::optional<double> X_origin) 
+                { return geometry.x_cn2() + step_CL * (OX - N_cr - N_cn1 - N_cn2); };
                 y_coord = [this](double x, double h) { return DM_Geom2d::line(x, Point(geometry.x_cn2(), -(geometry.r_cn2() - h)), Point(geometry.x_cl(), -(geometry.r_cn2() - h))); };
             break;
         }
@@ -130,21 +132,22 @@ void DM_FEmodel::nodes_creation(std::vector<std::pair<Point, int>>& Nodes, const
             x = x_coord(is_circle);
             y = y_coord(x, h);                
             Nodes.emplace_back(std::make_pair(Point(x, y), nbr));
+            std::cout << "Number " << nbr << ". " << "OX = " << OX << ", OR = " << OR << ";   x = " << x << ", y = " << y << ".\n";
             ++nbr;
         }
 
         switch (OcurrentSt)
         {
             case CIRCLE:
-            if (OX == N_cr) {OcurrentSt = FIRST_CONE; is_circle = std::nullopt;};
+            if (OX == N_cr) {OcurrentSt = FIRST_CONE; is_circle = std::nullopt; std::cout << "FIRST CONE\n"; };
             break;
 
             case FIRST_CONE:
-            if (OX == N_cr + N_cn1) {OcurrentSt = SECOND_CONE;};
+            if (OX == N_cr + N_cn1) {OcurrentSt = SECOND_CONE; std::cout << "SECOND CONE\n"; };
             break;
             
             case SECOND_CONE:
-            if (OX == N_cr + N_cn1 + N_cn2) {OcurrentSt = CYLINDER;};
+            if (OX == N_cr + N_cn1 + N_cn2) {OcurrentSt = CYLINDER; std::cout << "CYLINDER\n"; };
             break;
         }
     }
@@ -155,13 +158,6 @@ DM_FEmodel::DM_FEmodel(DM_Geom2d& geom, const double GC, const double TZMK, cons
 : geometry(geom), h_GC (GC), h_TZMK(TZMK), h_AMg(AMg), _DOF((N_cr + N_cn1 + N_cn2 + N_cl + 1) * (N_gc + N_tzmk + 2))
 {
     nodes_creation(_Nodes, N_cr, N_cn1, N_cn2, N_cl, N_gc, N_tzmk);
-    
-    // Отладка
-    for (const auto& Node : _Nodes)
-    {
-        std::cout << "\n Node " << Node.second << ": (" << Node.first.x << ", " << Node.first.y << ")\n";
-    }; 
-
 };
 
 // Возвращаемые значения
