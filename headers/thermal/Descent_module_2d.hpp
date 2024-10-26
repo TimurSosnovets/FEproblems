@@ -4,7 +4,7 @@
 #include <optional>
 
 const std::size_t MAX_DOF = 5000;
-const double Lamda_GC = 1, Lambda_TZMK = 1, Lambda_AMg = 1;
+const double Lamda_GC = 50.8, Lambda_TZMK = 50.8, Lambda_AMg = 50.8;
 
 
 
@@ -42,12 +42,12 @@ class DM_FEmodel
        
         std::vector<std::pair<Point, int>> _Nodes; // Массив узлов
         const double _DOF; // Степень свободы
-        //std::array<std::pair<LQuad, int>, MAX_DOF> _FEs; // Массив конечных элементов (Ссылок на них)
+        std::array<std::optional<std::pair<LQuad, int>>, MAX_DOF> _FEs; // Массив конечных элементов (Ссылок на них)
         Eigen::MatrixXd _GCM; // Глобальная матрица теплопроводности
 
         // Создание узлов
         void nodes_creation(std::vector<std::pair<Point, int>>& Nodes, const int N_cr, const int N_cn1, const int N_cn2, const int N_cl, const int N_gc, const int N_tzmk);
-        //void elements_creation(std::array<std::pair<LQuad, int>, MAX_DOF>& FEs, const int& FE_count);
+        void elements_creation(const int N_cr, const int N_cn1, const int N_cn2, const int N_cl, const int N_gc, const int N_tzmk);
     public:
         DM_FEmodel(DM_Geom2d& geom, const double GC, const double TZMK, const double AMg,
                    const int N_cr, const int N_cn1, const int N_cn2, const int N_cl, const int N_gc, const int N_tzmk);

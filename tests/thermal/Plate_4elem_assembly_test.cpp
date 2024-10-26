@@ -25,7 +25,7 @@
     std::array<std::reference_wrapper<std::pair<Point, int>>, 4> Verts4 = {std::ref(n5), std::ref(n8), std::ref(n9), std::ref(n6)};
     LQuad FE4 = LQuad (Verts4, lambda, lambda);
 
-    std::array<std::pair<LQuad, int>, 4> FEs = {
+    std::array<std::optional<std::pair<LQuad, int>>, 4> FEs = {
     std::make_pair(FE1, 1),
     std::make_pair(FE2, 2),
     std::make_pair(FE3, 3),
@@ -38,7 +38,7 @@
         int i = 1;
         for (const auto& FE : FEs)
         {
-            std::cout << "FE" << i << ". LCM: \n" << FE.first.Cond_Mat() << std::endl;
+            std::cout << "FE" << i << ". LCM: \n" << FE.value().first.Cond_Mat() << std::endl;
             ++i;
         }
         Assembly<LQuad, 4>(GCM, DOF, &FEs);

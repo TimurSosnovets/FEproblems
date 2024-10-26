@@ -1,4 +1,5 @@
 #include "../../headers/thermal/Descent_module_2d.hpp"
+#include <string>
 
 
 // ГЕОМЕТРИЯ СПУСКАЕМОГО АППАРАТА
@@ -55,15 +56,15 @@ const double DM_Geom2d::r_cn2() const
 }
 
 // КОНЕЧНОЭЛЕМЕНТНАЯ МОДЕЛЬ СПУСКАЕМОГО АППАРАТА
+enum OuterState {CIRCLE, FIRST_CONE, SECOND_CONE, CYLINDER}; // Итерации по длине
+enum InnerState {GLASSY_CARBON, TZMK, AMg_6}; // Итерации по слоям
+
 // Разбиение на узлы
 void DM_FEmodel::nodes_creation(std::vector<std::pair<Point, int>>& Nodes, const int N_cr, const int N_cn1, const int N_cn2, const int N_cl, const int N_gc, const int N_tzmk)
 {
     Nodes.reserve(_DOF);
     int nbr = 1; // Номер узла
-    
-    enum OuterState {CIRCLE, FIRST_CONE, SECOND_CONE, CYLINDER}; // Итерации по длине
     const double step_CR = geometry.x_cr() / N_cr, step_CN1 = (geometry.x_cn1() - geometry.x_cr()) / N_cn1, step_CN2 = (geometry.x_cn2() - geometry.x_cn1()) / N_cn2, step_CL = (geometry.x_cl() - geometry.x_cn2()) / N_cl; // Шаг по длине
-    enum InnerState {GLASSY_CARBON, TZMK, AMg_6}; // Итерации по радиусу
     const double step_GC = h_GC / N_gc, step_TZMK = h_TZMK / N_tzmk; // Шаг по слою
     double x, y; // Координаты точки 
     double h; // Глубина относительно поверхности
@@ -153,11 +154,57 @@ void DM_FEmodel::nodes_creation(std::vector<std::pair<Point, int>>& Nodes, const
     }
 };
 
+// Создание элементов
+void DM_FEmodel::elements_creation(const int N_cr, const int N_cn1, const int N_cn2, const int N_cl, const int N_gc, const int N_tzmk)
+{
+    // Глобальный номер левой нижней вершины элемента
+    std::function<int(int, int)> k;
+    k = [this, N_gc, N_tzmk](int i, int j) 
+                { return i * (N_gc + N_tzmk + 1) + j; };
+    
+    int n_elem = 0; // Номер КЭ
+    double lambda; // Коэффициент теплопроводности
+    std::string mat;
+
+    std::cout << "\n\n\n Elements:\n";
+    for (int i = 0; i < N_cr + N_cn1 + N_cn2 + N_cl; ++i) // Шаг по длине 
+    {
+        InnerState IcurrentSt = GLASSY_CARBON;
+        mat = "Glassy carbon";
+        for (int j = 0; j < N_gc + N_tzmk + 1; ++j) // Шаг по слоям
+        {
+            switch (IcurrentSt)
+            {
+                case GLASSY_CARBON:
+                lambda = Lamda_GC;
+                if (j == N_gc) {IcurrentSt = TZMK; mat = "TZMK"; }
+                break;
+
+                case TZMK:
+                lambda = Lambda_TZMK;
+                if (j == N_gc + N_tzmk) {IcurrentSt = AMg_6; mat = "AMg6"; }
+                break;
+
+                case AMg_6:
+                lambda = Lambda_AMg;
+                break;
+            }
+            std::cout << "i = " << i << ", j = " << j << "; k = " << k(i,j) << std::endl;
+            _FEs[n_elem] = {LQuad({_Nodes[k(i, j)], _Nodes[k(i+1, j)], _Nodes[k(i+1, j+1)], _Nodes[k(i, j+1)]}, lambda, lambda), n_elem + 1};
+            std::cout << "Number " << n_elem + 1 << ": " << mat << ", " <<   _FEs[n_elem].value().first.Vertices()[0].get().second << ", " << _FEs[n_elem].value().first.Vertices()[1].get().second << ", " <<  _FEs[n_elem].value().first.Vertices()[2].get().second << ", " << _FEs[n_elem].value().first.Vertices()[3].get().second << "." << std::endl;
+            ++n_elem;
+        }
+    }
+}
+
 // Конструктор класса
 DM_FEmodel::DM_FEmodel(DM_Geom2d& geom, const double GC, const double TZMK, const double AMg, const int N_cr, const int N_cn1, const int N_cn2, const int N_cl, const int N_gc, const int N_tzmk) 
 : geometry(geom), h_GC (GC), h_TZMK(TZMK), h_AMg(AMg), _DOF((N_cr + N_cn1 + N_cn2 + N_cl + 1) * (N_gc + N_tzmk + 2))
 {
     nodes_creation(_Nodes, N_cr, N_cn1, N_cn2, N_cl, N_gc, N_tzmk);
+    elements_creation(N_cr, N_cn1, N_cn2, N_cl, N_gc, N_tzmk);
+    Assembly<LQuad, MAX_DOF>(_GCM, _DOF, &_FEs);
+    std::cout << "\n\n\n\nGCM: \n" << _GCM; 
 };
 
 // Возвращаемые значения
@@ -165,5 +212,4 @@ const std::vector<std::pair<Point, int>>& DM_FEmodel::Nodes() const
 {
     return _Nodes;
 }
-
 

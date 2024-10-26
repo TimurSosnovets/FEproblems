@@ -11,6 +11,7 @@ struct Point
 {
     double x, y;
 
+    Point() : x(0.0), y(0.0) {} // Initializes x and y to 0.0
     Point(double x, double y)
     {
         this->x = x;
@@ -47,6 +48,6 @@ class LQuad
         
         const std::array<std::reference_wrapper<std::pair<Point, int>>, 4> Vertices() const; 
         const Eigen::Matrix2d& D() const;
-        const Eigen::Matrix<double, 4, 4>& Cond_Mat() const;    
+        const Eigen::Matrix<double, 4, 4>& Cond_Mat() const;   
         double Temperature(const double xi, const double eta, const double& T1, const double& T2, const double& T3, const double& T4);
 };
