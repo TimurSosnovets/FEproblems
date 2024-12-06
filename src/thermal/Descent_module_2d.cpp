@@ -133,7 +133,7 @@ void DM_FEmodel::nodes_creation(std::vector<std::pair<Point, int>>& Nodes, const
             x = x_coord(is_circle);
             y = y_coord(x, h);                
             Nodes.emplace_back(std::make_pair(Point(x, y), nbr));
-            std::cout << "Number " << nbr << ". " << "OX = " << OX << ", OR = " << OR << ";   x = " << x << ", y = " << y << ".\n";
+            //std::cout << "Number " << nbr << ". " << "OX = " << OX << ", OR = " << OR << ";   x = " << x << ", y = " << y << ".\n";
             ++nbr;
         }
 
@@ -160,7 +160,7 @@ void DM_FEmodel::elements_creation(const int N_cr, const int N_cn1, const int N_
     // Глобальный номер левой нижней вершины элемента
     std::function<int(int, int)> k;
     k = [this, N_gc, N_tzmk](int i, int j) 
-                { return i * (N_gc + N_tzmk + 1) + j; };
+                { return i * (N_gc + N_tzmk + 1 + 1) + j; }; // количество эл-то вдоль слоя + 1;
     
     int n_elem = 0; // Номер КЭ
     double lambda; // Коэффициент теплопроводности
@@ -189,10 +189,10 @@ void DM_FEmodel::elements_creation(const int N_cr, const int N_cn1, const int N_
                 lambda = Lambda_AMg;
                 break;
             }
-            std::cout << "i = " << i << ", j = " << j << "; k = " << k(i,j) << std::endl;
+            //std::cout << "i = " << i << ", j = " << j << "; k = " << k(i,j) << std::endl;
             _FEs[n_elem] = {LQuad({_Nodes[k(i, j)], _Nodes[k(i+1, j)], _Nodes[k(i+1, j+1)], _Nodes[k(i, j+1)]}, lambda, lambda), n_elem + 1};
-            std::cout << "Number " << n_elem + 1 << ": " << mat << ", " <<   _FEs[n_elem].value().first.Vertices()[0].get().second << ", " << _FEs[n_elem].value().first.Vertices()[1].get().second << ", " <<  _FEs[n_elem].value().first.Vertices()[2].get().second << ", " << _FEs[n_elem].value().first.Vertices()[3].get().second << "." << std::endl;
-            ++n_elem;
+            //std::cout << "Number " << n_elem + 1 << ": " << mat << ", " <<   _FEs[n_elem].value().first.Vertices()[0].get().second << ", " << _FEs[n_elem].value().first.Vertices()[1].get().second << ", " <<  _FEs[n_elem].value().first.Vertices()[2].get().second << ", " << _FEs[n_elem].value().first.Vertices()[3].get().second << "." << std::endl;
+            ++n_elem; 
         }
     }
 }
@@ -204,12 +204,22 @@ DM_FEmodel::DM_FEmodel(DM_Geom2d& geom, const double GC, const double TZMK, cons
     nodes_creation(_Nodes, N_cr, N_cn1, N_cn2, N_cl, N_gc, N_tzmk);
     elements_creation(N_cr, N_cn1, N_cn2, N_cl, N_gc, N_tzmk);
     Assembly<LQuad, MAX_DOF>(_GCM, _DOF, &_FEs);
-    std::cout << "\n\n\n\nGCM: \n" << _GCM; 
+    //std::cout << "\n\n\n\nGCM: \n" << _GCM; 
 };
 
 // Возвращаемые значения
 const std::vector<std::pair<Point, int>>& DM_FEmodel::Nodes() const
 {
     return _Nodes;
+}
+
+const std::array<std::optional<std::pair<LQuad, int>>, MAX_DOF>& DM_FEmodel::FEs() const
+{
+    return _FEs;
+}
+
+const Eigen::MatrixXd& DM_FEmodel::GCM() const
+{
+    return _GCM;
 }
 

@@ -4,18 +4,18 @@
 std::array<std::pair<double, double>, 2> IntP = {{ {1/sqrt(3), 1.0}, {-1/sqrt(3), 1.0} }};
 
 // Функции формы
-Eigen::RowVector<double, 4> LQuad::Shape_Func(const double xi, const double eta) 
+Eigen::RowVector<double, 4> LQuad::Shape_Func(const double xi, const double eta) const
 {
     Eigen::RowVector<double, 4> N;
-    N[0] = (1/4) * (1 - eta) * (1 - xi);
-    N[1] = (1/4) * (1 - eta) * (1 + xi);
-    N[2] = (1/4) * (1 + eta) * (1 + xi);
-    N[3] = (1/4) * (1 + eta) * (1 - xi);
+    N[0] = (1/4.0) * (1 - eta) * (1 - xi);
+    N[1] = (1/4.0) * (1 - eta) * (1 + xi);
+    N[2] = (1/4.0) * (1 + eta) * (1 + xi);
+    N[3] = (1/4.0) * (1 + eta) * (1 - xi);
     return N;
 };
 
 // Частные производные функций формы 
-std::pair<std::array<double, 4>, std::array<double, 4>> LQuad::PD_Shape_Func(const double xi, const double eta) 
+std::pair<std::array<double, 4>, std::array<double, 4>> LQuad::PD_Shape_Func(const double xi, const double eta) const
 {
     std::array<double, 4> d_xi, d_eta;
 
@@ -33,7 +33,7 @@ std::pair<std::array<double, 4>, std::array<double, 4>> LQuad::PD_Shape_Func(con
 };
 
 // Матрица градиентов
-Eigen::Matrix<double, 2, 4> LQuad::Grad_Mat(const double xi, const double eta)
+Eigen::Matrix<double, 2, 4> LQuad::Grad_Mat(const double xi, const double eta) const
 {
     Eigen::Matrix<double, 2, 4> S;
     S << -(1/4.0) * (1 - eta), (1/4.0) * (1 - eta), (1/4.0) * (1 + eta), -(1/4.0) * (1 + eta),
@@ -42,7 +42,7 @@ Eigen::Matrix<double, 2, 4> LQuad::Grad_Mat(const double xi, const double eta)
 };
 
 // Функция отображения
-Point LQuad::Mapping(const double xi, const double eta)
+Point LQuad::Mapping(const double xi, const double eta) const
 {
     double x=0, y=0;
     auto N = Shape_Func(xi, eta);
@@ -56,16 +56,20 @@ Point LQuad::Mapping(const double xi, const double eta)
 }
 
 // Якобиан преобразования
-Eigen::Matrix2d LQuad::Jacobian(const double xi, const double eta)
+Eigen::Matrix2d LQuad::Jacobian(const double xi, const double eta) const
 {
     auto dN = PD_Shape_Func(xi, eta);
     Eigen::Matrix2d J = Eigen::Matrix2d::Zero();
     for (int i=0; i<4; ++i)
     {
-        J(0) += dN.first[i] * _coords[2*i];
-        J(1) += dN.first[i] * _coords[2*i + 1];
-        J(2) += dN.second[i] * _coords[2*i];
-        J(3) += dN.second[i] * _coords[2*i + 1];
+        // J(0) += dN.first[i] * _coords[2*i];
+        // J(1) += dN.first[i] * _coords[2*i + 1];
+        // J(2) += dN.second[i] * _coords[2*i];
+        // J(3) += dN.second[i] * _coords[2*i + 1];
+        J(0, 0) += dN.first[i] * _coords[2 * i];        // ∂x/∂ξ
+        J(0, 1) += dN.second[i] * _coords[2 * i];       // ∂x/∂η
+        J(1, 0) += dN.first[i] * _coords[2 * i + 1];    // ∂y/∂ξ
+        J(1, 1) += dN.second[i] * _coords[2 * i + 1];   // ∂y/∂η
     }
     return J;
 }
@@ -95,11 +99,22 @@ LQuad::LQuad(const std::array<std::reference_wrapper<std::pair<Point, int>>, 4> 
         {   
             S = Grad_Mat(IntP[i].first, IntP[j].first);
             J = Jacobian(IntP[i].first, IntP[j].first);
+            double detJ = J.determinant();
+            // std::cout << "\n Det J " << detJ << std::endl;
+            // if (detJ < 0) 
+            // {
+            //     throw std::runtime_error("Jacobian determinant below zero.");
+            // }
+            // if (std::abs(detJ) < 1e-10) 
+            // {
+            //     throw std::runtime_error("Jacobian determinant is too small, element may be distorted.");
+            // }
             _H += IntP[i].second * IntP[j].second * S.transpose() * J.inverse().transpose() * _D * J.inverse() * S * J.determinant();
         }
     }
       
 };
+
 
 // Возвращаемые значения
 const std::array<std::reference_wrapper<std::pair<Point, int>>, 4> LQuad::Vertices() const
@@ -118,8 +133,26 @@ const Eigen::Matrix<double, 4, 4>& LQuad::Cond_Mat() const
 }
 
 // Температура в точке элемента
-double LQuad::Temperature(const double xi, const double eta, const double& T1, const double& T2, const double& T3, const double& T4)
+double LQuad::Temperature(const double xi, const double eta, const double& T1, const double& T2, const double& T3, const double& T4) const
 {
     Eigen::RowVector<double, 4> N = Shape_Func(xi, eta);
     return (N[0] * T1 + N[1] * T2 + N[2] * T3 + N[3] * T4);
+}
+
+// Вектор тепловых нагрузок
+Eigen::Vector<double, 4> LQuad::Heat_Load(const double heat_flux) const
+{
+    Eigen::Matrix2d J; // Якобиан
+    Eigen::RowVector<double, 4> N; // Вектор функций форм
+    Eigen::Vector<double, 4> F = Eigen::Vector<double, 4>::Zero(); // Вектор узловых тепловых нагрузок
+    // Интегрирование в квадратурах
+    for (const auto& w : IntP)
+    {
+        J = Jacobian(w.first, -1);
+        std::cout << "\n Jacobian det: \n" << J.determinant() << "\n"; 
+        N = Shape_Func(w.first, -1);
+        //std::cout << "\n Shape Functions: \n" << N << "\n"; 
+        F += w.second * heat_flux * N.transpose() * J(0,0);
+    }
+    return F;
 }

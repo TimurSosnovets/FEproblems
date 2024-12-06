@@ -17,6 +17,10 @@ struct Point
         this->x = x;
         this->y = y;
     };
+    static double distance_to(const Point& p1, const Point& p2) 
+    {
+        return sqrt(pow(p2.x - p1.x, 2) + pow(p2.y - p1.y, 2));
+    }
 };
 
 // Изопараметрический линейный четрырехугольный конечный элемент
@@ -29,19 +33,19 @@ class LQuad
         Eigen::Matrix<double, 4, 4> _H; // Матрица теплопроводности элемента
 
         // Функции формы
-        Eigen::RowVector<double, 4> Shape_Func(const double xi, const double eta);
+        Eigen::RowVector<double, 4> Shape_Func(const double xi, const double eta) const;
 
         // Частные производные функций формы 
-        std::pair<std::array<double, 4>, std::array<double, 4>> PD_Shape_Func(const double xi, const double eta);
+        std::pair<std::array<double, 4>, std::array<double, 4>> PD_Shape_Func(const double xi, const double eta) const;
         
         // Матрица градиентов
-        Eigen::Matrix<double, 2, 4> Grad_Mat(const double xi, const double eta);
+        Eigen::Matrix<double, 2, 4> Grad_Mat(const double xi, const double eta) const;
 
         // Функция отображения
-        Point Mapping(const double xi, const double eta);
+        Point Mapping(const double xi, const double eta) const;
 
         // Якобиан преобразования
-        Eigen::Matrix2d Jacobian(const double xi, const double eta);
+        Eigen::Matrix2d Jacobian(const double xi, const double eta) const;
 
     public:
         LQuad(const std::array<std::reference_wrapper<std::pair<Point, int>>, 4> Vertices, const double k1, const double k2);
@@ -49,5 +53,6 @@ class LQuad
         const std::array<std::reference_wrapper<std::pair<Point, int>>, 4> Vertices() const; 
         const Eigen::Matrix2d& D() const;
         const Eigen::Matrix<double, 4, 4>& Cond_Mat() const;   
-        double Temperature(const double xi, const double eta, const double& T1, const double& T2, const double& T3, const double& T4);
+        double Temperature(const double xi, const double eta, const double& T1, const double& T2, const double& T3, const double& T4) const;
+        Eigen::Vector<double, 4> Heat_Load(const double heat_flux) const;
 };

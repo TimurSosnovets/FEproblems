@@ -54,6 +54,6 @@ class DM_FEmodel
         
         // Возвращаемые значения
         const std::vector<std::pair<Point, int>>& Nodes() const;
-        const std::array<std::pair<LQuad, int>, MAX_DOF>& FEs() const;
+        const std::array<std::optional<std::pair<LQuad, int>>, MAX_DOF>& FEs() const;
         const Eigen::MatrixXd& GCM() const;
 };      
