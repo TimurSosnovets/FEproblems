@@ -15,8 +15,8 @@ int main()
     DM_Geom2d Nes_corp_geom = DM_Geom2d(R_cr, R_c1, R_c2, X_cr, X_c1, X_c2, X_cl);
     
     // Сетка
-    N_cr = 1; N_cn1 = 1; N_cn2 = 1; N_cl = 1;
-    N_gc = 1; N_tzmk = 1;
+    N_cr = 10; N_cn1 = 7; N_cn2 = 5; N_cl = 3;
+    N_gc = 3; N_tzmk = 5;
     N_x = N_cr + N_cn1 + N_cn2 + N_cl; N_r = N_gc + N_tzmk + 1;
     std::cout << "Estimate length: " << (N_x) * (N_r) << std::endl;
     DM_FEmodel Nes_crop_fe = DM_FEmodel(Nes_corp_geom, 15, 45, 3, N_cr, N_cn1, N_cn2, N_cl, N_gc, N_tzmk);

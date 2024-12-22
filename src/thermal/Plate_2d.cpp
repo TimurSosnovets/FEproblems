@@ -11,7 +11,7 @@ void Plate_2d::nodes_creation(const int m, const int n)
        // Вдоль ОУ
        for (int j = 0; j < n + 1; ++j)
        {
-            _Nodes.emplace_back() = {Point(i * (L_x / n), j * (L_y / m)), k + 1};
+            _Nodes.emplace_back() = {Point(i * (L_x / m), j * (L_y / n)), k + 1};
             ++k;
        } 
     }

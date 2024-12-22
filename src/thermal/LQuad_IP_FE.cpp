@@ -62,13 +62,9 @@ Eigen::Matrix2d LQuad::Jacobian(const double xi, const double eta) const
     Eigen::Matrix2d J = Eigen::Matrix2d::Zero();
     for (int i=0; i<4; ++i)
     {
-        // J(0) += dN.first[i] * _coords[2*i];
-        // J(1) += dN.first[i] * _coords[2*i + 1];
-        // J(2) += dN.second[i] * _coords[2*i];
-        // J(3) += dN.second[i] * _coords[2*i + 1];
         J(0, 0) += dN.first[i] * _coords[2 * i];        // ∂x/∂ξ
-        J(0, 1) += dN.second[i] * _coords[2 * i];       // ∂x/∂η
-        J(1, 0) += dN.first[i] * _coords[2 * i + 1];    // ∂y/∂ξ
+        J(0, 1) += dN.first[i] * _coords[2 * i + 1];    // ∂y/∂ξ
+        J(1, 0) += dN.second[i] * _coords[2 * i];       // ∂x/∂η
         J(1, 1) += dN.second[i] * _coords[2 * i + 1];   // ∂y/∂η
     }
     return J;
@@ -100,15 +96,6 @@ LQuad::LQuad(const std::array<std::reference_wrapper<std::pair<Point, int>>, 4> 
             S = Grad_Mat(IntP[i].first, IntP[j].first);
             J = Jacobian(IntP[i].first, IntP[j].first);
             double detJ = J.determinant();
-            // std::cout << "\n Det J " << detJ << std::endl;
-            // if (detJ < 0) 
-            // {
-            //     throw std::runtime_error("Jacobian determinant below zero.");
-            // }
-            // if (std::abs(detJ) < 1e-10) 
-            // {
-            //     throw std::runtime_error("Jacobian determinant is too small, element may be distorted.");
-            // }
             _H += IntP[i].second * IntP[j].second * S.transpose() * J.inverse().transpose() * _D * J.inverse() * S * J.determinant();
         }
     }
