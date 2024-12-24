@@ -1,6 +1,7 @@
 #pragma once
 #include <cmath>
 #include "Structs.hpp"
+#include "Materials.hpp"
 #include "../../lib/eigen-3.4.0/Eigen/Dense"
 #include <iostream>
 
@@ -11,13 +12,15 @@ extern std::array<std::pair<double, double>, 2> IntP;
 
 
 // Изопараметрический линейный четрырехугольный конечный элемент
-class LQuad 
+class NEW_LQuad 
 {
     private:
-        std::array<std::reference_wrapper<std::pair<Point, int>>, 4> _verts; // Массив вершин с глобальной нумерацией
+        const std::array<Node&, 4> _Vertices; // Вершины
+        const int _Number; // Номер элемента
         Eigen::Vector<double, 8> _coords; // Вектор координат вершин элемента
-        Eigen::Matrix2d _D; // Матрица коэффициентов теплопроводности
+        const Material mat;
         Eigen::Matrix<double, 4, 4> _H; // Матрица теплопроводности элемента
+        double T_rep; // Репрезентативная температура
 
         // Функции формы
         Eigen::RowVector<double, 4> Shape_Func(const double xi, const double eta) const;
@@ -35,9 +38,9 @@ class LQuad
         Eigen::Matrix2d Jacobian(const double xi, const double eta) const;
 
     public:
-        LQuad(const std::array<std::reference_wrapper<std::pair<Point, int>>, 4> Vertices, const double k1, const double k2);
+        NEW_LQuad(const int N, const std::array<Node&, 4> Vertices, const Material M, std::array<double, 4> ND_T);
         
-        const std::array<std::reference_wrapper<std::pair<Point, int>>, 4> Vertices() const; 
+        const const std::array<Node&, 4> Vertices() const; 
         const Eigen::Matrix2d& D() const;
         const Eigen::Matrix<double, 4, 4>& Cond_Mat() const;   
         double Temperature(const double xi, const double eta, const double& T1, const double& T2, const double& T3, const double& T4) const;

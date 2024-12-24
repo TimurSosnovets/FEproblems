@@ -2,13 +2,13 @@
 #include "../../lib/eigen-3.4.0/Eigen/Sparse"
 #include "../../lib/eigen-3.4.0/Eigen/SparseQR"
 
-double q = 100000.0;
+double q = 10000.0;
 
 int main() 
 {
     // Исходные значения
-    const double Length_X = 800, Length_Y = 8;
-    const int Quantity_X = 8, Quantity_Y = 6, DOF = (Quantity_X + 1) * (Quantity_Y + 1);
+    const double Length_X = 10.0, Length_Y = 6.0;
+    const int Quantity_X = 10, Quantity_Y = 3, DOF = (Quantity_X + 1) * (Quantity_Y + 1);
 
     // Тестирование
     std::cout << " AMg-6 lambda: " << AMg_6.get_TCC(300);

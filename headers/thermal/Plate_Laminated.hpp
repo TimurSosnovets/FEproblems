@@ -17,7 +17,7 @@ class LPlate
         const std::array<Material, 3> Mtrl; // Материал слоёв
         const double Thns = 1; // Толщина пластины
 
-        std::vector<std::pair<Point, int>> _Nodes; // Массив узлов
+        std::vector<Node> _Nodes; // Массив узлов
         // std::vector<std::pair<int, std::array<,4>>
         const double _DOF; // Степень свободы
         std::array<std::optional<std::pair<LQuad, int>>, MAX_DOF> _FEs; // Массив конечных элементов
