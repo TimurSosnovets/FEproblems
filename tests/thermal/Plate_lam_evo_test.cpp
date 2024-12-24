@@ -1,4 +1,4 @@
-#include "../../headers/thermal/Plate_Laminated.hpp"
+#include "../../headers/thermal/2d_plate.hpp"
 #include "../../lib/eigen-3.4.0/Eigen/Sparse"
 #include "../../lib/eigen-3.4.0/Eigen/SparseQR"
 
