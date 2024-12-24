@@ -1,5 +1,5 @@
 #pragma once
-#include "LQuad_NEW.hpp"
+#include "LQuad_IP.hpp"
 #include <optional>
 
 template <typename U, int N>

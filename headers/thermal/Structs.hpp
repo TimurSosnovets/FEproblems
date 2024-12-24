@@ -23,6 +23,7 @@ struct Node
 
     Node() : point(Point(0,0)), gn(0) {}
     Node(Point p, int n) : point(p), gn(n) {}
+    Node(double x, double y, int n) : point(Point(x,y)), gn(n) {}
 };
 
 // Элемент
