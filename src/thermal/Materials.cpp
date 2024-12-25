@@ -42,6 +42,9 @@ double interp_lin(const std::vector<std::pair<double, double>>& data, double T)
 }
 
 
+// Конструктор по умолчанию
+Material::Material() : TCC({{0, 0}}), SHC({{0, 0}}), rho(0), const_prop(true) {};
+
 // Конструктор для непостоянных параметров
 Material::Material(std::vector<std::pair<double, double>> tcc, std::vector<std::pair<double, double>> shc, double r) :
     TCC(tcc), SHC(shc), rho(r), const_prop(false) {};

@@ -1,7 +1,9 @@
 #pragma once
+#include <numeric>
 #include <cmath>
 #include "Structs.hpp"
 #include "Materials.hpp"
+#include "LQuad_IP.hpp"
 #include "../../lib/eigen-3.4.0/Eigen/Dense"
 #include <iostream>
 
@@ -34,7 +36,7 @@ class LPlate
         const std::vector<Element>& Elements() const;
         Eigen::MatrixXd GCM(Eigen::VectorXd nodal_temps) const; // Глобальная матрица теплопроводности
         Eigen::MatrixXd GDM(Eigen::VectorXd nodal_temps) const; // Глобальная матрица демпфирования
-        Eigen::VectorXd F(const double q, Eigen::VectorXd nodal_temps) const; // Вектор узловых нагрузок
+        Eigen::VectorXd F(const double q, const double eps, Eigen::VectorXd nodal_temps) const; // Вектор узловых нагрузок
 
     
 };

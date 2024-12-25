@@ -34,7 +34,7 @@ class LQuad
         Eigen::Matrix2d Jacobian(const double xi, const double eta) const;
 
     public:
-        LQuad(const std::array<Node*, 4> v, const Material m);
+        LQuad(const std::vector<Node*> v, const Material m);
         
         const double Temperature(const double xi, const double eta, Eigen::Vector<double, 4> nodal_temps) const;
         const double Element_Temp(Eigen::Vector<double, 4> nodal_temps) const;

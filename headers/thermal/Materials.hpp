@@ -18,6 +18,8 @@ class Material
         const double rho; // Плотность 
         const bool const_prop; // Маркер зависимости от температуры
     public:
+        // Конструктор по умолчанию
+        Material();
         // Конструктор для непостоянных параметров
         Material(std::vector<std::pair<double, double>> tcc, std::vector<std::pair<double, double>> shc, double r);;
         // Конструктор для постоянных параметров

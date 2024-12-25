@@ -32,8 +32,20 @@ struct Element
     const std::vector<Node*> vertices; // Массив ссылок на узлы - вершины
     const int gn; // Номер элемента
     const Material material; // Материал элемента
-    const bool surface; // Флаг элемента на поверхности
+    const bool is_surface; // Флаг элемента на поверхности
 
-    Element(std::vector<Node*> v, int n, Material m, bool s = false) : vertices(v), gn(n), material(m), surface(s) {}
+    Element(std::vector<Node*> v, int n, Material m, bool s = false) : vertices(v), gn(n), material(m), is_surface(s) {}
 };
 
+// template <typename DerivedM, typename Derivedm>
+// void Assembly(Eigen::MatrixBase<DerivedM>& M, const Eigen::MatrixBase<Derivedm>& m, Element& el) 
+// {   
+
+//     for (int i = 0; i < m.rows(), ++i)
+//     {
+//         for (int j = 0; i < m.cols(), ++j)
+//         {
+
+//         }
+//     }
+// }

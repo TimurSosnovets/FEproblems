@@ -3,7 +3,7 @@
 // Узлы
 Node n1(Point(0,0), 1), n2(Point(800,0), 2), n3(Point(800,8), 3), n4(Point(0,8), 4);
 
-const std::array<Node*, 4> Vertices = {&n1, &n2, &n3, &n4};
+const std::vector<Node*> Vertices = {&n1, &n2, &n3, &n4};
 Eigen::Vector4d Nodal_temps = {300, 400, 500, 600};
 
 int main() 

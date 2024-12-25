@@ -72,8 +72,9 @@ Eigen::Matrix2d LQuad::Jacobian(const double xi, const double eta) const
 
 
 //Конструктор класcа LQuad
-LQuad::LQuad(const std::array<Node*, 4> v, const Material m) : _material(m)
-{       
+LQuad::LQuad(const std::vector<Node*> v, const Material m) : _material(m)
+{   
+    if (!(v.size() == 4)) throw std::invalid_argument("LQuad must have exactly 4 vertices!");
     // Создаем вектор координат
     for (int i = 0; i < v.size(); i+=1)
     {
