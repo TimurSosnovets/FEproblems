@@ -5,4 +5,10 @@ g++ .\Plate_simple_test.cpp -o main ../src/mechanical/*.cpp
 g++ .\DM_2d_static_test.cpp -o main ../../src/thermal/*.cpp
 g++ .\LQuad_test.cpp -o main ../../src/thermal/*.cpp
 g++ .\Plate_lam_evo_test.cpp -o main ../../src/thermal/*.cpp
+g++ .\Plate_lam_evo_test.cpp -o main ../../src/thermal/*.cpp -I../../headers/SimpleXlsx -L../../lib/build -lSimpleXlsx
+
+
+
+g++ .\Simple.cpp -o main ../../src/thermal/*.cpp -I../../headers/SimpleXlsx -L../../lib/build -lSimpleXlsx
+g++ .\Simple.cpp -o main  -I../../../headers/SimpleXlsx -L../../build -lSimpleXlsx
 ./main.exe
