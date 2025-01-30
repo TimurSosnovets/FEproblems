@@ -1,6 +1,6 @@
-#include "../../headers/thermal/2d_plate.hpp"
-#include "../../lib/eigen-3.4.0/Eigen/Sparse"
-#include "../../lib/eigen-3.4.0/Eigen/SparseQR"
+#include "../../include/2d_plate.hpp"
+#include "../../lib/Eigen/Sparse"
+#include "../../lib/Eigen/SparseQR"
 #include <chrono>
 
 
@@ -17,7 +17,7 @@
     const double q = 3.987e5;
         // Разбиение
     const int Quantity_W = 1;
-    const std::array<int, 3> Quantity_L = {15, 45, 2};
+    const std::array<int, 3> Quantity_L = {3, 9, 2};
     int dof = (std::accumulate(Quantity_L.begin(), Quantity_L.end(), 0) + 1) * (Quantity_W + 1);
     
     // Модель пластины 
@@ -64,7 +64,7 @@ int main()
     std::chrono::duration<double> elapsed_seconds = end - start;
 
    // Print the solution and the elapsed time
-    //std::cout << "\n\n Solution: \n" << Nodal_temps << std::endl;
+    std::cout << "\n\n Solution: \n" << Nodal_temps << std::endl;
     std::cout << "\nExecution time: " << elapsed_seconds.count() << " seconds" << std::endl;
     return 0;
 };

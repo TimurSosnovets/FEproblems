@@ -1,4 +1,4 @@
-#include  "../../headers/thermal/Materials.hpp"
+#include  "../include/Materials.hpp"
 
 // Линейная интерполяция (два вектора)
 double interp_lin(const std::vector<double>& temperatures, const std::vector<double>& values, double T)

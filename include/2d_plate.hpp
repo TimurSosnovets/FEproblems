@@ -4,7 +4,7 @@
 #include "Structs.hpp"
 #include "Materials.hpp"
 #include "LQuad_IP.hpp"
-#include "../../lib/eigen-3.4.0/Eigen/Dense"
+#include "../../lib/Eigen/Dense"
 #include <iostream>
 
 // Точки интегрирования

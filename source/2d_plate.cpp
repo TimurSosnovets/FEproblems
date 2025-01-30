@@ -1,4 +1,4 @@
-#include "../../headers/thermal/2d_plate.hpp"
+#include "../include/2d_plate.hpp"
 #include <iostream>
 
 
