@@ -8,7 +8,6 @@ g++ .\Plate_lam_evo_test.cpp -o main ../../src/thermal/*.cpp
 g++ .\Plate_lam_evo_test.cpp -o main ../../src/thermal/*.cpp -I../../headers/SimpleXlsx -L../../lib/build -lSimpleXlsx
 
 
-
-g++ .\Simple.cpp -o main ../../src/thermal/*.cpp -I../../headers/SimpleXlsx -L../../lib/build -lSimpleXlsx
-g++ .\Simple.cpp -o main  -I../../../headers/SimpleXlsx -L../../build -lSimpleXlsx
+g++ .\testXLDateTime.cpp -o main  -I../../lib/OpenXLSX/headers -L../../lib/OpenXLSX/libOpenXLSX.a -lOpenXLSX
+g++ .\Demo1.cpp -o main  -I../../lib/OpenXLSX/headers -L../../lib/OpenXLSX -lOpenXLSX
 ./main.exe
