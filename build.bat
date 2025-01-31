@@ -5,11 +5,11 @@ if not exist build (
 )
 cd build
 
-echo Running CMake with Visual Studio generator...
-cmake -G "Visual Studio 17 2022" ..
+echo Running CMake with MinGW...
+cmake -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ ..
 
-echo Building the project in Release mode...
-cmake --build . --config Release
+echo Building the project...
+mingw32-make
 
 echo Build complete!
 pause

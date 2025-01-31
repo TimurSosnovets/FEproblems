@@ -3,8 +3,6 @@
 #include "../lib/Eigen/SparseQR"
 #include <chrono>
 
-
-
     // Исходные значения
         // Геометрия (м)
     const double Length_X = 0.35;

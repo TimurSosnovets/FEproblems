@@ -14,6 +14,7 @@ include_directories(include)
 include_directories(lib/eigen-3.4.0)  # Eigen is header-only
 
 # Add OpenXLSX as a subdirectory
+add_definitions(-D__MINGW32__)
 add_subdirectory(lib/OpenXLSX)
 
 # Collect all source files (definitions of classes/methods)
