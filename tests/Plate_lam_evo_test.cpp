@@ -2,6 +2,26 @@
 #include "../lib/Eigen/Sparse"
 #include "../lib/Eigen/SparseQR"
 #include <chrono>
+#include <OpenXLSX.hpp>
+
+// Function to save Eigen vector to Excel
+void SaveToExcel(const Eigen::VectorXd& data, const std::string& filename) {
+    using namespace OpenXLSX;
+    
+    // Create a new workbook
+    XLDocument doc;
+    doc.create(filename, XLForceOverwrite);
+    auto wks = doc.workbook().worksheet("Sheet1");
+
+    // Write data to the worksheet
+    for (int i = 0; i < data.size(); ++i) {
+        wks.cell(i + 1, 1).value() = data(i); // Store each value in the first column
+    }
+
+    // Save the workbook
+    doc.save();
+    doc.close();
+}
 
     // Исходные значения
         // Геометрия (м)
@@ -63,5 +83,7 @@ int main()
    // Print the solution and the elapsed time
     std::cout << "\n\n Solution: \n" << Nodal_temps << std::endl;
     std::cout << "\nExecution time: " << elapsed_seconds.count() << " seconds" << std::endl;
+
+    SaveToExcel(Nodal_temps, "./build/sheets/nodal_temperatures.xlsx");
     return 0;
 };
