@@ -1,10 +1,9 @@
-#include "../../include/2d_plate.hpp"
-#include "../../lib/Eigen/Sparse"
-#include "../../lib/Eigen/SparseQR"
+#include "../include/2d_plate.hpp"
+#include "../lib/Eigen/Sparse"
+#include "../lib/Eigen/SparseQR"
 #include <chrono>
 
 
-// Вывод в эксель
 
     // Исходные значения
         // Геометрия (м)
