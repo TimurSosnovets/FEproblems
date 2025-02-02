@@ -1,4 +1,4 @@
-#include "../../headers/thermal/LQuad_IP.hpp"
+#include "../include/LQuad_IP.hpp"
 
 // Узлы
 Node n1(Point(0,0), 1), n2(Point(800,0), 2), n3(Point(800,8), 3), n4(Point(0,8), 4);
@@ -17,5 +17,6 @@ int main()
     auto F2 = Element.Heat_Load_Surf(1e5, 0.9, Nodal_temps, {0, 1});
 
     std::cout << "\n\nElement temperature: " << T_elem << "\n\nConductivity matrix:\n" << GCM << "\n\nDamping matrix\n" << GDM << "\n\nLoad 1:\n" << F1 << "\n\nLoad 2\n" << F2 << std::endl;
+    std::cin.get();
     return 0;
 };

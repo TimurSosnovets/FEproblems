@@ -5,23 +5,28 @@
 #include <OpenXLSX.hpp>
 
 // Function to save Eigen vector to Excel
-void SaveToExcel(const Eigen::VectorXd& data, const std::string& filename) {
+void SaveToExcel(const Eigen::VectorXd& data, const std::string& filename) 
+{
     using namespace OpenXLSX;
-    
-    // Create a new workbook
-    XLDocument doc;
-    doc.create(filename, XLForceOverwrite);
-    auto wks = doc.workbook().worksheet("Sheet1");
 
-    // Write data to the worksheet
-    for (int i = 0; i < data.size(); ++i) {
-        wks.cell(i + 1, 1).value() = data(i); // Store each value in the first column
+    try {
+        XLDocument doc;
+        doc.create(filename, XLForceOverwrite);
+        auto wks = doc.workbook().worksheet("Sheet1");
+
+        for (int i = 0; i < data.size(); ++i) {
+            wks.cell(i + 1, 1).value() = data(i);
+        }
+
+        doc.save();
+        doc.close();
+        std::cout << "Data successfully saved to " << filename << std::endl;
+    } 
+    catch (const std::exception& e) {
+        std::cerr << "Error while saving to Excel: " << e.what() << std::endl;
     }
-
-    // Save the workbook
-    doc.save();
-    doc.close();
 }
+
 
     // Исходные значения
         // Геометрия (м)
@@ -58,10 +63,11 @@ void SaveToExcel(const Eigen::VectorXd& data, const std::string& filename) {
             if (solver.info() != Eigen::Success) 
             {
                 std::cout << "Decomposition failed!" << std::endl;
-                break; // Handle error
+                std::cin.get();  // Чтобы не закрывалось окно консоли при проблеме
+                return Eigen::VectorXd::Zero(dof); 
             }
             Nodal_temps = solver.solve(Rh);
-        }
+        }     
 
         return Nodal_temps;
     }
@@ -69,21 +75,30 @@ void SaveToExcel(const Eigen::VectorXd& data, const std::string& filename) {
 
 int main() 
 {
-    // Start the timer
+    // Старт таймера
     auto start = std::chrono::high_resolution_clock::now();
 
     auto Nodal_temps = Evo_calc(Plate, q, eps, 300, 325, 1e-1);
 
-    // Stop the timer
+    // Остановка таймера
     auto end = std::chrono::high_resolution_clock::now();
 
-    // Calculate the elapsed time in seconds
+    // Вычисление времени в секундах
     std::chrono::duration<double> elapsed_seconds = end - start;
 
-   // Print the solution and the elapsed time
+    // Вывод решения и времени расчёта
     std::cout << "\n\n Solution: \n" << Nodal_temps << std::endl;
     std::cout << "\nExecution time: " << elapsed_seconds.count() << " seconds" << std::endl;
 
-    SaveToExcel(Nodal_temps, "./build/sheets/nodal_temperatures.xlsx");
+    // Проверка на вшивость
+    if (Nodal_temps.hasNaN()) 
+    {
+        std::cerr << "NaN detected in solution!" << std::endl;
+        std::cin.get();
+        return -1;
+    }
+
+    SaveToExcel(Nodal_temps, "NDL_TEMPS.xlsx");
+    std::cin.get();
     return 0;
 };

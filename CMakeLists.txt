@@ -20,11 +20,17 @@ add_subdirectory(lib/OpenXLSX)
 # Collect all source files (definitions of classes/methods)
 file(GLOB SOURCE_FILES source/*.cpp)
 
-# Specify the test file to compile
-set(TEST_FILE tests/Plate_lam_evo_test.cpp)
+# Collect all test files (*.cpp) from tests/ folder
+file(GLOB TEST_FILES tests/*.cpp)
 
-# Create an executable for the test file
-add_executable(FEProblemsTest ${TEST_FILE} ${SOURCE_FILES})
+# Create an executable for each test file
+foreach(TEST_FILE ${TEST_FILES})
+    # Extract the filename without extension (e.g., Plate_lam_evo_test)
+    get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
 
-# Link OpenXLSX to the test executable
-target_link_libraries(FEProblemsTest OpenXLSX::OpenXLSX)
+    # Create an executable for each test
+    add_executable(${TEST_NAME} ${TEST_FILE} ${SOURCE_FILES})
+
+    # Link OpenXLSX to each test executable
+    target_link_libraries(${TEST_NAME} OpenXLSX::OpenXLSX)
+endforeach()

@@ -1,6 +1,11 @@
+===========================
+Links to external libraries
+===========================
 https://github.com/troldal/OpenXLSX
-PATCH FOR OPENXLSX for g++(MINGW32)
-in XLDocument.cpp 
+
+=====================================================
+PATCH FOR OPENXLSX for g++(MINGW32) in XLDocument.cpp 
+=====================================================
 // ===== External Includes ===== //
 #include <algorithm>
 #ifdef ENABLE_NOWIDE
@@ -17,7 +22,9 @@ in XLDocument.cpp
 #include <sys/stat.h>     // for stat, to test if a file exists and if a file is a directory
 
 
+=====================
 Tasks.json for VSCode
+=====================
 {
     "version": "2.0.0",
     "tasks": [
@@ -38,3 +45,7 @@ Tasks.json for VSCode
     ]
 }
 
+=======================
+Modifications to VScode
+=======================
+ctrl+shift+p -> "C/C++: Edit Configurations (UI)" -> include path -> ${workspaceFolder}/**
