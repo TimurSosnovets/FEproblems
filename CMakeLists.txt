@@ -11,7 +11,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/output)
 
 # Include directories for headers
 include_directories(include)
-include_directories(lib/eigen-3.4.0)  # Eigen is header-only
+include_directories(lib/Eigen)  # Eigen is header-only
 
 # Add OpenXLSX as a subdirectory
 add_definitions(-D__MINGW32__)

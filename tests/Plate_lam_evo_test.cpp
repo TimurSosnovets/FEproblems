@@ -1,6 +1,8 @@
-#include "../include/2d_plate.hpp"
-#include "../lib/Eigen/Sparse"
-#include "../lib/Eigen/SparseQR"
+#include "2d_plate.hpp"
+// Eigen
+#include <Sparse>
+#include <SparseQR>
+// STL
 #include <chrono>
 #include <OpenXLSX.hpp>
 
