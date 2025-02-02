@@ -1,34 +1,10 @@
 #include "2d_plate.hpp"
+#include "Output.hpp"
 // Eigen
 #include <Sparse>
 #include <SparseQR>
 // STL
 #include <chrono>
-#include <OpenXLSX.hpp>
-
-// Function to save Eigen vector to Excel
-void SaveToExcel(const Eigen::VectorXd& data, const std::string& filename) 
-{
-    using namespace OpenXLSX;
-
-    try {
-        XLDocument doc;
-        doc.create(filename, XLForceOverwrite);
-        auto wks = doc.workbook().worksheet("Sheet1");
-
-        for (int i = 0; i < data.size(); ++i) {
-            wks.cell(i + 1, 1).value() = data(i);
-        }
-
-        doc.save();
-        doc.close();
-        std::cout << "Data successfully saved to " << filename << std::endl;
-    } 
-    catch (const std::exception& e) {
-        std::cerr << "Error while saving to Excel: " << e.what() << std::endl;
-    }
-}
-
 
     // Исходные значения
         // Геометрия (м)
@@ -41,7 +17,7 @@ void SaveToExcel(const Eigen::VectorXd& data, const std::string& filename)
     const double q = 3.987e5;
         // Разбиение
     const int Quantity_W = 1;
-    const std::array<int, 3> Quantity_L = {3, 9, 2};
+    const std::array<int, 3> Quantity_L = {15, 45, 2};
     int dof = (std::accumulate(Quantity_L.begin(), Quantity_L.end(), 0) + 1) * (Quantity_W + 1);
     
     // Модель пластины 
@@ -89,7 +65,6 @@ int main()
     std::chrono::duration<double> elapsed_seconds = end - start;
 
     // Вывод решения и времени расчёта
-    std::cout << "\n\n Solution: \n" << Nodal_temps << std::endl;
     std::cout << "\nExecution time: " << elapsed_seconds.count() << " seconds" << std::endl;
 
     // Проверка на вшивость
@@ -100,7 +75,8 @@ int main()
         return -1;
     }
 
-    SaveToExcel(Nodal_temps, "NDL_TEMPS.xlsx");
+    std::vector<std::pair<std::string, Eigen::VectorXd>> Data = {std::make_pair("Nodal Temps", Nodal_temps), std::make_pair("test", Eigen::VectorXd::Zero(100))};
+    Save_xlsx(Data);
     std::cin.get();
     return 0;
 };

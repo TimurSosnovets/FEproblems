@@ -2,7 +2,7 @@
 #include <cmath>
 #include "Structs.hpp"
 #include "Materials.hpp"
-#include "../lib/Eigen/Dense"
+#include <Dense>
 #include <iostream>
 
 
