@@ -169,7 +169,7 @@ Eigen::Vector<double, 4> LQuad::Heat_Load_Surf(const double heat_flux, const dou
     const double sigma = 5.67e-8; // Постоянная Стефана-Больцмана
     // Выделение температуры поверхности
     const double T_rep = 1.0/2.0 * (nodal_temps[s[0]] + nodal_temps[s[1]]);
-    const double J = 1.0 / 2.0 * (Point::distance_to(Point(_coords[2*s[0]], _coords[2*s[0]+1]), Point(_coords[2*s[1]], _coords[2*s[1]+1]))); // Якобиан
+    const double J = 1.0 / 2.0 * (Point::distance(Point(_coords[2*s[0]], _coords[2*s[0]+1]), Point(_coords[2*s[1]], _coords[2*s[1]+1]))); // Якобиан
     Eigen::RowVector<double, 4> N; // Вектор функций форм
     Eigen::Vector<double, 4> F = Eigen::Vector<double, 4>::Zero(); // Вектор узловых тепловых нагрузок
     // Интегрирование в квадратурах

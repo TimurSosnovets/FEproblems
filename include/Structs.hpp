@@ -7,14 +7,20 @@
 
 struct Point 
 {
-    const double x, y;
+    const double x, y, z;
 
-    Point() : x(0.0), y(0.0) {} // Initializes x and y to 0.0
-    Point(double X, double Y) : x(X), y(Y) {} 
+    // Дефолтный конструктор
+    Point() : x(0.0), y(0.0), z(0.0) {}
 
-    static double distance_to(const Point& p1, const Point& p2) 
+    // 2d конструктор
+    Point(double X, double Y) : x(X), y(Y), z(0.0) {} 
+
+    //3d конструктор
+    Point(double X, double Y, double Z) : x(X), y(Y), z(Z) {}
+
+    static double distance(const Point& p1, const Point& p2) 
     {
-        return sqrt(pow(p2.x - p1.x, 2) + pow(p2.y - p1.y, 2));
+        return sqrt(pow(p2.x - p1.x, 2) + pow(p2.y - p1.y, 2) + pow(p2.z - p1.z, 2));
     }
 };
 
@@ -24,9 +30,17 @@ struct Node
     const Point point; // Непосредственно точка
     const int gn; // Глобальный номер
 
-    Node() : point(Point(0,0)), gn(0) {}
-    Node(Point p, int n) : point(p), gn(n) {}
+    // Дефолтный конструктор
+    Node() : point(), gn(0) {}
+
+    // 2d конструктор
     Node(double x, double y, int n) : point(Point(x,y)), gn(n) {}
+
+    // 3d конструктор
+    Node(double x, double y, double z, int n) : point(Point(x,y,z)), gn(n) {}
+
+    // точка-конструктор
+    Node(Point p, int n) : point(p), gn(n) {}
 };
 
 // Элемент
