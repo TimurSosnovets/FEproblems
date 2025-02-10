@@ -1,6 +1,9 @@
 #pragma once
-#include "Materials.hpp"
+// STL
 #include <cmath>
+// Current project
+#include "Materials.hpp"
+
 
 struct Point 
 {
@@ -37,15 +40,3 @@ struct Element
     Element(std::vector<Node*> v, int n, Material m, bool s = false) : vertices(v), gn(n), material(m), is_surface(s) {}
 };
 
-// template <typename DerivedM, typename Derivedm>
-// void Assembly(Eigen::MatrixBase<DerivedM>& M, const Eigen::MatrixBase<Derivedm>& m, Element& el) 
-// {   
-
-//     for (int i = 0; i < m.rows(), ++i)
-//     {
-//         for (int j = 0; i < m.cols(), ++j)
-//         {
-
-//         }
-//     }
-// }

@@ -1,3 +1,14 @@
+============
+Requirements
+============
+In order to properly build this project msys2, g++, gcc, mingw-make have to be enstalled.
+
+Install msys2 then open ucrt64 and use commands below:
+pacman -Syu
+pacman -Su
+pacman -S mingw-w64-ucrt-x86_64-gcc
+pacman -S mingw-w64-ucrt-x86_64-make
+
 ===========================
 Links to external libraries
 ===========================

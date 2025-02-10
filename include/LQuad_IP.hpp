@@ -1,15 +1,16 @@
 #pragma once
+// STL
 #include <cmath>
+#include <iostream>
+// Eigen
+#include <Dense>
+// Current project
 #include "Structs.hpp"
 #include "Materials.hpp"
-#include <Dense>
-#include <iostream>
 
 
 // Точки интегрирования
 extern std::array<std::pair<double, double>, 2> IntP;
-
-
 
 // Изопараметрический линейный четрырехугольный конечный элемент
 class LQuad 
