@@ -15,7 +15,7 @@ extern std::array<std::pair<double, double>, 2> int_pnts;
 class LQube
 {
     private:
-        const Eigen::Vector<double, 24> _coords; // Координаты вершин
+        Eigen::Vector<double, 24> _coords; // Координаты вершин
         const Material _material; // Материал элемента
         const bool is_surface; // Маркер поверхностного элемента (поверность всегда - узлы 1-4)
 

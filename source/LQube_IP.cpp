@@ -1,7 +1,7 @@
 #include "LQube_IP.hpp"
 
 // Точки интегрирования и весовые коэффициенты
-std::array<std::pair<double, double>, 2> IntP = {{ {1/sqrt(3), 1.0}, {-1/sqrt(3), 1.0} }};
+std::array<std::pair<double, double>, 2> int_pnts = {{ {1/sqrt(3), 1.0}, {-1/sqrt(3), 1.0} }};
 
 // Функции формы
 Eigen::RowVector<double, 8> LQube::Shape_Func(const double xi, const double eta, const double zeta) const
@@ -114,4 +114,150 @@ Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double 
     }
 
     return J;
+}
+
+// Конструктор класса LQube
+LQube::LQube(const std::vector<Node*> v, const Material& m, const bool surf) : _material(m), is_surface(surf)
+{
+    /*Проверка количества узлов*/
+    if (!(v.size() == 8)) throw std::invalid_argument("LQube must have exactly 8 vertices!");
+
+    /*Заполнение вектора координат*/
+    for (int i = 0; i < v.size(); ++i)
+    {
+        _coords[3 * i] = v[i] -> point.x;
+        _coords[3 * i + 1] = v[i] -> point.y;
+        _coords[3 * i + 2] = v[i] -> point.z;
+    }
+}
+
+// Температура в точке элемента при заданных узловых температурах
+const double LQube::Point_Temp(const double xi, const double eta, const double zeta, const Eigen::Vector<double, 24>& nodal_temps) const
+{
+    Eigen::RowVector<double, 8> N = Shape_Func(xi, eta, zeta);
+    return (N * nodal_temps);
+}
+
+// Репрезентативная температура элемента
+const double LQube::Element_Temp(const Eigen::Vector<double, 24>& nodal_temps) const
+{
+    /*Инициализация*/
+    double T_rep = 0; 
+    double T;
+
+    /*Численное интегрирование*/
+    for (int i = 0; i < int_pnts.size(); ++i)
+    {
+        for (int j = 0; j < int_pnts.size(); ++j)
+        {   
+            for (int k = 0; k < int_pnts.size(); ++k)
+            {
+                T = Point_Temp(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first, nodal_temps); // Температура в точках интегрирования
+                T_rep += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * T;
+            }
+        }
+    }
+
+    return T_rep / 8;
+}
+
+// Матрица теплопроводности при заданных узловых температурах
+Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(const Eigen::Vector<double, 24>& nodal_temps) const
+{   
+    /*Инициализация*/
+    Eigen::Matrix<double, 3, 8> B; // Матрица градиентов
+    Eigen::Matrix3d D; // Матрица материала
+    Eigen::Matrix3d J; // Якобиан преобразования
+    double detJ; // Детерминант Якобиана преобразования
+    Eigen::Matrix<double, 8, 8> H = Eigen::Matrix<double, 8, 8>::Zero(); // Матрица теплопроводности
+
+    /*Определение репрезентативной температуры элемента*/
+    const double T_rep = Element_Temp(nodal_temps);
+
+    /*Заполнение матрицы материала D*/
+    double Lambda = _material.get_TCC(T_rep); // Коэффициент теплопроводности при заданной температуре элемента
+    D << 
+        Lambda, 0, 0,
+        0, Lambda, 0,
+        0, 0, Lambda;
+    
+    /*Численное интегрирование*/
+    for (int i = 0; i < int_pnts.size(); ++i)
+    {
+        for (int j = 0; j < int_pnts.size(); ++j)
+        {   
+            for (int k = 0; k < int_pnts.size(); ++k)
+            {
+                J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                detJ = J.determinant();
+
+                H += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * B.transpose() * D * B * detJ; 
+            }
+        }
+    }
+
+    return H;
+} 
+
+// Матрица демфпирования (теплоёмкости) при заданных узловых температурах
+Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Eigen::Vector<double, 24>& nodal_temps) const
+{
+    /*Инициализация*/
+    Eigen::RowVector<double, 8> N; // Матрица функций форм
+    Eigen::Matrix3d J; // Якобиан преобразования
+    double detJ; // Детерминант Якобиана преобразования
+    double rho = _material.dens(); // Плотность материала
+    double c; // Удельная теплоёмкость материала при заданной температуре
+    Eigen::Matrix<double, 8, 8> C = Eigen::Matrix<double, 8, 8>::Zero(); // Матрица демпфирования (теплоёмкости)
+
+    /*Определение репрезентативной температуры элемента*/
+    const double T_rep = Element_Temp(nodal_temps);
+
+    /*Численное интегрирование*/
+    for (int i = 0; i < int_pnts.size(); ++i)
+    {
+        for (int j = 0; j < int_pnts.size(); ++j)
+        {   
+            for (int k = 0; k < int_pnts.size(); ++k)
+            {
+                N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                detJ = J.determinant();
+                c = _material.get_SHC(T_rep);
+
+                C += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * rho * c * N.transpose() * N * detJ; 
+            }
+        }
+    }
+
+    return C;
+} 
+
+// Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
+Eigen::Vector<double, 24> LQube::Heat_Load_Surf(const double heat_flux, const double& eps, Eigen::Vector<double, 24>& nodal_temps, const double Jacobian) const
+{
+    /*Проверка, является ли элемент поверхностным*/
+    if (! is_surface) return Eigen::Vector<double, 24>::Zero();
+
+    /*Инициализация*/
+    const double sigma = 5.67e-8; // Постоянная Стефана-Больцмана
+    double T_surf = 0; // Температура излучающей поверхности
+    Eigen::RowVector<double, 8> N; // Матрица функций форм
+    Eigen::Vector<double, 24> F = Eigen::Vector<double, 24>::Zero(); // Вектор узловых нагрузок [Вт]
+
+    /*Определение репрезентативной температуры излучающей поверхности*/ // Поверхность всегда - на (-1) по Z
+    for (int i = 0; i < 4; ++i) {T_surf += (1.0 / 4.0) * nodal_temps(i);}
+
+    /*Численное интегрирование (по поверхности элемента -> z = -1)*/
+    for (int i = 0; i < int_pnts.size(); ++i)
+    {
+        for (int j = 0; j < int_pnts.size(); ++j)
+        {   
+            N = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1);
+            F += int_pnts[i].second * int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N.transpose() * Jacobian; 
+        }
+    }
+
+    return F;
 }
