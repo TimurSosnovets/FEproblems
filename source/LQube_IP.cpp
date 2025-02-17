@@ -166,10 +166,12 @@ Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(Eigen::Vector<double, 8>& nodal_temp
 {   
     /*Инициализация*/
     Eigen::Matrix<double, 3, 8> B; // Матрица градиентов
+    Eigen::Matrix<double, 3, 8> B_T; // Матрица градиентов (транспонированная)
     Eigen::Matrix3d D; // Матрица материала
     Eigen::Matrix3d J; // Якобиан преобразования
     double detJ; // Детерминант Якобиана преобразования
     Eigen::Matrix<double, 8, 8> H = Eigen::Matrix<double, 8, 8>::Zero(); // Матрица теплопроводности
+    int nbr = 0;
 
     /*Определение репрезентативной температуры элемента*/
     const double T_rep = Element_Temp(nodal_temps);
@@ -187,12 +189,23 @@ Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(Eigen::Vector<double, 8>& nodal_temp
         for (int j = 0; j < int_pnts.size(); ++j)
         {   
             for (int k = 0; k < int_pnts.size(); ++k)
-            {
-                J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-                B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-                detJ = J.determinant();
+            {   
+                if ((Grad.has_value()) && (Grad_T.has_value()) && (dJac.has_value()))
+                {
+                    B = Grad.value()[nbr];
+                    B_T = Grad_T.value()[nbr];
+                    detJ = dJac.value()[nbr];
+                    ++nbr;
+                }
+                else
+                {
+                    J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                    B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                    B_T = B.transpose();
+                    detJ = J.determinant();
+                }
 
-                H += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * B.transpose() * D * B * detJ; 
+                H += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * B_T * D * B * detJ; 
             }
         }
     }
