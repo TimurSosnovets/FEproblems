@@ -171,7 +171,7 @@ Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(Eigen::Vector<double, 8>& nodal_temp
     Eigen::Matrix3d J; // Якобиан преобразования
     double detJ; // Детерминант Якобиана преобразования
     Eigen::Matrix<double, 8, 8> H = Eigen::Matrix<double, 8, 8>::Zero(); // Матрица теплопроводности
-    int nbr = 0;
+    int nbr = 0; // Счётчик
 
     /*Определение репрезентативной температуры элемента*/
     const double T_rep = Element_Temp(nodal_temps);
@@ -218,11 +218,13 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(Eigen::Vector<double, 8>& nodal_temp
 {
     /*Инициализация*/
     Eigen::RowVector<double, 8> N; // Матрица функций форм
+    Eigen::Vector<double, 8> N_T; // Матрица функций форм (транспонированная)
     Eigen::Matrix3d J; // Якобиан преобразования
     double detJ; // Детерминант Якобиана преобразования
     double rho = _material.dens(); // Плотность материала
     double c; // Удельная теплоёмкость материала при заданной температуре
     Eigen::Matrix<double, 8, 8> C = Eigen::Matrix<double, 8, 8>::Zero(); // Матрица демпфирования (теплоёмкости)
+    int nbr = 0; // Счётчик
 
     /*Определение репрезентативной температуры элемента*/
     const double T_rep = Element_Temp(nodal_temps);
@@ -234,9 +236,20 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(Eigen::Vector<double, 8>& nodal_temp
         {   
             for (int k = 0; k < int_pnts.size(); ++k)
             {
-                N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-                J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-                detJ = J.determinant();
+                if ((Shape.has_value()) && (Shape_T.has_value()) && (dJac.has_value()))
+                {
+                    N = Shape.value()[nbr];
+                    N_T = Shape_T.value()[nbr];
+                    detJ = dJac.value()[nbr];
+                    ++nbr;
+                }
+                else
+                {
+                    N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                    N_T = N.transpose();
+                    J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                    detJ = J.determinant();
+                }
                 c = _material.get_SHC(T_rep);
 
                 C += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * rho * c * N.transpose() * N * detJ; 
@@ -248,13 +261,14 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(Eigen::Vector<double, 8>& nodal_temp
 } 
 
 // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
-Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const double heat_flux, const double& eps, Eigen::Vector<double, 8>& nodal_temps, double Jacobian) const
+Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const double heat_flux, const double& eps, Eigen::Vector<double, 8>& nodal_temps, double surf_area) const
 {
     /*Инициализация*/
     const double sigma = 5.67e-8; // Постоянная Стефана-Больцмана
     double T_surf = 0; // Температура излучающей поверхности
-    Eigen::RowVector<double, 8> N; // Матрица функций форм
+    Eigen::RowVector<double, 8> N_T; // Матрица функций форм (транспонированная)
     Eigen::Vector<double, 8> F = Eigen::Vector<double, 8>::Zero(); // Вектор узловых нагрузок [Вт]
+    int surf = 0; // Счётчик
 
     /*Определение репрезентативной температуры излучающей поверхности*/ // Поверхность всегда - на (-1) по Z
     for (int i = 0; i < 4; ++i) {T_surf += (1.0 / 4.0) * nodal_temps(i);}
@@ -264,8 +278,17 @@ Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const double heat_flux, const dou
     {
         for (int j = 0; j < int_pnts.size(); ++j)
         {   
-            N = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1);
-            F += (1.0/4.0) * int_pnts[i].second * int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N.transpose() * Jacobian; 
+            if (Shape_surf.has_value())
+            {
+                N_T = Shape_surf.value()[surf];
+                ++surf;
+            }
+            else
+            {
+                N_T = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
+            }
+
+            F += (1.0/4.0) * int_pnts[i].second * int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * surf_area; 
         }
     }
 
@@ -280,14 +303,17 @@ void LQube::calculate_element()
     Grad_T = std::array<Eigen::Matrix<double, 8, 3>, 8>{};
     Shape = std::array<Eigen::RowVector<double, 8>, 8>{};
     Shape_T = std::array<Eigen::Vector<double, 8>, 8>{};
+    Shape_surf = std::array<Eigen::Vector<double, 8>, 4>{};
     dJac = std::array<double, 8>{};
-    int nbr = 0;
+    int nbr = 0, surf = 0; // Счётчики
 
     /*Заполнение*/
     for (int i = 0; i < int_pnts.size(); ++i)
-        {
+    {
         for (int j = 0; j < int_pnts.size(); ++j)
         {   
+            Shape_surf.value()[surf] = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
+            ++surf;
             for (int k = 0; k < int_pnts.size(); ++k)
             {   
                 auto N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);

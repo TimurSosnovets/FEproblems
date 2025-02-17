@@ -1,4 +1,4 @@
-#include  "../include/Materials.hpp"
+#include  "Materials.hpp"
 
 // Линейная интерполяция (два вектора)
 double interp_lin(const std::vector<double>& temperatures, const std::vector<double>& values, double T)
@@ -71,7 +71,6 @@ double Material::dens() const
 {
     return rho;
 }
-
 
 // СУ-2500
 const Material GC_2500

@@ -24,7 +24,9 @@ class LQube
         std::optional<std::array<Eigen::Matrix<double, 8, 3>, 8>> Grad_T;// Матрица градиентов (транспонированная)
         std::optional<std::array<Eigen::RowVector<double, 8>, 8>> Shape; // Функции формы
         std::optional<std::array<Eigen::Vector<double, 8>, 8>> Shape_T; // Функции формы (транспонированные)
+        std::optional<std::array<Eigen::Vector<double, 8>, 4>> Shape_surf; // Функции формы по поверхности
         std::optional<std::array<double, 8>> dJac; // Определитель якобиана преобразования
+ 
 
         /*Внутренние функции*/
         // Функции формы
@@ -52,7 +54,7 @@ class LQube
         /*Матрицы элемента*/
         Eigen::Matrix<double, 8, 8> Cond_Mat(Eigen::Vector<double, 8>& nodal_temps) const; // Матрица теплопроводности
         Eigen::Matrix<double, 8, 8> Damp_Mat(Eigen::Vector<double, 8>& nodal_temps) const; // Матрица демфпирования (теплоёмкости)
-        Eigen::Vector<double, 8> Heat_Load_Surf(const double heat_flux, const double& eps, Eigen::Vector<double, 8>& nodal_temps, double Jacobian) const; // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
+        Eigen::Vector<double, 8> Heat_Load_Surf(const double heat_flux, const double& eps, Eigen::Vector<double, 8>& nodal_temps, double surf_area) const; // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
 
         /*Числовые значения элемента*/
         const double Point_Temp(const double xi, const double eta, const double zeta, const Eigen::Vector<double, 8>& nodal_temps) const; // Температура заданной точке элемента

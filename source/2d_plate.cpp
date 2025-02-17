@@ -96,7 +96,7 @@ void LPlate::elements_creation(const int W, const std::array<int, 3> L_h)
                 break;
             }
             std::vector<Node*> vertices = {&_nodes[k(i,j)], &_nodes[k(i+1,j)], &_nodes[k(i+1,j+1)], &_nodes[k(i,j+1)]};
-            _elements.emplace_back(vertices, n, *material, is_surface);
+            _elements.emplace_back(vertices, n, material, is_surface);
             is_surface = false;
             ++n;
             ++j;  
@@ -118,13 +118,6 @@ LPlate::LPlate(const std::array<Material, 3> Layer_materials, const double Width
     std::cout << std::endl;
 
     elements_creation(FEC_width, FEC_layer);
-    // Тестовый вывод
-    for (const auto& element : _elements)
-    {
-        std::cout << "\n Element "<< element.gn << " nodes:";
-        for (const auto& node : element.vertices) {std::cout << " " << node->gn;}
-        std::cout << "; lambda = " << element.material.get_TCC(300) << "; is surfase?: " << element.is_surface << " ; ";
-    }
     std::cout << std::endl;
 };
 
@@ -145,7 +138,7 @@ Eigen::MatrixXd LPlate::GCM(Eigen::VectorXd nodal_temps) const
         }
 
         // Создаём конечный элемент
-        LQuad Quad(element.vertices, element.material);
+        LQuad Quad(element.vertices, *element.material);
         H = Quad.Cond_Mat(T); 
 
         // Переносим значения в глобальную матрицу
@@ -181,7 +174,7 @@ Eigen::MatrixXd LPlate::GDM(Eigen::VectorXd nodal_temps) const
         }
 
         // Создаём конечный элемент
-        LQuad Quad(element.vertices, element.material);
+        LQuad Quad(element.vertices, *element.material);
         C = Quad.Damp_Mat(T); 
 
         // Переносим значения в глобальную матрицу
@@ -219,7 +212,7 @@ Eigen::VectorXd LPlate::F(const double q, const double eps, Eigen::VectorXd noda
         }
 
         // Создаём конечный элемент
-        LQuad Quad(element.vertices, element.material);
+        LQuad Quad(element.vertices, *element.material);
         f = Quad.Heat_Load_Surf(q, eps, T, {0, 1}); 
 
         // Переносим значения в глобальную матрицу

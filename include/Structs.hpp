@@ -1,6 +1,8 @@
 #pragma once
 // STL
 #include <cmath>
+#include <iostream>
+#include <string>
 // Current project
 #include "Materials.hpp"
 
@@ -48,9 +50,37 @@ struct Element
 {
     const std::vector<Node*> vertices; // Массив ссылок на узлы - вершины
     const int gn; // Номер элемента
-    const Material material; // Материал элемента
+    const Material* material; // Материал элемента
     const bool is_surface; // Флаг элемента на поверхности
+    const double surface_area; // Площадь повехности
+    std::string* layer = nullptr; // Положение по слою
+    std::string* primitive = nullptr; // Положение по части аппарата
+    
 
-    Element(std::vector<Node*> v, int n, Material m, bool s = false) : vertices(v), gn(n), material(m), is_surface(s) {}
+    // Конструктор
+    Element(std::vector<Node*> v, int n, Material* m, bool s = false, double area = 0) : vertices(v), gn(n), material(m), is_surface(s), surface_area(area) {}
+
+    void get_info() const
+    {   
+        /*Инициализация*/
+        std::cout << "Element " << gn << ": ";
+        /*Является ли поверхностным*/
+        if (is_surface) {std::cout << "surface, ";}
+        else {std::cout << "internal, ";}
+        /*Слой*/
+        if (layer == nullptr) {std::cout << "layer - not assigned, ";}
+        else {std::cout << "layer - " << *layer << ", ";}
+        /*Геометрическая часть аппарата*/
+        if (primitive == nullptr) {std::cout << "primitive - not assigned, ";}
+        else {std::cout << "primitive - " << *primitive << ". ";}
+        /*Узлы*/
+        std::cout << "Nodes:";
+        for (const auto& node : vertices)
+        {
+            std::cout << " " << node->gn << ",";
+        }
+        /*Завершение*/
+        std::cout << "." << std::endl;
+    }
 };
 
