@@ -117,10 +117,10 @@ Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double 
 }
 
 // Конструктор класса LQube
-LQube::LQube(const std::vector<Node*> v, const Material& m, const bool surf) : _material(m), is_surface(surf)
+LQube::LQube(std::vector<Node*> v, const Material& m) : _material(m)
 {
     /*Проверка количества узлов*/
-    if (!(v.size() == 8)) throw std::invalid_argument("LQube must have exactly 8 vertices!");
+    if (!(v.size() == 8)) throw std::invalid_argument("8 vertices must have exactly LQube...");
 
     /*Заполнение вектора координат*/
     for (int i = 0; i < v.size(); ++i)
@@ -132,14 +132,14 @@ LQube::LQube(const std::vector<Node*> v, const Material& m, const bool surf) : _
 }
 
 // Температура в точке элемента при заданных узловых температурах
-const double LQube::Point_Temp(const double xi, const double eta, const double zeta, const Eigen::Vector<double, 24>& nodal_temps) const
+const double LQube::Point_Temp(const double xi, const double eta, const double zeta, const Eigen::Vector<double, 8>& nodal_temps) const
 {
     Eigen::RowVector<double, 8> N = Shape_Func(xi, eta, zeta);
     return (N * nodal_temps);
 }
 
 // Репрезентативная температура элемента
-const double LQube::Element_Temp(const Eigen::Vector<double, 24>& nodal_temps) const
+const double LQube::Element_Temp(const Eigen::Vector<double, 8>& nodal_temps) const
 {
     /*Инициализация*/
     double T_rep = 0; 
@@ -162,7 +162,7 @@ const double LQube::Element_Temp(const Eigen::Vector<double, 24>& nodal_temps) c
 }
 
 // Матрица теплопроводности при заданных узловых температурах
-Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(const Eigen::Vector<double, 24>& nodal_temps) const
+Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(Eigen::Vector<double, 8>& nodal_temps) const
 {   
     /*Инициализация*/
     Eigen::Matrix<double, 3, 8> B; // Матрица градиентов
@@ -201,7 +201,7 @@ Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(const Eigen::Vector<double, 24>& nod
 } 
 
 // Матрица демфпирования (теплоёмкости) при заданных узловых температурах
-Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Eigen::Vector<double, 24>& nodal_temps) const
+Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(Eigen::Vector<double, 8>& nodal_temps) const
 {
     /*Инициализация*/
     Eigen::RowVector<double, 8> N; // Матрица функций форм
@@ -235,16 +235,13 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Eigen::Vector<double, 24>& nod
 } 
 
 // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
-Eigen::Vector<double, 24> LQube::Heat_Load_Surf(const double heat_flux, const double& eps, Eigen::Vector<double, 24>& nodal_temps, const double Jacobian) const
+Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const double heat_flux, const double& eps, Eigen::Vector<double, 8>& nodal_temps, double Jacobian) const
 {
-    /*Проверка, является ли элемент поверхностным*/
-    if (! is_surface) return Eigen::Vector<double, 24>::Zero();
-
     /*Инициализация*/
     const double sigma = 5.67e-8; // Постоянная Стефана-Больцмана
     double T_surf = 0; // Температура излучающей поверхности
     Eigen::RowVector<double, 8> N; // Матрица функций форм
-    Eigen::Vector<double, 24> F = Eigen::Vector<double, 24>::Zero(); // Вектор узловых нагрузок [Вт]
+    Eigen::Vector<double, 8> F = Eigen::Vector<double, 8>::Zero(); // Вектор узловых нагрузок [Вт]
 
     /*Определение репрезентативной температуры излучающей поверхности*/ // Поверхность всегда - на (-1) по Z
     for (int i = 0; i < 4; ++i) {T_surf += (1.0 / 4.0) * nodal_temps(i);}
@@ -255,9 +252,43 @@ Eigen::Vector<double, 24> LQube::Heat_Load_Surf(const double heat_flux, const do
         for (int j = 0; j < int_pnts.size(); ++j)
         {   
             N = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1);
-            F += int_pnts[i].second * int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N.transpose() * Jacobian; 
+            F += (1.0/4.0) * int_pnts[i].second * int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N.transpose() * Jacobian; 
         }
     }
 
     return F;
+}
+
+// Предрасчёт характеристик
+void LQube::calculate_element()
+{
+    /*Инициализация*/
+    Grad = std::array<Eigen::Matrix<double, 3, 8>, 8>{};
+    Grad_T = std::array<Eigen::Matrix<double, 8, 3>, 8>{};
+    Shape = std::array<Eigen::RowVector<double, 8>, 8>{};
+    Shape_T = std::array<Eigen::Vector<double, 8>, 8>{};
+    dJac = std::array<double, 8>{};
+    int nbr = 0;
+
+    /*Заполнение*/
+    for (int i = 0; i < int_pnts.size(); ++i)
+        {
+        for (int j = 0; j < int_pnts.size(); ++j)
+        {   
+            for (int k = 0; k < int_pnts.size(); ++k)
+            {   
+                auto N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                auto J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                auto B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                auto dJ = J.determinant(); 
+
+                Grad.value()[nbr] = B;
+                Grad_T.value()[nbr] = B.transpose();
+                Shape.value()[nbr] = N;
+                Shape_T.value()[nbr] = N.transpose();
+                dJac.value()[nbr] = dJ;
+                ++nbr;
+            }
+        }
+    }   
 }
