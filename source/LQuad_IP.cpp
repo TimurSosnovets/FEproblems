@@ -72,7 +72,7 @@ Eigen::Matrix2d LQuad::Jacobian(const double xi, const double eta) const
 
 
 //Конструктор класcа LQuad
-LQuad::LQuad(const std::vector<Node*> v, const Material m) : _material(m)
+LQuad::LQuad(const std::vector<Node*> v,const Material* m) : _material(m)
 {   
     if (!(v.size() == 4)) throw std::invalid_argument("LQuad must have exactly 4 vertices!");
     // Создаем вектор координат
@@ -117,8 +117,8 @@ Eigen::Matrix<double, 4, 4> LQuad::Cond_Mat(Eigen::Vector<double, 4> nodal_temps
 
     //Матрица D
     Eigen::Matrix2d D;
-    D << _material.get_TCC(T_rep), 0,
-          0, _material.get_TCC(T_rep);
+    D << _material->get_TCC(T_rep), 0,
+          0, _material->get_TCC(T_rep);
 
     Eigen::Matrix<double, 2, 4> S; // Матрица градиентов
     Eigen::Matrix2d J; // Якобиан преобразования
@@ -157,7 +157,7 @@ Eigen::Matrix<double, 4, 4> LQuad::Damp_Mat(Eigen::Vector<double, 4> nodal_temps
             N = Shape_Func(IntP[i].first, IntP[j].first);
             J = Jacobian(IntP[i].first, IntP[j].first);
             const double detJ = J.determinant();
-            C += IntP[i].second * IntP[j].second * _material.dens() * _material.get_SHC(T_rep) * N.transpose() * N * J.determinant();
+            C += IntP[i].second * IntP[j].second * _material->dens() * _material->get_SHC(T_rep) * N.transpose() * N * J.determinant();
         }
     }
     return C; 

@@ -66,7 +66,7 @@ void LPlate::elements_creation(const int W, const std::array<int, 3> L_h)
     k = [this, L_h](int i, int j) { return i * (std::accumulate(L_h.begin(), L_h.end(), 0) + 1) + j; }; // количество эл-то вдоль слоя + 1
 
     int n = 1;
-    const Material* material; // Материал элемента
+    const Material* material = &GC_2500; // Материал элемента
     bool is_surface; // Маркер поверхностного элемента
     // Заполнение массива эелементов
     for (int i = 0; i < W; ++i)
@@ -138,7 +138,7 @@ Eigen::MatrixXd LPlate::GCM(Eigen::VectorXd nodal_temps) const
         }
 
         // Создаём конечный элемент
-        LQuad Quad(element.vertices, *element.material);
+        LQuad Quad(element.vertices, element.material);
         H = Quad.Cond_Mat(T); 
 
         // Переносим значения в глобальную матрицу
@@ -174,7 +174,7 @@ Eigen::MatrixXd LPlate::GDM(Eigen::VectorXd nodal_temps) const
         }
 
         // Создаём конечный элемент
-        LQuad Quad(element.vertices, *element.material);
+        LQuad Quad(element.vertices, element.material);
         C = Quad.Damp_Mat(T); 
 
         // Переносим значения в глобальную матрицу
@@ -212,7 +212,7 @@ Eigen::VectorXd LPlate::F(const double q, const double eps, Eigen::VectorXd noda
         }
 
         // Создаём конечный элемент
-        LQuad Quad(element.vertices, *element.material);
+        LQuad Quad(element.vertices, element.material);
         f = Quad.Heat_Load_Surf(q, eps, T, {0, 1}); 
 
         // Переносим значения в глобальную матрицу

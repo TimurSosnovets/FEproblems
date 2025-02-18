@@ -12,7 +12,7 @@
 Node n1(Point(0,0,0), 1), n2(Point(0.01,0,0), 2), n3(Point(0.01,0.01,0), 3), n4(Point(0,0.01,0), 4); // Низ элемента
 Node n5(Point(0,0,0.006), 5), n6(Point(0.01,0,0.006), 6), n7(Point(0.01,0.01,0.006), 7), n8(Point(0,0.01,0.006), 8); // Верх элемента
 std::vector<Node*> Vertices = {&n1, &n2, &n3, &n4, &n5, &n6, &n7, &n8};
-double J = 0.01 * 0.01;
+double surface_area = 0.01 * 0.01;
 
 Eigen::Vector<double, 8> test_temps = {300, 400, 500, 600, 300, 400, 500, 600};
 
@@ -20,16 +20,25 @@ Eigen::Vector<double, 8> test_temps = {300, 400, 500, 600, 300, 400, 500, 600};
 int main()
 {
     /*Инициализация*/
-    LQube element(Vertices, AMg_6);
+    LQube element(Vertices, &AMg_6);
 
     auto GCM = element.Cond_Mat(test_temps); // Матрица теплопроводности
     auto GDM = element.Damp_Mat(test_temps); // Матрица теплоёмкости
     auto T_elem = element.Element_Temp(test_temps); // Репрезентативная температура элемент
-    auto F = element.Heat_Load_Surf(1e5, 0, test_temps, J); // Вектор нагрузок
+    auto F = element.Heat_Load_Surf(1e5, 0, test_temps, surface_area); // Вектор нагрузок
 
     /*Вывод тестируемых значений*/
     std::cout << "\n\nElement temperature: " << T_elem << "\n\nConductivity matrix:\n" << GCM << "\n\nDamping matrix\n" << GDM << "\n\nLoad 1:\n" << F << std::endl;
     
+    /*Тестирование прерасчёта элемента*/
+    element.calculate_element();
+    auto GCM_pre = element.Cond_Mat(test_temps);
+    auto GDM_pre = element.Damp_Mat(test_temps);
+    auto F_pre = element.Heat_Load_Surf(1e5, 0, test_temps, surface_area);
+
+    /*Вывод тестируемых значений для сравнения*/
+    std::cout << "\n\nPre calculation test: " << "\n\nConductivity matrix diff:\n" << GCM_pre - GCM << "\n\nDamping matrix diff\n" << GDM_pre - GDM  << "\n\nLoad 1 diff:\n" << F_pre - F << std::endl;
+
     /*Решение задачи стационарной теплопроводности*/
     auto Lh = GCM; // Левая часть уравнения
     auto Rh = F; // Правая часть уравнения

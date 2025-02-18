@@ -17,7 +17,7 @@ class LQube
 {
     private:
         Eigen::Vector<double, 24> _coords; // Координаты вершин
-        const Material _material; // Материал элемента
+        const Material* _material; // Материал элемента
 
         /*Предрасчитанные значения*/
         std::optional<std::array<Eigen::Matrix<double, 3, 8>, 8>> Grad;// Матрица градиентов
@@ -46,7 +46,7 @@ class LQube
 
     public:
         /*Конструктор*/
-        LQube(std::vector<Node*> v, const Material& m);
+        LQube(std::vector<Node*> v, const Material* m);
 
         /*Предрасчёт характеристик*/
         void calculate_element();

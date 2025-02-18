@@ -17,7 +17,7 @@ class LQuad
 {
     private:
         Eigen::Vector<double, 8> _coords; // Вектор координат вершин элемента
-        const Material _material;
+        const Material* _material;
 
         // Функции формы
         Eigen::RowVector<double, 4> Shape_Func(const double xi, const double eta) const;
@@ -35,7 +35,7 @@ class LQuad
         Eigen::Matrix2d Jacobian(const double xi, const double eta) const;
 
     public:
-        LQuad(const std::vector<Node*> v, const Material m);
+        LQuad(const std::vector<Node*> v, const Material* m);
         
         const double Temperature(const double xi, const double eta, Eigen::Vector<double, 4> nodal_temps) const;
         const double Element_Temp(Eigen::Vector<double, 4> nodal_temps) const;

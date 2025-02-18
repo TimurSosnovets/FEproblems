@@ -8,7 +8,7 @@ Eigen::Vector4d Nodal_temps = {300, 400, 500, 600};
 
 int main() 
 {
-    LQuad Element(Vertices, AMg_6);
+    LQuad Element(Vertices, &AMg_6);
 
     auto GCM = Element.Cond_Mat(Nodal_temps);
     auto GDM = Element.Damp_Mat(Nodal_temps);

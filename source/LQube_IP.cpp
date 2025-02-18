@@ -117,7 +117,7 @@ Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double 
 }
 
 // Конструктор класса LQube
-LQube::LQube(std::vector<Node*> v, const Material& m) : _material(m)
+LQube::LQube(std::vector<Node*> v, const Material* m) : _material(m)
 {
     /*Проверка количества узлов*/
     if (!(v.size() == 8)) throw std::invalid_argument("8 vertices must have exactly LQube...");
@@ -166,7 +166,7 @@ Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(Eigen::Vector<double, 8>& nodal_temp
 {   
     /*Инициализация*/
     Eigen::Matrix<double, 3, 8> B; // Матрица градиентов
-    Eigen::Matrix<double, 3, 8> B_T; // Матрица градиентов (транспонированная)
+    Eigen::Matrix<double, 8, 3> B_T; // Матрица градиентов (транспонированная)
     Eigen::Matrix3d D; // Матрица материала
     Eigen::Matrix3d J; // Якобиан преобразования
     double detJ; // Детерминант Якобиана преобразования
@@ -177,7 +177,7 @@ Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(Eigen::Vector<double, 8>& nodal_temp
     const double T_rep = Element_Temp(nodal_temps);
 
     /*Заполнение матрицы материала D*/
-    double Lambda = _material.get_TCC(T_rep); // Коэффициент теплопроводности при заданной температуре элемента
+    double Lambda = _material->get_TCC(T_rep); // Коэффициент теплопроводности при заданной температуре элемента
     D << 
         Lambda, 0, 0,
         0, Lambda, 0,
@@ -221,7 +221,7 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(Eigen::Vector<double, 8>& nodal_temp
     Eigen::Vector<double, 8> N_T; // Матрица функций форм (транспонированная)
     Eigen::Matrix3d J; // Якобиан преобразования
     double detJ; // Детерминант Якобиана преобразования
-    double rho = _material.dens(); // Плотность материала
+    double rho = _material->dens(); // Плотность материала
     double c; // Удельная теплоёмкость материала при заданной температуре
     Eigen::Matrix<double, 8, 8> C = Eigen::Matrix<double, 8, 8>::Zero(); // Матрица демпфирования (теплоёмкости)
     int nbr = 0; // Счётчик
@@ -250,7 +250,7 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(Eigen::Vector<double, 8>& nodal_temp
                     J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
                     detJ = J.determinant();
                 }
-                c = _material.get_SHC(T_rep);
+                c = _material->get_SHC(T_rep);
 
                 C += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * rho * c * N_T * N * detJ; 
             }
