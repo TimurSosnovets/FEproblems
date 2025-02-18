@@ -60,6 +60,19 @@ struct Element
     // Конструктор
     Element(std::vector<Node*> v, int n, Material* m, bool s = false, double area = 0) : vertices(v), gn(n), material(m), is_surface(s), surface_area(area) {}
 
+    // Указание слоя
+    void set_layer(std::string* lr)
+    {
+        layer = lr;
+    }
+
+    // Указание слоя
+    void set_primitive(std::string* pr)
+    {
+        primitive = pr;
+    }
+
+    // Информация об элементе
     void get_info() const
     {   
         /*Инициализация*/

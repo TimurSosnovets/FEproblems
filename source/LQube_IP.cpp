@@ -252,7 +252,7 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(Eigen::Vector<double, 8>& nodal_temp
                 }
                 c = _material.get_SHC(T_rep);
 
-                C += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * rho * c * N.transpose() * N * detJ; 
+                C += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * rho * c * N_T * N * detJ; 
             }
         }
     }
