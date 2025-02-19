@@ -2,11 +2,42 @@
 // STL
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <fstream>
 // Eigen
 #include "Dense"
 // OpenXLSX
 #include "OpenXLSX.hpp"
 #include "XLCellReference.hpp"
+
+/*Запись логов*/
+class logger
+{
+    public:
+        // Вывод требуемого сообщения
+        static void log(const std::string& message, bool to_console = true, const std::string& filename = "")
+        {   
+            /*Вывод сообщения в консоль*/
+            if (to_console) {std::cout << message << std::endl;}
+
+            /*Вывод сообщения в файл*/
+            if (!filename.empty()) 
+            {
+                std::ofstream file(filename, std::ios::app);
+                if (file.is_open()) 
+                {
+                    file << message << std::endl;
+                    file.close();
+                } 
+                else 
+                {
+                    std::cerr << "Error: unable to open log file.\n";
+                }
+            }
+        }
+};
+
+
 
 // Вывод столбцов и заголовков у ним в файл .xlsx
 template <typename DataV>

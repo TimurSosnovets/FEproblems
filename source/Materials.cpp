@@ -1,7 +1,7 @@
 #include  "Materials.hpp"
 
 // Линейная интерполяция (два вектора)
-double interp_lin(const std::vector<double>& temperatures, const std::vector<double>& values, double T)
+double interp_lin(const std::vector<double>& temperatures, const std::vector<double>& values, const double T)
 {
     if (temperatures.size() != values.size() || temperatures.empty() || values.empty()) {
         throw std::invalid_argument("Temperature and lambda arrays must have the same non-zero size");
@@ -20,7 +20,7 @@ double interp_lin(const std::vector<double>& temperatures, const std::vector<dou
 }
 
 // Линейная интерполяция (один вектор пар)
-double interp_lin(const std::vector<std::pair<double, double>>& data, double T)
+double interp_lin(const std::vector<std::pair<double, double>>& data, const double T)
 {
     if (data.empty()) {
         throw std::invalid_argument("Temperature and lambda arrays must have the same non-zero size");
@@ -53,14 +53,14 @@ Material::Material(std::vector<std::pair<double, double>> tcc, std::vector<std::
 Material::Material(double tcc, double shc, double r) : TCC({{0, tcc}}), SHC({{0, shc}}), rho(r), const_prop(true) {};
 
 // Коэффициент теплопроводности при заданной температуре
-double Material::get_TCC(double T) const
+double Material::get_TCC(const double T) const
 {
     if (const_prop) { return TCC[0].second; }
         else { return interp_lin(TCC, T); } 
 }
 
 // Удельная теплоёмкость при заданной температуре
-double Material::get_SHC(double T) const 
+double Material::get_SHC(const double T) const 
 {
     if (const_prop) { return SHC[0].second; }
         else { return interp_lin(SHC, T); }
@@ -72,6 +72,7 @@ double Material::dens() const
     return rho;
 }
 
+/*Библиотека материалов*/
 // СУ-2500
 const Material GC_2500
     (

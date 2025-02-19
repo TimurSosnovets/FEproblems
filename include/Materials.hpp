@@ -5,10 +5,10 @@
 #include <stdexcept>
 
 // Линейная интерполяция (два вектора)
-double interp_lin(const std::vector<double>& temperatures, const std::vector<double>& values, double T);
+double interp_lin(const std::vector<double>& temperatures, const std::vector<double>& values, const double T);
 
 // Линейная интерполяция (один вектор пар)
-double interp_lin(const std::vector<std::pair<double, double>>& data, double T);
+double interp_lin(const std::vector<std::pair<double, double>>& data, const double T);
 
 
 class Material
@@ -27,17 +27,17 @@ class Material
         Material(double tcc, double shc, double r);
 
         // Коэффициент теплопроводности при заданной температуре
-        double get_TCC(double T) const;
+        double get_TCC(const double T) const;
 
         // Удельная теплоёмкость при заданной температуре
-        double get_SHC(double T) const;
+        double get_SHC(const double T) const;
 
         // Плотность
         double dens() const;
 
 };
 
-
+/*Библиотека материалов*/
 extern const Material GC_2500;
 extern const Material TZMK_10;
 extern const Material AMg_6;

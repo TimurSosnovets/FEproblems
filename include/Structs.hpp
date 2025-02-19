@@ -5,6 +5,7 @@
 #include <string>
 // Current project
 #include "Materials.hpp"
+#include "Output.hpp"
 
 
 struct Point 
@@ -72,28 +73,32 @@ struct Element
         primitive = pr;
     }
 
-    // Информация об элементе
-    void get_info() const
+    void get_info(const size_t DOF, const std::string& filename) const
     {   
         /*Инициализация*/
-        std::cout << "Element " << gn << ": ";
-        /*Является ли поверхностным*/
-        if (is_surface) {std::cout << "surface, ";}
-        else {std::cout << "internal, ";}
-        /*Слой*/
-        if (layer == nullptr) {std::cout << "layer - not assigned, ";}
-        else {std::cout << "layer - " << *layer << ", ";}
-        /*Геометрическая часть аппарата*/
-        if (primitive == nullptr) {std::cout << "primitive - not assigned, ";}
-        else {std::cout << "primitive - " << *primitive << ". ";}
-        /*Узлы*/
-        std::cout << "Nodes:";
-        for (const auto& node : vertices)
+        std::string message, m_surface, m_layer, m_primitive, nodes;
+        
+        /*Определение качественных характеристик*/
+            // Является ли поверхностным
+            m_surface = is_surface ? "surface" : "internal";
+            // В каком слое находится
+            m_layer = (layer == nullptr) ? "not assigned" : *layer;
+            // Частью какой геометрии является
+            m_primitive = (primitive == nullptr) ? "not assigned" : *primitive;      
+
+        /*Массив номеров узлов через пробел*/
+        for (size_t i = 0; i < vertices.size(); ++i)
         {
-            std::cout << " " << node->gn << ",";
+            nodes += std::to_string(vertices[i]->gn);
+            if (i < vertices.size() - 1) { nodes += " "; }
         }
-        /*Завершение*/
-        std::cout << "." << std::endl;
+
+        /*Непосредственно сообщение*/
+        message = "Element " + std::to_string(gn) + ": " + m_surface + ", layer - " + m_layer + ", primitive - " + m_primitive + ", nodes {" + nodes + "}.";
+        
+        /*Вывод сообщения*/
+        if (DOF < 31) {logger::log(message);}
+        else {logger::log(message, false, filename)};
     }
 };
 

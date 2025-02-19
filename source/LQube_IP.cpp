@@ -117,7 +117,7 @@ Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double 
 }
 
 // Конструктор класса LQube
-LQube::LQube(std::vector<Node*> v, const Material* m) : _material(m)
+LQube::LQube(const std::vector<Node*> v, const Material* m) : _material(m)
 {
     /*Проверка количества узлов*/
     if (!(v.size() == 8)) throw std::invalid_argument("8 vertices must have exactly LQube...");
@@ -162,7 +162,7 @@ const double LQube::Element_Temp(const Eigen::Vector<double, 8>& nodal_temps) co
 }
 
 // Матрица теплопроводности при заданных узловых температурах
-Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(Eigen::Vector<double, 8>& nodal_temps) const
+Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(const Eigen::Vector<double, 8>& nodal_temps) const
 {   
     /*Инициализация*/
     Eigen::Matrix<double, 3, 8> B; // Матрица градиентов
@@ -214,7 +214,7 @@ Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(Eigen::Vector<double, 8>& nodal_temp
 } 
 
 // Матрица демфпирования (теплоёмкости) при заданных узловых температурах
-Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(Eigen::Vector<double, 8>& nodal_temps) const
+Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Eigen::Vector<double, 8>& nodal_temps) const
 {
     /*Инициализация*/
     Eigen::RowVector<double, 8> N; // Матрица функций форм
@@ -261,7 +261,7 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(Eigen::Vector<double, 8>& nodal_temp
 } 
 
 // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
-Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const double heat_flux, const double& eps, Eigen::Vector<double, 8>& nodal_temps, double surf_area) const
+Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const double heat_flux, const double& eps, const Eigen::Vector<double, 8>& nodal_temps, const double surf_area) const
 {
     /*Инициализация*/
     const double sigma = 5.67e-8; // Постоянная Стефана-Больцмана

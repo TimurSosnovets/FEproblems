@@ -46,15 +46,15 @@ class LQube
 
     public:
         /*Конструктор*/
-        LQube(std::vector<Node*> v, const Material* m);
+        LQube(const std::vector<Node*> v, const Material* m);
 
         /*Предрасчёт характеристик*/
         void calculate_element();
 
         /*Матрицы элемента*/
-        Eigen::Matrix<double, 8, 8> Cond_Mat(Eigen::Vector<double, 8>& nodal_temps) const; // Матрица теплопроводности
-        Eigen::Matrix<double, 8, 8> Damp_Mat(Eigen::Vector<double, 8>& nodal_temps) const; // Матрица демфпирования (теплоёмкости)
-        Eigen::Vector<double, 8> Heat_Load_Surf(const double heat_flux, const double& eps, Eigen::Vector<double, 8>& nodal_temps, double surf_area) const; // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
+        Eigen::Matrix<double, 8, 8> Cond_Mat(const Eigen::Vector<double, 8>& nodal_temps) const; // Матрица теплопроводности
+        Eigen::Matrix<double, 8, 8> Damp_Mat(const Eigen::Vector<double, 8>& nodal_temps) const; // Матрица демфпирования (теплоёмкости)
+        Eigen::Vector<double, 8> Heat_Load_Surf(const double heat_flux, const double& eps, const Eigen::Vector<double, 8>& nodal_temps, const double surf_area) const; // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
 
         /*Числовые значения элемента*/
         const double Point_Temp(const double xi, const double eta, const double zeta, const Eigen::Vector<double, 8>& nodal_temps) const; // Температура заданной точке элемента
