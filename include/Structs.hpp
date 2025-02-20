@@ -53,13 +53,13 @@ struct Element
     const int gn; // Номер элемента
     const Material* material; // Материал элемента
     const bool is_surface; // Флаг элемента на поверхности
-    const double surface_area; // Площадь повехности
+    const float surface_area; // Площадь повехности
     std::string* layer = nullptr; // Положение по слою
     std::string* primitive = nullptr; // Положение по части аппарата
     
 
     // Конструктор
-    Element(std::vector<Node*> v, int n, const Material* m, bool s = false, double area = 0) : vertices(v), gn(n), material(m), is_surface(s), surface_area(area) {}
+    Element(const std::vector<Node*>& v, const int n, const Material* const m, const bool s = false, const float area = 0) : vertices(v), gn(n), material(m), is_surface(s), surface_area(area) {}
 
     // Указание слоя
     void set_layer(std::string* lr)

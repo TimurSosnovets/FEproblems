@@ -117,7 +117,7 @@ Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double 
 }
 
 // Конструктор класса LQube
-LQube::LQube(const std::vector<Node*> v, const Material* m) : _material(m)
+LQube::LQube(const std::vector<Node*> v, const Material* const m) : _material(m)
 {
     /*Проверка количества узлов*/
     if (!(v.size() == 8)) throw std::invalid_argument("8 vertices must have exactly LQube...");
@@ -261,11 +261,11 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Eigen::Vector<double, 8>& noda
 } 
 
 // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
-Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const double heat_flux, const double& eps, const Eigen::Vector<double, 8>& nodal_temps, const double surf_area) const
+Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const double heat_flux, const float eps, const Eigen::Vector<double, 8>& nodal_temps, const float surf_area) const
 {
     /*Инициализация*/
-    const double sigma = 5.67e-8; // Постоянная Стефана-Больцмана
-    double T_surf = 0; // Температура излучающей поверхности
+    const float sigma = 5.67e-8; // Постоянная Стефана-Больцмана
+    double T_surf = 0.0; // Температура излучающей поверхности
     Eigen::RowVector<double, 8> N_T; // Матрица функций форм (транспонированная)
     Eigen::Vector<double, 8> F = Eigen::Vector<double, 8>::Zero(); // Вектор узловых нагрузок [Вт]
     int surf = 0; // Счётчик
