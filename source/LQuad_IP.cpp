@@ -1,4 +1,4 @@
-#include  "../include/LQuad_IP.hpp"
+#include  "LQuad_IP.hpp"
 
 // Точки интегрирования
 std::array<std::pair<double, double>, 2> IntP = {{ {1/sqrt(3), 1.0}, {-1/sqrt(3), 1.0} }};

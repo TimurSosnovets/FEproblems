@@ -4,7 +4,7 @@
 std::array<std::pair<double, double>, 2> int_pnts = {{ {1/sqrt(3), 1.0}, {-1/sqrt(3), 1.0} }};
 
 // Функции формы
-Eigen::RowVector<double, 8> LQube::Shape_Func(const double xi, const double eta, const double zeta) const
+Eigen::RowVector<double, 8> LQube::Shape_Func(const double xi, const double eta, const double zeta)
 {
     /*Инициализация*/
     Eigen::RowVector<double, 8> N;
@@ -22,7 +22,7 @@ Eigen::RowVector<double, 8> LQube::Shape_Func(const double xi, const double eta,
 }
 
 // Частные производные функций формы
-std::array<Eigen::RowVector<double, 8>, 3> LQube::Shape_Func_PD(const double xi, const double eta, const double zeta) const
+std::array<Eigen::RowVector<double, 8>, 3> LQube::Shape_Func_PD(const double xi, const double eta, const double zeta)
 {
     /*Инициализация*/
     std::array<Eigen::RowVector<double, 8>, 3> dN;
@@ -59,7 +59,7 @@ std::array<Eigen::RowVector<double, 8>, 3> LQube::Shape_Func_PD(const double xi,
 }
 
 // Матрица градиентов
-Eigen::Matrix<double, 3, 8> LQube::Grad_Mat(const double xi, const double eta, const double zeta) const
+Eigen::Matrix<double, 3, 8> LQube::Grad_Mat(const double xi, const double eta, const double zeta)
 {
     /*Инициализация*/
     Eigen::Matrix<double, 3, 8> B;
@@ -73,25 +73,27 @@ Eigen::Matrix<double, 3, 8> LQube::Grad_Mat(const double xi, const double eta, c
 }
 
 // Функция отображения
-Point LQube::Mapping(const double xi, const double eta, const double zeta) const
+Point LQube::Mapping(const double xi, const double eta, const double zeta, const Element& FE)
 {
+    if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
     /*Инициализация*/
     double x = 0.0, y = 0.0, z = 0.0;
     Eigen::RowVector<double, 8> N = Shape_Func(xi, eta, zeta);
 
     for (int i = 0; i < 8; ++i)
     {
-        x += N[i] * _coords[3 * i];
-        y += N[i] * _coords[3 * i + 1];
-        z += N[i] * _coords[3 * i + 2];
+        x += N[i] * FE.vertices[i]->point.x;
+        y += N[i] * FE.vertices[i]->point.y;
+        z += N[i] * FE.vertices[i]->point.z;
     }
 
     return Point(x, y, z);
 }
 
 // Якобиан преобразования
-Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double zeta) const
+Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double zeta, const Element& FE)
 {
+    if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
     /*Инициализация*/
     Eigen::Matrix3d J;
     std::array<Eigen::RowVector<double, 8>, 3> dN = Shape_Func_PD(xi, eta, zeta);
@@ -100,9 +102,9 @@ Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double 
     /*Получение векторов-координат по соответствующим осям*/
     for (int i = 0; i < 8; ++i)
     {
-        X(i) = _coords[3 * i];
-        Y(i) = _coords[3 * i + 1];
-        Z(i) = _coords[3 * i + 2];
+        X(i) = FE.vertices[i]->point.x;
+        Y(i) = FE.vertices[i]->point.y;
+        Z(i) = FE.vertices[i]->point.z;
     }
 
     /*Заполнение Якобиана преобразования*/
@@ -116,30 +118,15 @@ Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double 
     return J;
 }
 
-// Конструктор класса LQube
-LQube::LQube(const std::vector<Node*> v, const Material* const m) : _material(m)
-{
-    /*Проверка количества узлов*/
-    if (!(v.size() == 8)) throw std::invalid_argument("8 vertices must have exactly LQube...");
-
-    /*Заполнение вектора координат*/
-    for (int i = 0; i < v.size(); ++i)
-    {
-        _coords[3 * i] = v[i] -> point.x;
-        _coords[3 * i + 1] = v[i] -> point.y;
-        _coords[3 * i + 2] = v[i] -> point.z;
-    }
-}
-
 // Температура в точке элемента при заданных узловых температурах
-const double LQube::Point_Temp(const double xi, const double eta, const double zeta, const Eigen::Vector<double, 8>& nodal_temps) const
+double LQube::Point_Temp(const double xi, const double eta, const double zeta, const Eigen::Vector<double, 8>& nodal_temps)
 {
-    Eigen::RowVector<double, 8> N = Shape_Func(xi, eta, zeta);
+    Eigen::RowVector<double, 8> N = LQube::Shape_Func(xi, eta, zeta);
     return (N * nodal_temps);
 }
 
 // Репрезентативная температура элемента
-const double LQube::Element_Temp(const Eigen::Vector<double, 8>& nodal_temps) const
+double LQube::Element_Temp(const Eigen::Vector<double, 8>& nodal_temps)
 {
     /*Инициализация*/
     double T_rep = 0; 
@@ -162,8 +149,9 @@ const double LQube::Element_Temp(const Eigen::Vector<double, 8>& nodal_temps) co
 }
 
 // Матрица теплопроводности при заданных узловых температурах
-Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(const Eigen::Vector<double, 8>& nodal_temps) const
+Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(const Element& FE, const Eigen::Vector<double, 8>& nodal_temps)
 {   
+    if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
     /*Инициализация*/
     Eigen::Matrix<double, 3, 8> B; // Матрица градиентов
     Eigen::Matrix<double, 8, 3> B_T; // Матрица градиентов (транспонированная)
@@ -177,7 +165,7 @@ Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(const Eigen::Vector<double, 8>& noda
     const double T_rep = Element_Temp(nodal_temps);
 
     /*Заполнение матрицы материала D*/
-    double Lambda = _material->get_TCC(T_rep); // Коэффициент теплопроводности при заданной температуре элемента
+    double Lambda = FE.material->get_TCC(T_rep); // Коэффициент теплопроводности при заданной температуре элемента
     D << 
         Lambda, 0, 0,
         0, Lambda, 0,
@@ -199,7 +187,7 @@ Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(const Eigen::Vector<double, 8>& noda
                 }
                 else
                 {
-                    J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                    J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first, FE);
                     B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
                     B_T = B.transpose();
                     detJ = J.determinant();
@@ -214,14 +202,14 @@ Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(const Eigen::Vector<double, 8>& noda
 } 
 
 // Матрица демфпирования (теплоёмкости) при заданных узловых температурах
-Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Eigen::Vector<double, 8>& nodal_temps) const
+Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Element& FE, const Eigen::Vector<double, 8>& nodal_temps)
 {
     /*Инициализация*/
     Eigen::RowVector<double, 8> N; // Матрица функций форм
     Eigen::Vector<double, 8> N_T; // Матрица функций форм (транспонированная)
     Eigen::Matrix3d J; // Якобиан преобразования
     double detJ; // Детерминант Якобиана преобразования
-    double rho = _material->dens(); // Плотность материала
+    double rho = FE.material->dens(); // Плотность материала
     double c; // Удельная теплоёмкость материала при заданной температуре
     Eigen::Matrix<double, 8, 8> C = Eigen::Matrix<double, 8, 8>::Zero(); // Матрица демпфирования (теплоёмкости)
     int nbr = 0; // Счётчик
@@ -247,10 +235,10 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Eigen::Vector<double, 8>& noda
                 {
                     N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
                     N_T = N.transpose();
-                    J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                    J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first, FE);
                     detJ = J.determinant();
                 }
-                c = _material->get_SHC(T_rep);
+                c = FE.material->get_SHC(T_rep);
 
                 C += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * rho * c * N_T * N * detJ; 
             }
@@ -261,7 +249,7 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Eigen::Vector<double, 8>& noda
 } 
 
 // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
-Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const double heat_flux, const float eps, const Eigen::Vector<double, 8>& nodal_temps, const float surf_area) const
+Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::Vector<double, 8>& nodal_temps, const float surf_area)
 {
     /*Инициализация*/
     const float sigma = 5.67e-8; // Постоянная Стефана-Больцмана
@@ -295,39 +283,39 @@ Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const double heat_flux, const flo
     return F;
 }
 
-// Предрасчёт характеристик
-void LQube::calculate_element()
-{
-    /*Инициализация*/
-    Grad = std::array<Eigen::Matrix<double, 3, 8>, 8>{};
-    Grad_T = std::array<Eigen::Matrix<double, 8, 3>, 8>{};
-    Shape = std::array<Eigen::RowVector<double, 8>, 8>{};
-    Shape_T = std::array<Eigen::Vector<double, 8>, 8>{};
-    Shape_surf = std::array<Eigen::Vector<double, 8>, 4>{};
-    dJac = std::array<double, 8>{};
-    int nbr = 0, surf = 0; // Счётчики
+// // Предрасчёт характеристик
+// void LQube::calculate_element()
+// {
+//     /*Инициализация*/
+//     Grad = std::array<Eigen::Matrix<double, 3, 8>, 8>{};
+//     Grad_T = std::array<Eigen::Matrix<double, 8, 3>, 8>{};
+//     Shape = std::array<Eigen::RowVector<double, 8>, 8>{};
+//     Shape_T = std::array<Eigen::Vector<double, 8>, 8>{};
+//     Shape_surf = std::array<Eigen::Vector<double, 8>, 4>{};
+//     dJac = std::array<double, 8>{};
+//     int nbr = 0, surf = 0; // Счётчики
 
-    /*Заполнение*/
-    for (int i = 0; i < int_pnts.size(); ++i)
-    {
-        for (int j = 0; j < int_pnts.size(); ++j)
-        {   
-            Shape_surf.value()[surf] = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
-            ++surf;
-            for (int k = 0; k < int_pnts.size(); ++k)
-            {   
-                auto N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-                auto J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-                auto B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-                auto dJ = J.determinant(); 
+//     /*Заполнение*/
+//     for (int i = 0; i < int_pnts.size(); ++i)
+//     {
+//         for (int j = 0; j < int_pnts.size(); ++j)
+//         {   
+//             Shape_surf.value()[surf] = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
+//             ++surf;
+//             for (int k = 0; k < int_pnts.size(); ++k)
+//             {   
+//                 auto N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+//                 auto J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+//                 auto B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+//                 auto dJ = J.determinant(); 
 
-                Grad.value()[nbr] = B;
-                Grad_T.value()[nbr] = B.transpose();
-                Shape.value()[nbr] = N;
-                Shape_T.value()[nbr] = N.transpose();
-                dJac.value()[nbr] = dJ;
-                ++nbr;
-            }
-        }
-    }   
-}
+//                 Grad.value()[nbr] = B;
+//                 Grad_T.value()[nbr] = B.transpose();
+//                 Shape.value()[nbr] = N;
+//                 Shape_T.value()[nbr] = N.transpose();
+//                 dJac.value()[nbr] = dJ;
+//                 ++nbr;
+//             }
+//         }
+//     }   
+// }

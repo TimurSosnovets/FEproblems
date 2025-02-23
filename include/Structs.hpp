@@ -98,7 +98,6 @@ struct Element
         
         /*Вывод сообщения*/
         if (DOF < 31) {logger::log(message);}
-        else {logger::log(message, false, filename)};
+        else {logger::log(message, false, filename);}
     }
 };
-

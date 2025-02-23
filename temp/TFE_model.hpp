@@ -1,6 +1,6 @@
 #pragma once
 // Current project
-#include "Structs.hpp"
+#include "FE_entities.hpp"
 #include "Materials.hpp"
 // Eigen
 #include <Dense>
@@ -27,7 +27,7 @@ class TFE_model
 
         /*Добавление структурных единиц*/
         void add_node(const Point p, const int g_nbr);
-        void add_element(const std::vector<Node*>& verts, const int& g_nbr, const Material* const material, const bool is_surf = false, const float& surf_area = 0, const std::string* const layer = nullptr, const std::string* const primitive = nullptr);
+        void add_element(const std::vector<Node*>& verts, const int& g_nbr, const Material* const material, const bool is_surf = false, const float& surf_area = 0, std::string* const layer = nullptr, std::string* const primitive = nullptr);
 
         /*Предрасчёт сетки*/
         void pre_calculate();
