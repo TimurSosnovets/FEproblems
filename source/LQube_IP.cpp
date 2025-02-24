@@ -152,6 +152,7 @@ double LQube::Element_Temp(const Eigen::Vector<double, 8>& nodal_temps)
 Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(const Element& FE, const Eigen::Vector<double, 8>& nodal_temps)
 {   
     if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
+
     /*Инициализация*/
     Eigen::Matrix<double, 3, 8> B; // Матрица градиентов
     Eigen::Matrix<double, 8, 3> B_T; // Матрица градиентов (транспонированная)
@@ -178,11 +179,11 @@ Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(const Element& FE, const Eigen::Vect
         {   
             for (int k = 0; k < int_pnts.size(); ++k)
             {   
-                if ((Grad.has_value()) && (Grad_T.has_value()) && (dJac.has_value()))
+                if (FE.has_cache())
                 {
-                    B = Grad.value()[nbr];
-                    B_T = Grad_T.value()[nbr];
-                    detJ = dJac.value()[nbr];
+                    B = FE.cache.GM[nbr];
+                    B_T = FE.cache.GM_T[nbr];
+                    detJ = FE.cache.J_det[nbr];
                     ++nbr;
                 }
                 else
@@ -204,6 +205,8 @@ Eigen::Matrix<double, 8, 8> LQube::Cond_Mat(const Element& FE, const Eigen::Vect
 // Матрица демфпирования (теплоёмкости) при заданных узловых температурах
 Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Element& FE, const Eigen::Vector<double, 8>& nodal_temps)
 {
+    if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
+
     /*Инициализация*/
     Eigen::RowVector<double, 8> N; // Матрица функций форм
     Eigen::Vector<double, 8> N_T; // Матрица функций форм (транспонированная)
@@ -224,11 +227,11 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Element& FE, const Eigen::Vect
         {   
             for (int k = 0; k < int_pnts.size(); ++k)
             {
-                if ((Shape.has_value()) && (Shape_T.has_value()) && (dJac.has_value()))
+                if (FE.has_cache())
                 {
-                    N = Shape.value()[nbr];
-                    N_T = Shape_T.value()[nbr];
-                    detJ = dJac.value()[nbr];
+                    N = FE.cache.SF[nbr];
+                    N_T = FE.cache.SF_T[nbr];
+                    detJ = FE.cache.J_det[nbr];
                     ++nbr;
                 }
                 else
@@ -251,6 +254,8 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Element& FE, const Eigen::Vect
 // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
 Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::Vector<double, 8>& nodal_temps, const float surf_area)
 {
+    if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
+
     /*Инициализация*/
     const float sigma = 5.67e-8; // Постоянная Стефана-Больцмана
     double T_surf = 0.0; // Температура излучающей поверхности
@@ -266,9 +271,9 @@ Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const Element& FE, const double h
     {
         for (int j = 0; j < int_pnts.size(); ++j)
         {   
-            if (Shape_surf.has_value())
+            if (FE.has_cache())
             {
-                N_T = Shape_surf.value()[surf];
+                N_T = FE.cache.SF_s[surf];
                 ++surf;
             }
             else
@@ -283,39 +288,39 @@ Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const Element& FE, const double h
     return F;
 }
 
-// // Предрасчёт характеристик
-// void LQube::calculate_element()
-// {
-//     /*Инициализация*/
-//     Grad = std::array<Eigen::Matrix<double, 3, 8>, 8>{};
-//     Grad_T = std::array<Eigen::Matrix<double, 8, 3>, 8>{};
-//     Shape = std::array<Eigen::RowVector<double, 8>, 8>{};
-//     Shape_T = std::array<Eigen::Vector<double, 8>, 8>{};
-//     Shape_surf = std::array<Eigen::Vector<double, 8>, 4>{};
-//     dJac = std::array<double, 8>{};
-//     int nbr = 0, surf = 0; // Счётчики
+// Предрасчёт характеристик
+void LQube::calculate_element(Element& FE)
+{   
+    /*Инициализация*/
+    FE.cache.GM.reserve(8);
+    FE.cache.GM_T.reserve(8);
+    FE.cache.SF.reserve(8);
+    FE.cache.SF_T.reserve(8);
+    FE.cache.SF_s.reserve(8);
+    FE.cache.J_det.reserve(8);
+    int nbr = 0, surf = 0; // Счётчики
 
-//     /*Заполнение*/
-//     for (int i = 0; i < int_pnts.size(); ++i)
-//     {
-//         for (int j = 0; j < int_pnts.size(); ++j)
-//         {   
-//             Shape_surf.value()[surf] = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
-//             ++surf;
-//             for (int k = 0; k < int_pnts.size(); ++k)
-//             {   
-//                 auto N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-//                 auto J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-//                 auto B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-//                 auto dJ = J.determinant(); 
+    /*Заполнение*/
+    for (int i = 0; i < int_pnts.size(); ++i)
+    {
+        for (int j = 0; j < int_pnts.size(); ++j)
+        {   
+            FE.cash.SF_s[surf] = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
+            ++surf;
+            for (int k = 0; k < int_pnts.size(); ++k)
+            {   
+                auto N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                auto J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                auto B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                auto dJ = J.determinant(); 
 
-//                 Grad.value()[nbr] = B;
-//                 Grad_T.value()[nbr] = B.transpose();
-//                 Shape.value()[nbr] = N;
-//                 Shape_T.value()[nbr] = N.transpose();
-//                 dJac.value()[nbr] = dJ;
-//                 ++nbr;
-//             }
-//         }
-//     }   
-// }
+                FE.cache.GM[nbr] = B;
+                FE.cache.GM_T[nbr] = B.transpose();
+                FE.cache.SF[nbr] = N;
+                FE.cache.SF_T[nbr] = N.transpose();
+                FE.cache.J_det[nbr] = dJ;
+                ++nbr;
+            }
+        }
+    }   
+}

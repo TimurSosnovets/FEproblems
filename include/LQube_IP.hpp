@@ -34,7 +34,7 @@ class LQube
 
     public:
         /*Предрасчёт характеристик*/
-        static void calculate_element();
+        static void calculate_element(Element& FE);
 
         /*Матрицы элемента*/
         static Eigen::Matrix<double, 8, 8> Cond_Mat(const Element& FE, const Eigen::Vector<double, 8>& nodal_temps); // Матрица теплопроводности

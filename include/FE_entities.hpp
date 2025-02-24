@@ -26,6 +26,20 @@ struct Point
     }
 };
 
+struct Cache
+{
+    // Матрица градиентов
+    std::vector<Eigen::MatrixXd> GM; 
+    std::vector<Eigen::MatrixXd> GM_T;
+    // Матрица функций форм
+    std::vector<Eigen::RowVectorXd> SF;
+    std::vector<Eigen::VectorXd> SF_T;
+    // Матрица функций форм поверхности
+    std::vector<Eigen::VectorXd> SF_s;
+    // Определитель якобиана преобразования
+    std::vector<double> J_det;
+}
+
 // Узел
 class Node
 {
@@ -65,6 +79,9 @@ class Element
         std::string* primitive = nullptr; // Положение по части аппарата
         const bool is_surface; // Флаг элемента на поверхности
         const float surface_area; // Площадь повехности
+        Cache cache; // Предрасчитанные значения
+
+        bool has_cache() const;
 
     public:
         // Конструктор
@@ -78,7 +95,10 @@ class Element
 
         // Данные об элементе
         void get_info(const bool to_console, const std::string& filename) const;
+        
+        // Друзья
         friend class LQube;
+        friend class TFE_model;
 };
 
 

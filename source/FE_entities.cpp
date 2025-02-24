@@ -16,6 +16,8 @@ Element::Element(const std::vector<Node*>& v, const int n, const Material* const
 void Element::set_layer(std::string* lr) {layer = lr;}
 // Указание геометрического примитива
 void Element::set_primitive(std::string* pr) {primitive = pr;}
+// Наличие предрасчитанных значений
+bool Element::has_cache() const {return !cache.GM.empty();}
 // Информация об элементе
 void Element::get_info(const bool to_console, const std::string& filename) const
 {   
@@ -45,24 +47,5 @@ void Element::get_info(const bool to_console, const std::string& filename) const
 }
 
 
-
-
-
-
-// // Предрасчитанные значения
-// struct prec_val
-// {
-//     Eigen::VectorXd _coords; // Координаты вершин
-
-    
-//     std::array<Eigen::MatrixXd, 8> Grad;// Матрица градиентов
-//     std::array<Eigen::MatrixXd, 8> Grad_T;// Матрица градиентов (транспонированная)
-//     std::array<Eigen::RowVectorXd, 8> Shape; // Функции формы
-//     std::array<Eigen::VectorXd, 8> Shape_T; // Функции формы (транспонированные)
-//     std::array<Eigen::VectorXd, 4> Shape_surf; // Функции формы по поверхности
-//     std::array<double, 8> dJac; // Определитель якобиана преобразования
-
-//     prec_val();
-// };
 
 

@@ -6,7 +6,13 @@
 #include <Dense>
 #include <Sparse>
 #include <Core>
+#include <unordered_set>
 
+// Для вычисления уникальных комбинаций строка-столбец на базе КЭ сетки
+struct PairHash 
+{
+    size_t operator()(const std::pair<int, int>& p) const {return std::hash<int>()(p.first) ^ std::hash<int>()(p.second);}
+};
 
 // Тепловая конечно-элементная модель
 class TFE_model
@@ -16,10 +22,10 @@ class TFE_model
         std::vector<Node> _nodes; // Массив узлов
         std::vector<Element> _elements; // Массив элементов
         const size_t _DOF; // Степень свободы модели (в данном случае оно же - количество узлов)
+        size_t unique_DOF = 0; // Количество ненулевых значений в матрицах (зависит только от сетки)
 
         /*Внутренние методы*/
-        void assembly(Eigen::SparseMatrix<double> A, const Eigen::MatrixXd a) const; // Ассамблирование матрицы A размерности [DOF x DOF] из меньшей матрицы a
-        Eigen::VectorXd Dynamic_calculation(const float initial_temp, const int max_time, const float time_step) const; // Решение нестационарной задачи с заданными начальными условиями, временем расчёта и шагом.
+        void assembly(std::vector<Eigen::Triplet<double>>& t, const Eigen::MatrixXd& a) const; // Ассамблирование матрицы A размерности [DOF x DOF] из меньшей матрицы a
 
     public:
         /*Конструктор класса*/
@@ -31,11 +37,15 @@ class TFE_model
 
         /*Предрасчёт сетки*/
         void pre_calculate();
+        void mesh_check();
 
         /*Вычисление параметров*/
-        Eigen::SparseMatrix<double> GCM(const Eigen::VectorXd nodal_temps) const; // Глобальная матрица теплопроводности
-        Eigen::SparseMatrix<double> GDM(const Eigen::VectorXd nodal_temps) const; // Глобальная матрица демпфирования
-        Eigen::SparseVector<double> F(const double q, const double eps, const Eigen::VectorXd nodal_temps) const; // Вектор узловых нагрузок
+        Eigen::SparseMatrix<double> GCM(const Eigen::VectorXd& nodal_temps) const; // Глобальная матрица теплопроводности
+        Eigen::SparseMatrix<double> GDM(const Eigen::VectorXd& nodal_temps) const; // Глобальная матрица демпфирования
+        Eigen::SparseVector<double> F(const double q, const double eps, const Eigen::VectorXd& nodal_temps) const; // Вектор узловых нагрузок
+
+        /*Решение нестационарной задачи с заданными начальными условиями, временем расчёта и шагом.*/
+        Eigen::VectorXd Dynamic_calculation(const float initial_temp, const int max_time, const float time_step) const; 
 
         /*Вывод информации*/
         void mesh_info() const;

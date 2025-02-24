@@ -52,9 +52,72 @@ void TFE_model::pre_calculate()
 {
     for (const auto& element : _elements)
     {
-        element.
+        LQube::calculate_element(element);
     }
 }
+
+// Ассамблирование матрицы A размерности [DOF x DOF] из меньшей матрицы a
+void TFE_model::assembly(std::vector<Eigen::Triplet<double>>& t , const Eigen::MatrixXd& a) const
+{
+    for (size_t i = 0; i < a.rows(); ++i)
+    {
+        for (size_t j = 0; j < a.cols(); ++j)
+        {
+            size_t row = element.vertices[i]->gn - 1;
+            size_t col = element.vertices[j]->gn - 1;
+            t.emplace_back(row, col, a(i, j));
+        }
+    }
+} 
+
+// Проверка количества ненулевых значений в глобальных матрицах
+void TFE_model::mesh_check()
+{
+    std::unordered_set<std::pair<int, int>, PairHash> nnz_entries;
+
+    for (const auto& element : _elements)
+    {
+        for (int i = 0; i < element.vertices.size(); ++i) 
+        {
+            for (int j = 0; j < element.vertices.size(); ++j) 
+            {
+                int row = element.vertices[i]->gn - 1;
+                int col = element.vertices[j]->gn - 1;
+                nnz_entries.emplace(row, col);
+            }
+        }
+    }
+    unique_DOF = nnz_entries.size();
+}
+
+// Глобальная матрица теплопроводности
+Eigen::SparseMatrix<double> GCM(const Eigen::VectorXd& nodal_temps) const
+{
+    /*Инициализация*/
+    Eigen::SparseMatrix<double> GCM;
+    std::vector<Eigen::Triplet<double>> triplets;
+    if !(unique_DOF == 0) {triplets.reserve(unique_DOF);}
+    Eigen::Matrix<double, 8, 8> H;
+    Eigen::Vector<double, 8> T;
+
+    /*Заполнение вектора ненулевых значений*/
+    for (const auto& element : _elements)
+    {   
+        // Заполняем локальный вектор узловых температур
+        int i = 0;
+        for (const auto& node : element.vertices)
+        {
+            T[i] = nodal_temps[node->gn - 1];
+            ++i;
+        }
+
+        H = LQube::Cond_Mat(element, T);
+        assembly(triplets, H);
+    }
+
+    GCM.setFromTriplets(triplets.begin(), triplets.end());
+    return GCM;
+} 
 
 
 
