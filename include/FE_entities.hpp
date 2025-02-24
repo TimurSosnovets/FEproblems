@@ -38,7 +38,7 @@ struct Cache
     std::vector<Eigen::VectorXd> SF_s;
     // Определитель якобиана преобразования
     std::vector<double> J_det;
-}
+};
 
 // Узел
 class Node
@@ -65,6 +65,7 @@ class Node
         // Номер элемента
         int global_number() const;
         friend class LQube;
+        friend class TFE_model;
 };
 
 

@@ -2,6 +2,7 @@
 // Current project
 #include "FE_entities.hpp"
 #include "Materials.hpp"
+#include "LQube_IP.hpp"
 // Eigen
 #include <Dense>
 #include <Sparse>
@@ -25,7 +26,7 @@ class TFE_model
         size_t unique_DOF = 0; // Количество ненулевых значений в матрицах (зависит только от сетки)
 
         /*Внутренние методы*/
-        void assembly(std::vector<Eigen::Triplet<double>>& t, const Eigen::MatrixXd& a) const; // Ассамблирование матрицы A размерности [DOF x DOF] из меньшей матрицы a
+        void assembly(std::vector<Eigen::Triplet<double>>& t, const Eigen::MatrixXd& a, const Element& FE) const; // Ассамблирование матрицы A размерности [DOF x DOF] из меньшей матрицы a
 
     public:
         /*Конструктор класса*/
@@ -42,7 +43,7 @@ class TFE_model
         /*Вычисление параметров*/
         Eigen::SparseMatrix<double> GCM(const Eigen::VectorXd& nodal_temps) const; // Глобальная матрица теплопроводности
         Eigen::SparseMatrix<double> GDM(const Eigen::VectorXd& nodal_temps) const; // Глобальная матрица демпфирования
-        Eigen::SparseVector<double> F(const double q, const double eps, const Eigen::VectorXd& nodal_temps) const; // Вектор узловых нагрузок
+        Eigen::SparseVector<double> NLV(const double q, const double eps, const Eigen::VectorXd& nodal_temps) const; // Вектор узловых нагрузок
 
         /*Решение нестационарной задачи с заданными начальными условиями, временем расчёта и шагом.*/
         Eigen::VectorXd Dynamic_calculation(const float initial_temp, const int max_time, const float time_step) const; 

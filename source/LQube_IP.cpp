@@ -252,7 +252,7 @@ Eigen::Matrix<double, 8, 8> LQube::Damp_Mat(const Element& FE, const Eigen::Vect
 } 
 
 // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
-Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::Vector<double, 8>& nodal_temps, const float surf_area)
+Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::Vector<double, 8>& nodal_temps)
 {
     if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
 
@@ -281,7 +281,7 @@ Eigen::Vector<double, 8> LQube::Heat_Load_Surf(const Element& FE, const double h
                 N_T = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
             }
 
-            F += (1.0/4.0) * int_pnts[i].second * int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * surf_area; 
+            F += (1.0/4.0) * int_pnts[i].second * int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * FE.surface_area; 
         }
     }
 
@@ -305,12 +305,12 @@ void LQube::calculate_element(Element& FE)
     {
         for (int j = 0; j < int_pnts.size(); ++j)
         {   
-            FE.cash.SF_s[surf] = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
+            FE.cache.SF_s[surf] = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
             ++surf;
             for (int k = 0; k < int_pnts.size(); ++k)
             {   
                 auto N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-                auto J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                auto J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first, FE);
                 auto B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
                 auto dJ = J.determinant(); 
 

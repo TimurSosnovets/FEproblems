@@ -50,21 +50,21 @@ void TFE_model::add_element(const std::vector<Node*>& verts, const int& g_nbr, c
 // Предрасчёт элемента
 void TFE_model::pre_calculate()
 {
-    for (const auto& element : _elements)
+    for (auto& element : _elements)
     {
         LQube::calculate_element(element);
     }
 }
 
 // Ассамблирование матрицы A размерности [DOF x DOF] из меньшей матрицы a
-void TFE_model::assembly(std::vector<Eigen::Triplet<double>>& t , const Eigen::MatrixXd& a) const
+void TFE_model::assembly(std::vector<Eigen::Triplet<double>>& t , const Eigen::MatrixXd& a, const Element& FE) const
 {
     for (size_t i = 0; i < a.rows(); ++i)
     {
         for (size_t j = 0; j < a.cols(); ++j)
         {
-            size_t row = element.vertices[i]->gn - 1;
-            size_t col = element.vertices[j]->gn - 1;
+            size_t row = FE.vertices[i]->gn - 1;
+            size_t col = FE.vertices[j]->gn - 1;
             t.emplace_back(row, col, a(i, j));
         }
     }
@@ -91,12 +91,12 @@ void TFE_model::mesh_check()
 }
 
 // Глобальная матрица теплопроводности
-Eigen::SparseMatrix<double> GCM(const Eigen::VectorXd& nodal_temps) const
+Eigen::SparseMatrix<double> TFE_model::GCM(const Eigen::VectorXd& nodal_temps) const
 {
     /*Инициализация*/
     Eigen::SparseMatrix<double> GCM;
     std::vector<Eigen::Triplet<double>> triplets;
-    if !(unique_DOF == 0) {triplets.reserve(unique_DOF);}
+    if (!(unique_DOF == 0)) {triplets.reserve(unique_DOF);}
     Eigen::Matrix<double, 8, 8> H;
     Eigen::Vector<double, 8> T;
 
@@ -112,12 +112,77 @@ Eigen::SparseMatrix<double> GCM(const Eigen::VectorXd& nodal_temps) const
         }
 
         H = LQube::Cond_Mat(element, T);
-        assembly(triplets, H);
+        assembly(triplets, H, element);
     }
 
     GCM.setFromTriplets(triplets.begin(), triplets.end());
     return GCM;
 } 
+
+// Глобальная матрица демфирования
+Eigen::SparseMatrix<double> TFE_model::GDM(const Eigen::VectorXd& nodal_temps) const
+{
+    /*Инициализация*/
+    Eigen::SparseMatrix<double> GDM;
+    std::vector<Eigen::Triplet<double>> triplets;
+    if (!(unique_DOF == 0)) {triplets.reserve(unique_DOF);}
+    Eigen::Matrix<double, 8, 8> C;
+    Eigen::Vector<double, 8> T;
+
+    /*Заполнение вектора ненулевых значений*/
+    for (const auto& element : _elements)
+    {   
+        // Вектор узловых температур
+        int i = 0;
+        for (const auto& node : element.vertices)
+        {
+            T[i] = nodal_temps[node->gn - 1];
+            ++i;
+        }
+
+        C = LQube::Damp_Mat(element, T);
+        assembly(triplets, C, element);
+    }
+
+    GDM.setFromTriplets(triplets.begin(), triplets.end());
+    return GDM;
+} 
+
+// Вектор узловых нагрузок
+Eigen::SparseVector<double> TFE_model::NLV(const double q, const double eps, const Eigen::VectorXd& nodal_temps) const
+{
+    /*Инициализация*/
+    Eigen::SparseVector<double> NLV;
+    std::vector<Eigen::Triplet<double>> triplets;
+
+    size_t surf_el_count = 0; // Количество поверхностных элементов
+    for (const auto& element : _elements)
+    {
+        if (element.is_surface) ++surf_el_count;
+    }
+    triplets.reserve(surf_el_count * 2);
+
+    Eigen::Vector<double, 8> F;
+    Eigen::Vector<double, 8> T;
+
+    /*Заполнение вектора ненулевых значений*/
+    for (const auto& element : _elements)
+    {   
+        // Вектор узловых температур
+        int i = 0;
+        for (const auto& node : element.vertices)
+        {
+            T[i] = nodal_temps[node->gn - 1];
+            ++i;
+        }
+
+        F = LQube::Heat_Load_Surf(element, q, eps, T);
+        //
+    }
+
+
+}
+
 
 
 

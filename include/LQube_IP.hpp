@@ -39,7 +39,7 @@ class LQube
         /*Матрицы элемента*/
         static Eigen::Matrix<double, 8, 8> Cond_Mat(const Element& FE, const Eigen::Vector<double, 8>& nodal_temps); // Матрица теплопроводности
         static Eigen::Matrix<double, 8, 8> Damp_Mat(const Element& FE, const Eigen::Vector<double, 8>& nodal_temps); // Матрица демфпирования (теплоёмкости)
-        static Eigen::Vector<double, 8> Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::Vector<double, 8>& nodal_temps, const float surf_area); // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
+        static Eigen::Vector<double, 8> Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::Vector<double, 8>& nodal_temps); // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
 
         /*Числовые значения элемента*/
         static double Point_Temp(const double xi, const double eta, const double zeta, const Eigen::Vector<double, 8>& nodal_temps); // Температура заданной точке элемента
