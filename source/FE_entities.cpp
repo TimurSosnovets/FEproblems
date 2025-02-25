@@ -11,7 +11,7 @@ const Point& Node::coords() const {return point;}
 
 /*Конечный элемент*/
 //Конструктор
-Element::Element(const std::vector<Node*>& v, const int n, const Material* const m, const bool s = false, const float area = 0) : vertices(v), gn(n), material(m), is_surface(s), surface_area(area) {}
+Element::Element(std::unique_ptr<Isoparametric_3D> fe_type, const std::vector<Node*>& v, const int n, const Material* const m, const bool s = false, const float area = 0) : type(fe_type), vertices(v), gn(n), material(m), is_surface(s), surface_area(area) {}
 // Указание слоя
 void Element::set_layer(std::string* lr) {layer = lr;}
 // Указание геометрического примитива

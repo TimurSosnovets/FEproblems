@@ -39,9 +39,11 @@ void TFE_model::add_node(const Point p, const int g_nbr)
 }
 
 // Добавление элемента
-void TFE_model::add_element(const std::vector<Node*>& verts, const int& g_nbr, const Material* const material, const bool is_surf = false, const float& surf_area = 0, std::string* const layer = nullptr, std::string* const primitive = nullptr)
+void TFE_model::add_element(const ElementType fe_type, const std::vector<Node*>& verts, const int& g_nbr, const Material* const material, const bool is_surf = false, const float& surf_area = 0, std::string* const layer = nullptr, std::string* const primitive = nullptr)
 {
-    auto& new_element = _elements.emplace_back(verts, g_nbr, material, is_surf, surf_area);
+    std::unique_ptr<Isoparametric_3D> type;
+    if (fe_type == ElementType::LQube) {type = std::make_unique<LQube>();}
+    auto& new_element = _elements.emplace_back(std::move(type), verts, g_nbr, material, is_surf, surf_area);
     if (layer) {new_element.set_layer(layer);}
     if (primitive) {new_element.set_primitive(primitive);}
 
@@ -52,7 +54,7 @@ void TFE_model::pre_calculate()
 {
     for (auto& element : _elements)
     {
-        LQube::calculate_element(element);
+        element.type->calculate_element(element);
     }
 }
 
@@ -111,7 +113,7 @@ Eigen::SparseMatrix<double> TFE_model::GCM(const Eigen::VectorXd& nodal_temps) c
             ++i;
         }
 
-        H = LQube::Cond_Mat(element, T);
+        H = element.type->Cond_Mat(element, T);
         assembly(triplets, H, element);
     }
 
@@ -140,7 +142,7 @@ Eigen::SparseMatrix<double> TFE_model::GDM(const Eigen::VectorXd& nodal_temps) c
             ++i;
         }
 
-        C = LQube::Damp_Mat(element, T);
+        C = element.type->Damp_Mat(element, T);
         assembly(triplets, C, element);
     }
 
@@ -176,7 +178,7 @@ Eigen::SparseVector<double> TFE_model::NLV(const double q, const double eps, con
             ++i;
         }
 
-        F = LQube::Heat_Load_Surf(element, q, eps, T);
+        F = element.type->Heat_Load_Surf(element, q, eps, T);
         //
     }
 

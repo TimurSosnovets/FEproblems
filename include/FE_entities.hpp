@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 // Current project
+#include "FE_instances.hpp"
 #include "Materials.hpp"
 #include "Output.hpp"
 
@@ -73,6 +74,7 @@ class Node
 class Element
 {
     private:
+        std::unique_ptr<Isoparametric_3D> type; // Тип элемента
         const std::vector<Node*> vertices; // Массив ссылок на узлы - вершины
         const int gn; // Номер элемента
         const Material* material; // Материал элемента
@@ -86,7 +88,7 @@ class Element
 
     public:
         // Конструктор
-        Element(const std::vector<Node*>& v, const int n, const Material* const m, const bool s = false, const float area = 0);
+        Element(std::unique_ptr<Isoparametric_3D> fe_type, const std::vector<Node*>& v, const int n, const Material* const m, const bool s = false, const float area = 0);
 
         // Указание слоя
         void set_layer(std::string* lr);

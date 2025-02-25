@@ -13,35 +13,40 @@
 extern std::array<std::pair<double, double>, 2> int_pnts;
 
 // Изопараметрический линейный кубический элемент
-class LQube
+class LQube : public Isoparametric_3D
 {
     private:
         /*Внутренние функции*/
         // Функции формы
-        static Eigen::RowVector<double, 8> Shape_Func(const double xi, const double eta, const double zeta);
+        Eigen::RowVectorXd Shape_Func(const double xi, const double eta, const double zeta) const override;
 
         // Частные производные функций формы 
-        static std::array<Eigen::RowVector<double, 8>, 3> Shape_Func_PD(const double xi, const double eta, const double zeta);
+        std::array<Eigen::RowVectorXd, 3> Shape_Func_PD(const double xi, const double eta, const double zeta) const override;
         
         // Матрица градиентов
-        static Eigen::Matrix<double, 3, 8> Grad_Mat(const double xi, const double eta, const double zeta);
+        Eigen::MatrixXd Grad_Mat(const double xi, const double eta, const double zeta) const override;
 
         // Функция отображения
-        static Point Mapping(const double xi, const double eta, const double zeta, const Element& FE);
+        Point Mapping(const double xi, const double eta, const double zeta, const Element& FE) const override;
 
         // Якобиан преобразования
-        static Eigen::Matrix3d Jacobian(const double xi, const double eta, const double zeta, const Element& FE);
+        Eigen::Matrix3d Jacobian(const double xi, const double eta, const double zeta, const Element& FE) const override;
 
     public:
         /*Предрасчёт характеристик*/
-        static void calculate_element(Element& FE);
+        void calculate_element(Element& FE) const override;
 
         /*Матрицы элемента*/
-        static Eigen::Matrix<double, 8, 8> Cond_Mat(const Element& FE, const Eigen::Vector<double, 8>& nodal_temps); // Матрица теплопроводности
-        static Eigen::Matrix<double, 8, 8> Damp_Mat(const Element& FE, const Eigen::Vector<double, 8>& nodal_temps); // Матрица демфпирования (теплоёмкости)
-        static Eigen::Vector<double, 8> Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::Vector<double, 8>& nodal_temps); // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
+        // Матрица теплопроводности
+        Eigen::MatrixXd Cond_Mat(const Element& FE, const Eigen::VectorXd& nodal_temps) const override;
+        // Матрица демфпирования (теплоёмкости) 
+        Eigen::MatrixXd Damp_Mat(const Element& FE, const Eigen::VectorXd& nodal_temps) const override;
+        // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности) 
+        Eigen::VectorXd Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::VectorXd& nodal_temps) const override; 
 
         /*Числовые значения элемента*/
-        static double Point_Temp(const double xi, const double eta, const double zeta, const Eigen::Vector<double, 8>& nodal_temps); // Температура заданной точке элемента
-        static double Element_Temp(const Eigen::Vector<double, 8>& nodal_temps); // Репрезентативная температура элемента
+        // Температура заданной точке элемента
+        double Point_Temp(const double xi, const double eta, const double zeta, const Eigen::VectorXd& nodal_temps) const override;
+        // Репрезентативная температура элемента 
+        double Element_Temp(const Eigen::VectorXd& nodal_temps) const override; 
 };
