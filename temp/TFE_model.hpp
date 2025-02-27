@@ -24,6 +24,7 @@ class TFE_model
         std::vector<Element> _elements; // Массив элементов
         const size_t _DOF; // Степень свободы модели (в данном случае оно же - количество узлов)
         size_t unique_DOF = 0; // Количество ненулевых значений в матрицах (зависит только от сетки)
+        size_t unique_DOF_surf = 0; // Количество ненулевых значений в векторе нагрузок (зависит только от сетки)
 
         /*Внутренние методы*/
         void assembly(std::vector<Eigen::Triplet<double>>& t, const Eigen::MatrixXd& a, const Element& FE) const; // Ассамблирование матрицы A размерности [DOF x DOF] из меньшей матрицы a
@@ -39,6 +40,7 @@ class TFE_model
         /*Предрасчёт сетки*/
         void pre_calculate();
         void mesh_check();
+        void surface_check();
 
         /*Вычисление параметров*/
         Eigen::SparseMatrix<double> GCM(const Eigen::VectorXd& nodal_temps) const; // Глобальная матрица теплопроводности
@@ -46,7 +48,7 @@ class TFE_model
         Eigen::SparseVector<double> NLV(const double q, const double eps, const Eigen::VectorXd& nodal_temps) const; // Вектор узловых нагрузок
 
         /*Решение нестационарной задачи с заданными начальными условиями, временем расчёта и шагом.*/
-        Eigen::VectorXd Dynamic_calculation(const float initial_temp, const int max_time, const float time_step) const; 
+        Eigen::VectorXd Dynamic_calculation(const float initial_temp, const Eigen::Triplets& constraints,const float q, const int max_time, const float time_step) const; 
 
         /*Вывод информации*/
         void mesh_info() const;

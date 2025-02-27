@@ -92,19 +92,47 @@ void TFE_model::mesh_check()
     unique_DOF = nnz_entries.size();
 }
 
+void TFE_model::surface_check()
+{
+    std::unordered_set<int> nnz_nodes;
+
+    for (const auto& element : _elements)
+    {
+        if (element.is_surface)
+        {
+            for (const auto& vertex : element.vertices)
+            {
+                nnz_nodes.insert(vertex->gn - 1);
+            }
+        }
+    }
+    unique_DOF_surf = nnz_nodes.size();
+}
+
 // Глобальная матрица теплопроводности
 Eigen::SparseMatrix<double> TFE_model::GCM(const Eigen::VectorXd& nodal_temps) const
 {
     /*Инициализация*/
+    if (unique_DOF == 0) throw std::invalid_argument("Mesh check is required!");
     Eigen::SparseMatrix<double> GCM;
     std::vector<Eigen::Triplet<double>> triplets;
-    if (!(unique_DOF == 0)) {triplets.reserve(unique_DOF);}
-    Eigen::Matrix<double, 8, 8> H;
-    Eigen::Vector<double, 8> T;
+    triplets.reserve(unique_DOF);
+    // Размерность
+    size_t size = 0;
+    Eigen::MatrixXd H;
+    Eigen::VectorXd T;
+    T.reserve(8);
 
     /*Заполнение вектора ненулевых значений*/
     for (const auto& element : _elements)
     {   
+        // Проверка размера элемента
+        if (element.vertices.size() != size) 
+        {
+            size = element.vertices.size();
+            T.resize(size);
+            H.resize(size, size);
+        }
         // Заполняем локальный вектор узловых температур
         int i = 0;
         for (const auto& node : element.vertices)
@@ -125,15 +153,26 @@ Eigen::SparseMatrix<double> TFE_model::GCM(const Eigen::VectorXd& nodal_temps) c
 Eigen::SparseMatrix<double> TFE_model::GDM(const Eigen::VectorXd& nodal_temps) const
 {
     /*Инициализация*/
+    if (unique_DOF == 0) throw std::invalid_argument("Mesh check is required!");
     Eigen::SparseMatrix<double> GDM;
     std::vector<Eigen::Triplet<double>> triplets;
-    if (!(unique_DOF == 0)) {triplets.reserve(unique_DOF);}
-    Eigen::Matrix<double, 8, 8> C;
-    Eigen::Vector<double, 8> T;
+    triplets.reserve(unique_DOF);
+    // Размерность
+    size_t size = 0;
+    Eigen::MatrixXd C;
+    Eigen::VectorXd T;
+    T.reserve(8);
 
     /*Заполнение вектора ненулевых значений*/
     for (const auto& element : _elements)
     {   
+        // Проверка размера элемента
+        if (element.vertices.size() != size) 
+        {
+            size = element.vertices.size();
+            T.resize(size);
+            C.resize(size, size);
+        }
         // Вектор узловых температур
         int i = 0;
         for (const auto& node : element.vertices)
@@ -154,22 +193,25 @@ Eigen::SparseMatrix<double> TFE_model::GDM(const Eigen::VectorXd& nodal_temps) c
 Eigen::SparseVector<double> TFE_model::NLV(const double q, const double eps, const Eigen::VectorXd& nodal_temps) const
 {
     /*Инициализация*/
-    Eigen::SparseVector<double> NLV;
-    std::vector<Eigen::Triplet<double>> triplets;
-
-    size_t surf_el_count = 0; // Количество поверхностных элементов
-    for (const auto& element : _elements)
-    {
-        if (element.is_surface) ++surf_el_count;
-    }
-    triplets.reserve(surf_el_count * 2);
-
-    Eigen::Vector<double, 8> F;
-    Eigen::Vector<double, 8> T;
+    if (unique_DOF_surf == 0) throw std::invalid_argument("Surface check is required!");
+    Eigen::SparseVector<double> NLV(unique_DOF_surf);
+    // Размерность векторов
+    size_t size = 0;
+    Eigen::VectorXd F;
+    Eigen::VectorXd T;
+    F.reserve(8);
+    T.reserve(8);
 
     /*Заполнение вектора ненулевых значений*/
     for (const auto& element : _elements)
     {   
+        // Проверка размера элемента
+        if (element.vertices.size() != size) 
+        {
+            size = element.vertices.size();
+            T.resize(size);
+            F.resize(size);
+        }
         // Вектор узловых температур
         int i = 0;
         for (const auto& node : element.vertices)
@@ -179,10 +221,15 @@ Eigen::SparseVector<double> TFE_model::NLV(const double q, const double eps, con
         }
 
         F = element.type->Heat_Load_Surf(element, q, eps, T);
-        //
+        
+        // Перенос значений в глобальный вектор
+        for (size_t i = 0; i < element.vertices.size(); ++i)
+        {
+            NLV.coeffRef(element.vertices[i]->gn - 1) += F[i];
+        }
     }
 
-
+    return NLV;
 }
 
 
