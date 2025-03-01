@@ -1,5 +1,6 @@
 #include "LQube_IP.hpp"
 #include "Output.hpp"
+#include "TFE_model.hpp"
 // Eigen
 #include <Sparse>
 #include <SparseQR>
@@ -7,8 +8,6 @@
 #include <chrono>
 
 /*Исходные данные*/
-// Node n1(Point(0,0,0), 1), n2(Point(400,0,0), 2), n3(Point(400,0.06,0), 3), n4(Point(0,0.06,0), 4); // Низ элемента
-// Node n5(Point(0,0,0.06), 5), n6(Point(400,0,0.06), 6), n7(Point(400,0.06,0.06), 7), n8(Point(0,0.06,0.06), 8); // Верх элемента
 Node n1(Point(0,0,0), 1), n2(Point(0.01,0,0), 2), n3(Point(0.01,0.01,0), 3), n4(Point(0,0.01,0), 4); // Низ элемента
 Node n5(Point(0,0,0.006), 5), n6(Point(0.01,0,0.006), 6), n7(Point(0.01,0.01,0.006), 7), n8(Point(0,0.01,0.006), 8); // Верх элемента
 std::vector<Node*> Vertices = {&n1, &n2, &n3, &n4, &n5, &n6, &n7, &n8};
@@ -19,54 +18,89 @@ Eigen::Vector<double, 8> test_temps = {300, 400, 500, 600, 300, 400, 500, 600};
 /*Тестирование*/
 int main()
 {
-    /*Инициализация*/
-    LQube element(Vertices, &AMg_6);
+    try {
+        /*Инициализация*/
+        TFE_model model(1, 1, 1);
+        logger::log("Model created succesfully!");
+        std::cin.get();
 
-    auto GCM = element.Cond_Mat(test_temps); // Матрица теплопроводности
-    auto GDM = element.Damp_Mat(test_temps); // Матрица теплоёмкости
-    auto T_elem = element.Element_Temp(test_temps); // Репрезентативная температура элемент
-    auto F = element.Heat_Load_Surf(1e5, 0, test_temps, surface_area); // Вектор нагрузок
+        for (const auto& node : Vertices) {model.add_node(*node);}
+        logger::log("Nodes were added succesfully!");
+        std::cin.get();
 
-    /*Вывод тестируемых значений*/
-    std::cout << "\n\nElement temperature: " << T_elem << "\n\nConductivity matrix:\n" << GCM << "\n\nDamping matrix\n" << GDM << "\n\nLoad 1:\n" << F << std::endl;
+        model.add_element(ElementType::LQube, Vertices, 1, &AMg_6, true, surface_area);
+        logger::log("The element was added succesfully!");
+        std::cin.get();
+
+        model.pre_calculate();
+        logger::log("Mesh calculated succesfully!");
+        std::cin.get();
+
+        model.mesh_check();
+        logger::log("Mesh has been checked succesfully!");
+        std::cin.get();
+
+        model.surface_check();
+        logger::log("Surface has been checked succesfully!");
+        std::cin.get();
+
+        model.mesh_info();
+        std::cin.get();
     
-    /*Тестирование прерасчёта элемента*/
-    element.calculate_element();
-    auto GCM_pre = element.Cond_Mat(test_temps);
-    auto GDM_pre = element.Damp_Mat(test_temps);
-    auto F_pre = element.Heat_Load_Surf(1e5, 0, test_temps, surface_area);
+        auto GCM = model.GCM(test_temps); // Матрица теплопроводности
+        logger::log("GCM has been computed succesfully!");
+        std::cin.get();
 
-    /*Вывод тестируемых значений для сравнения*/
-    std::cout << "\n\nPre calculation test: " << "\n\nConductivity matrix diff:\n" << GCM_pre - GCM << "\n\nDamping matrix diff\n" << GDM_pre - GDM  << "\n\nLoad 1 diff:\n" << F_pre - F << std::endl;
+        auto GDM = model.GDM(test_temps); // Матрица теплоёмкости
+        logger::log("GDM has been computed succesfully!");
+        std::cin.get();
 
-    /*Решение задачи стационарной теплопроводности*/
-    auto Lh = GCM; // Левая часть уравнения
-    auto Rh = F; // Правая часть уравнения
+        auto F = model.NLV(10e5, 0, test_temps); // Вектор нагрузок
+        logger::log("NLV has been computed succesfully!");
+        std::cin.get();
 
-    // Закрепление
-    for (int i = 4; i < 8; ++i)
-    {
-        Rh(i) = 300;
-        for (int j = 0; j < 8; ++j)
+        /*Вывод тестируемых значений*/
+        std::cout << "\n\nConductivity matrix:\n" << GCM.toDense() << "\n\nDamping matrix\n" << GDM.toDense() << "\n\nLoad 1:\n" << F.toDense() << std::endl;
+        std::cin.get();
+        
+        /*Решение задачи стационарной теплопроводности*/
+        auto Lh = GCM; // Левая часть уравнения
+        auto Rh = F; // Правая часть уравнения
+
+        // Закрепление
+        for (int i = 4; i < 8; ++i)
         {
-            if (i == j) {Lh(i,j) = 1;}
-            else {Lh(i,j) = 0;}
+            Rh.coeffRef(i) = 300;
+            for (int j = 0; j < 8; ++j)
+            {
+                if (i == j) {Lh.coeffRef(i, j) = 1;}
+                else {Lh.coeffRef(i, j) = 0;}
+            }
         }
+
+        std::cout << "\n\nLeft hand of the equation:\n" << Lh.toDense() << "\n\nThe right one:\n" << Rh.toDense() << std::endl;
+        std::cin.get();
+
+        // Решение
+        Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
+        solver.compute(Lh);
+        if (solver.info() != Eigen::Success) 
+        {
+            std::cout << "Decomposition failed!" << std::endl;
+            std::cin.get();  // Чтобы не закрывалось окно консоли при проблеме
+            return -1; // Exit if decomposition fails
+        }
+        Eigen::VectorXd Nodal_temps = solver.solve(Rh); // Convert to dense vector
+
+        // Вывод результата
+        std::cout << "\n\nSolution:\n" << Nodal_temps << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
     }
 
-    // Решение
-    Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
-    Eigen::SparseMatrix<double> A = Lh.sparseView();
-    solver.compute(A);
-    if (solver.info() != Eigen::Success) 
-    {
-        std::cout << "Decomposition failed!" << std::endl;
-        std::cin.get();  // Чтобы не закрывалось окно консоли при проблеме
-    }
-    auto Nodal_temps = solver.solve(Rh);
+    std::cout << "Press Enter to exit..." << std::endl;
+    std::cin.get(); // Wait for user input
 
-    // Вывод результата
-    std::cout << "\n\nSolution:\n" << Nodal_temps;
-    std::cin.get();
-
+    return 0;
 }

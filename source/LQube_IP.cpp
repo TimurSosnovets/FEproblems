@@ -7,7 +7,7 @@ std::array<std::pair<double, double>, 2> int_pnts = {{ {1/sqrt(3), 1.0}, {-1/sqr
 Eigen::RowVectorXd LQube::Shape_Func(const double xi, const double eta, const double zeta) const
 {
     /*Инициализация*/
-    Eigen::RowVector<double, 8> N;
+    Eigen::RowVectorXd N(8);
 
     N[0] = (1/8.0) * (1 - eta) * (1 - xi) * (1-zeta);
     N[1] = (1/8.0) * (1 - eta) * (1 + xi) * (1-zeta);
@@ -25,8 +25,8 @@ Eigen::RowVectorXd LQube::Shape_Func(const double xi, const double eta, const do
 std::array<Eigen::RowVectorXd, 3> LQube::Shape_Func_PD(const double xi, const double eta, const double zeta) const
 {
     /*Инициализация*/
-    std::array<Eigen::RowVector<double, 8>, 3> dN;
-    Eigen::RowVector<double, 8> d_xi, d_eta, d_zeta;
+    std::array<Eigen::RowVectorXd, 3> dN;
+    Eigen::RowVectorXd d_xi(8), d_eta(8), d_zeta(8);
 
     d_xi[0] = (1/8.0) * (1 - eta) * (-1) * (1-zeta);
     d_xi[1] = (1/8.0) * (1 - eta) * (+1) * (1-zeta);
@@ -59,11 +59,11 @@ std::array<Eigen::RowVectorXd, 3> LQube::Shape_Func_PD(const double xi, const do
 }
 
 // Матрица градиентов
-Eigen::Matrix<double, 3, 8> LQube::Grad_Mat(const double xi, const double eta, const double zeta) const
+Eigen::MatrixXd LQube::Grad_Mat(const double xi, const double eta, const double zeta) const
 {
     /*Инициализация*/
-    Eigen::Matrix<double, 3, 8> B;
-    std::array<Eigen::RowVector<double, 8>, 3> dN = Shape_Func_PD(xi, eta, zeta);
+    Eigen::MatrixXd B(3,8);
+    std::array<Eigen::RowVectorXd, 3> dN = Shape_Func_PD(xi, eta, zeta);
 
     B.row(0) = dN[0];
     B.row(1) = dN[1];
@@ -78,7 +78,7 @@ Point LQube::Mapping(const double xi, const double eta, const double zeta, const
     if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
     /*Инициализация*/
     double x = 0.0, y = 0.0, z = 0.0;
-    Eigen::RowVector<double, 8> N = Shape_Func(xi, eta, zeta);
+    Eigen::RowVectorXd N = Shape_Func(xi, eta, zeta);
 
     for (int i = 0; i < 8; ++i)
     {
@@ -96,7 +96,7 @@ Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double 
     if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
     /*Инициализация*/
     Eigen::Matrix3d J;
-    std::array<Eigen::RowVector<double, 8>, 3> dN = Shape_Func_PD(xi, eta, zeta);
+    std::array<Eigen::RowVectorXd, 3> dN = Shape_Func_PD(xi, eta, zeta);
     Eigen::Matrix<double, 8, 1> X, Y, Z;
 
     /*Получение векторов-координат по соответствующим осям*/
@@ -292,12 +292,12 @@ Eigen::VectorXd LQube::Heat_Load_Surf(const Element& FE, const double heat_flux,
 void LQube::calculate_element(Element& FE) const
 {   
     /*Инициализация*/
-    FE.cache.GM.reserve(8);
-    FE.cache.GM_T.reserve(8);
-    FE.cache.SF.reserve(8);
-    FE.cache.SF_T.reserve(8);
-    FE.cache.SF_s.reserve(8);
-    FE.cache.J_det.reserve(8);
+    FE.cache.GM.resize(8);
+    FE.cache.GM_T.resize(8);
+    FE.cache.SF.resize(8);
+    FE.cache.SF_T.resize(8);
+    FE.cache.SF_s.resize(8);
+    FE.cache.J_det.resize(8);
     int nbr = 0, surf = 0; // Счётчики
 
     /*Заполнение*/
@@ -309,10 +309,10 @@ void LQube::calculate_element(Element& FE) const
             ++surf;
             for (int k = 0; k < int_pnts.size(); ++k)
             {   
-                auto N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-                auto J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first, FE);
-                auto B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-                auto dJ = J.determinant(); 
+                Eigen::VectorXd N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                Eigen::Matrix3d J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first, FE);
+                Eigen::MatrixXd B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                double dJ = J.determinant(); 
 
                 FE.cache.GM[nbr] = B;
                 FE.cache.GM_T[nbr] = B.transpose();

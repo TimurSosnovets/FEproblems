@@ -4,9 +4,11 @@
 #include <iostream>
 #include <string>
 // Current project
-#include "FE_instances.hpp"
 #include "Materials.hpp"
 #include "Output.hpp"
+
+class Isoparametric_3D;
+class LQube;
 
 struct Point 
 {

@@ -7,6 +7,7 @@
 #include <Dense>
 // Current project
 #include "FE_entities.hpp"
+#include "FE_instances.hpp"
 #include "Materials.hpp"
 
 // Точки интегрирования

@@ -48,7 +48,7 @@ class Isoparametric_3D
         virtual double Point_Temp(const double xi, const double eta, const double zeta, const Eigen::VectorXd& nodal_temps) const = 0; 
         // Репрезентативная температура элемента
         virtual double Element_Temp(const Eigen::VectorXd& nodal_temps) const = 0; 
-}
+};
 
 enum class ElementType 
 {
