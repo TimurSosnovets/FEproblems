@@ -10,7 +10,7 @@
 /*Исходные данные*/
 Node n1(Point(0,0,0), 1), n2(Point(0.01,0,0), 2), n3(Point(0.01,0.01,0), 3), n4(Point(0,0.01,0), 4); // Низ элемента
 Node n5(Point(0,0,0.006), 5), n6(Point(0.01,0,0.006), 6), n7(Point(0.01,0.01,0.006), 7), n8(Point(0,0.01,0.006), 8); // Верх элемента
-std::vector<Node*> Vertices = {&n1, &n2, &n3, &n4, &n5, &n6, &n7, &n8};
+std::vector<const Node*> Vertices = {&n1, &n2, &n3, &n4, &n5, &n6, &n7, &n8};
 double surface_area = 0.01 * 0.01;
 
 Eigen::Vector<double, 8> test_temps = {300, 400, 500, 600, 300, 400, 500, 600};

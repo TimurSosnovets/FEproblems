@@ -47,7 +47,7 @@ void TFE_model::add_node(const Node& node)
 }
 
 // Добавление элемента
-void TFE_model::add_element(const ElementType fe_type, const std::vector<Node*>& verts, const int& g_nbr, const Material* const material, const bool is_surf, const float& surf_area, std::string* const layer, std::string* const primitive)
+void TFE_model::add_element(const ElementType fe_type, const std::vector<const Node*>& verts, const int& g_nbr, const Material* const material, const bool is_surf, const float& surf_area, std::string* const layer, std::string* const primitive)
 {
     std::unique_ptr<Isoparametric_3D> type;
     if (fe_type == ElementType::LQube) {type = std::make_unique<LQube>();}
@@ -66,7 +66,7 @@ void TFE_model::pre_calculate()
     }
 }
 
-// Ассамблирование матрицы A размерности [DOF x DOF] из меньшей матрицы a
+// Сбор триплетов для разреженной матрицы размерности [DOF x DOF] из меньшей матрицы a
 void TFE_model::assembly(std::vector<Eigen::Triplet<double>>& t , const Eigen::MatrixXd& a, const Element& FE) const
 {
     for (size_t i = 0; i < a.rows(); ++i)
@@ -153,7 +153,6 @@ Eigen::SparseMatrix<double> TFE_model::GCM(const Eigen::VectorXd& nodal_temps) c
 Eigen::SparseMatrix<double> TFE_model::GDM(const Eigen::VectorXd& nodal_temps) const
 {
     /*Инициализация*/
-    //if (unique_DOF == 0) throw std::invalid_argument("Mesh check is required!");
     Eigen::SparseMatrix<double> GDM(_DOF, _DOF);
     std::vector<Eigen::Triplet<double>> triplets;
     // Размерность
@@ -184,7 +183,6 @@ Eigen::SparseMatrix<double> TFE_model::GDM(const Eigen::VectorXd& nodal_temps) c
 Eigen::SparseVector<double> TFE_model::NLV(const double q, const double eps, const Eigen::VectorXd& nodal_temps) const
 {
     /*Инициализация*/
-//    if (unique_DOF_surf == 0) throw std::invalid_argument("Surface check is required!");
     Eigen::SparseVector<double> NLV(_DOF);
     // Размерность векторов
     size_t size = 8;
@@ -194,14 +192,6 @@ Eigen::SparseVector<double> TFE_model::NLV(const double q, const double eps, con
     /*Заполнение вектора ненулевых значений*/
     for (const auto& element : _elements)
     {   
-        // // Проверка размера элемента
-        // if (element.vertices.size() != size) 
-        // {
-        //     size = element.vertices.size();
-        //     T.resize(size);
-        //     F.resize(size);
-        // }
-        // Вектор узловых температур
         int i = 0;
         for (const auto& node : element.vertices)
         {
@@ -221,6 +211,45 @@ Eigen::SparseVector<double> TFE_model::NLV(const double q, const double eps, con
     return NLV;
 }
 
+// Динамический расчет 
+Eigen::VectorXd TFE_model::Dynamic_calculation(const float initial_temp, const std::vector<std::pair<int, double>>& constraints, const float q, const int max_time, const float time_step) const
+{
+    /*Инициализация*/
+    auto start = std::chrono::high_resolution_clock::now(); // Таймер
+    std::string message;
+    Eigen::VectorXd nodal_temps = initial_temp * Eigen::VectorXd::Ones(_DOF); // Глобальный вектор узловых температур
+    Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
+    Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
+    Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver; // Решатель
 
+    /*Расчёт*/
+    for (size_t t = 0; t < max_time; t += time_step)
+    {
+        // Вычисление значений на шаге
+        Lh = GCM(nodal_temps) + (2 / time_step) * (GDM(nodal_temps));
+        Rh = ((2 / time_step) * GDM(nodal_temps) - GCM(nodal_temps)) * nodal_temps + 2 * NLV(q, 0.0, nodal_temps);
+        // Закрепления
+        if (!constraints.empty())
+        {
+            for (const auto& LBC : constraints)
+            {
+                Rh(LBC.first) = LBC.second;
+                for (Eigen::SparseMatrix<double>::InnerIterator it(Lh, LBC.first); it; ++it) {it.valueRef() = 0;}
+                Lh.coeffRef(LBC.first, LBC.first) = 1;
+            }
+        }
+        // Решение матричного уравнения
+        solver.compute(Lh);
+        if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
+        nodal_temps = solver.solve(Rh);
+        if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
+    }    
 
+    /*Вывод времени расчёта*/
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
+    logger::log(message);
 
+    return nodal_temps;
+}

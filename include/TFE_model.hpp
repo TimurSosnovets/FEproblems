@@ -4,10 +4,10 @@
 #include "Materials.hpp"
 #include "LQube_IP.hpp"
 // Eigen
-#include <Dense>
-#include <Sparse>
-#include <Core>
+#include <IterativeLinearSolvers>
+// STL
 #include <unordered_set>
+#include <chrono>
 
 // Для вычисления уникальных комбинаций строка-столбец на базе КЭ сетки
 struct PairHash 
@@ -36,7 +36,7 @@ class TFE_model
         /*Добавление структурных единиц*/
         void add_node(const Point p, const int g_nbr);
         void add_node(const Node& node);
-        void add_element(const ElementType fe_type, const std::vector<Node*>& verts, const int& g_nbr, const Material* const material, const bool is_surf = false, const float& surf_area = 0, std::string* const layer = nullptr, std::string* const primitive = nullptr);
+        void add_element(const ElementType fe_type, const std::vector<const Node*>& verts, const int& g_nbr, const Material* const material, const bool is_surf = false, const float& surf_area = 0, std::string* const layer = nullptr, std::string* const primitive = nullptr);
 
         /*Предрасчёт сетки*/
         void pre_calculate();
@@ -49,7 +49,7 @@ class TFE_model
         Eigen::SparseVector<double> NLV(const double q, const double eps, const Eigen::VectorXd& nodal_temps) const; // Вектор узловых нагрузок
 
         /*Решение нестационарной задачи с заданными начальными условиями, временем расчёта и шагом.*/
-        Eigen::VectorXd Dynamic_calculation(const float initial_temp, const Eigen::Triplet<double>& constraints, const float q, const int max_time, const float time_step) const; 
+        Eigen::VectorXd Dynamic_calculation(const float initial_temp, const std::vector<std::pair<int, double>>& constraints, const float q, const int max_time, const float time_step) const; 
 
         /*Вывод объектов*/
         const std::vector<Node>& Nodes() const;

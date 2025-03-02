@@ -3,8 +3,6 @@
 #include <cmath>
 #include <iostream>
 #include <optional>
-// Eigen
-#include <Dense>
 // Current project
 #include "FE_entities.hpp"
 #include "Materials.hpp"

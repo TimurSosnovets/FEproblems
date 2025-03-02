@@ -13,7 +13,7 @@ const Point& Node::coords() const {return point;}
 
 /*Конечный элемент*/
 //Конструктор
-Element::Element(std::unique_ptr<Isoparametric_3D> fe_type, const std::vector<Node*>& v, const int n, const Material* const m, const bool s, const float area) : 
+Element::Element(std::unique_ptr<Isoparametric_3D> fe_type, const std::vector<const Node*>& v, const int n, const Material* const m, const bool s, const float area) : 
 type(std::move(fe_type)), 
 vertices(v), 
 gn(n), 

@@ -41,3 +41,4 @@ class Material
 extern const Material GC_2500;
 extern const Material TZMK_10;
 extern const Material AMg_6;
+extern const Material Steel_30HGSA;

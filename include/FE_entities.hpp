@@ -6,6 +6,10 @@
 // Current project
 #include "Materials.hpp"
 #include "Output.hpp"
+// Eigen
+#include <Dense>
+#include <Sparse>
+#include <Core>
 
 class Isoparametric_3D;
 class LQube;
@@ -77,7 +81,7 @@ class Element
 {
     private:
         std::unique_ptr<Isoparametric_3D> type; // Тип элемента
-        const std::vector<Node*> vertices; // Массив ссылок на узлы - вершины
+        const std::vector<const Node*> vertices; // Массив ссылок на узлы - вершины
         const int gn; // Номер элемента
         const Material* material; // Материал элемента
         std::string* layer = nullptr; // Положение по слою
@@ -90,7 +94,7 @@ class Element
 
     public:
         // Конструктор
-        Element(std::unique_ptr<Isoparametric_3D> fe_type, const std::vector<Node*>& v, const int n, const Material* const m, const bool s = false, const float area = 0);
+        Element(std::unique_ptr<Isoparametric_3D> fe_type, const std::vector<const Node*>& v, const int n, const Material* const m, const bool s = false, const float area = 0);
 
         // Указание слоя
         void set_layer(std::string* lr);

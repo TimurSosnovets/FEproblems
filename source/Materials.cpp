@@ -92,4 +92,7 @@ const Material TZMK_10
 // АМг-6
 const Material AMg_6 (122.0, 922.0, 2640.0);
 
+// Сталь 30ХГСА
+const Material Steel_30HGSA (34.0, 600.0, 7800.0);
+
 
