@@ -10,12 +10,14 @@ void make_model(TFE_model& model, const std::array<float, 3> dimentions, const s
     const double dx = dimentions[0] / mesh[0], dy = dimentions[1] / mesh[1], dz = dimentions[2] / mesh[2];
     int node_number = 1;
     int element_number = 1;
+    bool is_surface = true;
+    float surface_area = dx * dz;
     std::vector<const Node*> vertices(8);
     double eps = 1e-6; // Для сравнения координат
 
     // Создание узлов
     for (int step_y = 0; (step_y) < mesh[1] + 1; ++step_y)
-    {
+    {   
         y = step_y * dy;
         for (int step_z = 0; (step_z) < mesh[2] + 1; ++step_z)
         {
@@ -49,7 +51,7 @@ void make_model(TFE_model& model, const std::array<float, 3> dimentions, const s
         // Учитываем только базовые узлы
         if (abs(node.coords().y - ly) < eps) {break;}
         if ((abs(node.coords().x - lx) < eps) || (abs(node.coords().z - lz) < eps)) {continue;}
-
+        if (node.coords().y != 0) {is_surface = false; surface_area = 0.0;}
         // Создание элемента
         int v1 = node.global_number() - 1;
         int v2 = next_x(v1);
@@ -59,15 +61,23 @@ void make_model(TFE_model& model, const std::array<float, 3> dimentions, const s
         int v6 = next_y(v2);
         int v7 = next_y(v3);
         int v8 = next_y(v4);
-        vertices[0] = &model.Nodes()[v1];
-        vertices[1] = &model.Nodes()[v2];
-        vertices[2] = &model.Nodes()[v3];
-        vertices[3] = &model.Nodes()[v4];
-        vertices[4] = &model.Nodes()[v5];
-        vertices[5] = &model.Nodes()[v6];
-        vertices[6] = &model.Nodes()[v7];
-        vertices[7] = &model.Nodes()[v8];
-        model.add_element(ElementType::LQube, vertices, element_number, &Steel_30HGSA);
+        // vertices[0] = &model.Nodes()[v1];
+        // vertices[1] = &model.Nodes()[v2];
+        // vertices[2] = &model.Nodes()[v3];
+        // vertices[3] = &model.Nodes()[v4];
+        // vertices[4] = &model.Nodes()[v5];
+        // vertices[5] = &model.Nodes()[v6];
+        // vertices[6] = &model.Nodes()[v7];
+        // vertices[7] = &model.Nodes()[v8];
+        vertices[0] = &model.Nodes()[v2];
+        vertices[1] = &model.Nodes()[v1];
+        vertices[2] = &model.Nodes()[v4];
+        vertices[3] = &model.Nodes()[v3];
+        vertices[4] = &model.Nodes()[v6];
+        vertices[5] = &model.Nodes()[v5];
+        vertices[6] = &model.Nodes()[v8];
+        vertices[7] = &model.Nodes()[v7];
+        model.add_element(ElementType::LQube, vertices, element_number, &AMg_6, is_surface, surface_area);
         ++element_number;
     }
 }
@@ -76,7 +86,7 @@ int main()
 {
     /*Взятие значений*/
     logger::log("Mesh test");
-    std::array<float, 3> dim = {0.01, 0.05, 0.1};
+    std::array<float, 3> dim = {0.01, 0.06, 0.01};
     std::array<int, 3> fec;
     logger::log("Enter number of elements for each side of plate:");
     std::cout << "OX: ";
@@ -96,38 +106,22 @@ int main()
     
     /*Решение*/
     // Ввод значений
-    double constraint_temp, initial_temp;
-    int time;
-    float time_step;
+    double constraint_temp = 300;
     int constraint_count = (fec[0] + 1) * (fec[2] + 1) * 2;
     std::vector<std::pair<int, double>> LBC;
 
-    logger::log("Enter constraint temperature:");
-    std::cin >> constraint_temp;
-
-    logger::log("Enter initial temperature:");
-    std::cin >> initial_temp;
-
-    logger::log("Enter the calculation time interval (integer, s):");
-    std::cin >> time;
-
-    logger::log("Enter time step (integer, s):");
-    std::cin >> time_step;
+    // logger::log("Enter constraint temperature:");
+    // std::cin >> constraint_temp;
 
     // Формирование вектора закреплений
-        // Левая грань
-    for (int i = 0; i < constraint_count / 2; ++i)
-    {
-        LBC.emplace_back(i, constraint_temp);
-    }
         // Правая грань
     for (int i = model.Nodes().size() - constraint_count / 2; i < model.Nodes().size(); ++i)
     {
         LBC.emplace_back(i, constraint_temp);
     }
 
-    Eigen::VectorXd temps = model.transient_analisys(initial_temp, LBC, 0.0, time, time_step);
-
+    Eigen::VectorXd temps = model.steady_state_analysis(LBC, 1e5);
+    
     logger::log("Nodal temperatures:");
     std::cout << temps;
     std::cin.get();

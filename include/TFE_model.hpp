@@ -49,8 +49,8 @@ class TFE_model
         Eigen::SparseVector<double> NLV(const double q, const double eps, const Eigen::VectorXd& nodal_temps) const; // Вектор узловых нагрузок
 
         /*Решение нестационарной задачи с заданными начальными условиями, временем расчёта и шагом.*/
-        Eigen::VectorXd Dynamic_calculation(const float initial_temp, const std::vector<std::pair<int, double>>& constraints, const float q, const int max_time, const float time_step) const; 
-
+        Eigen::VectorXd transient_analisys(const float initial_temp, const std::vector<std::pair<int, double>>& constraints, const float q, const int max_time, const float time_step) const; 
+        Eigen::VectorXd steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q) const;
         /*Вывод объектов*/
         const std::vector<Node>& Nodes() const;
         const std::vector<Element>& Elements() const;

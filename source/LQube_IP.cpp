@@ -95,7 +95,7 @@ Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double 
 {
     if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
     /*Инициализация*/
-    Eigen::Matrix3d J;
+    Eigen::Matrix3d J, A;
     std::array<Eigen::RowVectorXd, 3> dN = Shape_Func_PD(xi, eta, zeta);
     Eigen::Matrix<double, 8, 1> X, Y, Z;
 
@@ -114,8 +114,8 @@ Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double 
         J(1, i) = dN[i] * Y;
         J(2, i) = dN[i] * Z;
     }
-
-    return J;
+    A = J.transpose();
+    return A;
 }
 
 // Температура в точке элемента при заданных узловых температурах

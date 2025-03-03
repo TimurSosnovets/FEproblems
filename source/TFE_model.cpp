@@ -212,7 +212,7 @@ Eigen::SparseVector<double> TFE_model::NLV(const double q, const double eps, con
 }
 
 // Динамический расчет 
-Eigen::VectorXd TFE_model::Dynamic_calculation(const float initial_temp, const std::vector<std::pair<int, double>>& constraints, const float q, const int max_time, const float time_step) const
+Eigen::VectorXd TFE_model::transient_analisys(const float initial_temp, const std::vector<std::pair<int, double>>& constraints, const float q, const int max_time, const float time_step) const
 {
     /*Инициализация*/
     auto start = std::chrono::high_resolution_clock::now(); // Таймер
@@ -221,9 +221,11 @@ Eigen::VectorXd TFE_model::Dynamic_calculation(const float initial_temp, const s
     Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
     Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
     Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver; // Решатель
+    //Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
 
+    logger::log("Started transient analysis calculation.");
     /*Расчёт*/
-    for (size_t t = 0; t < max_time; t += time_step)
+    for (size_t t = 0; t * time_step < max_time; ++t)
     {
         // Вычисление значений на шаге
         Lh = GCM(nodal_temps) + (2 / time_step) * (GDM(nodal_temps));
@@ -234,15 +236,22 @@ Eigen::VectorXd TFE_model::Dynamic_calculation(const float initial_temp, const s
             for (const auto& LBC : constraints)
             {
                 Rh(LBC.first) = LBC.second;
-                for (Eigen::SparseMatrix<double>::InnerIterator it(Lh, LBC.first); it; ++it) {it.valueRef() = 0;}
+                //for (Eigen::SparseMatrix<double>::InnerIterator it(Lh, LBC.first); it; ++it) {it.valueRef() = 0;}
+                for (int col = 0; col < Lh.cols(); ++col) {
+                    Lh.coeffRef(LBC.first, col) = 0; // Explicitly set all elements in the row to 0
+                }
                 Lh.coeffRef(LBC.first, LBC.first) = 1;
             }
         }
+        Lh.prune(0.0);
+        // std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
+        // std::cout << "Right hand vector:\n" << Rh << std::endl;
         // Решение матричного уравнения
         solver.compute(Lh);
         if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
         nodal_temps = solver.solve(Rh);
         if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
+        else {std::cout << "Time step " << t << " done." << std::endl;}
     }    
 
     /*Вывод времени расчёта*/
@@ -250,6 +259,50 @@ Eigen::VectorXd TFE_model::Dynamic_calculation(const float initial_temp, const s
     std::chrono::duration<double> elapsed_seconds = end - start;
     message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
     logger::log(message);
+    std::cin.get();
+    return nodal_temps;
+}
 
+Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q) const
+{
+    /*Инициализация*/
+    auto start = std::chrono::high_resolution_clock::now(); // Таймер
+    std::string message;
+    Eigen::VectorXd nodal_temps; // Глобальный вектор узловых температур
+    Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
+    Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
+    Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
+    logger::log("Started transient analysis calculation.");
+
+    Lh = GCM(300 * Eigen::VectorXd::Ones(_DOF));
+    Rh = NLV(q, 0.0, 300 * Eigen::VectorXd::Ones(_DOF));
+
+    // Закрепления
+    if (!constraints.empty())
+    {
+        for (const auto& LBC : constraints)
+        {
+            Rh(LBC.first) = LBC.second;
+            for (int col = 0; col < Lh.cols(); ++col) {
+                Lh.coeffRef(LBC.first, col) = 0; // Explicitly set all elements in the row to 0
+            }
+            Lh.coeffRef(LBC.first, LBC.first) = 1;
+        }
+    }
+    Lh.prune(0.0);
+
+    std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
+    std::cout << "Right hand vector:\n" << Rh << std::endl;
+
+    solver.compute(Lh);
+    if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
+    nodal_temps = solver.solve(Rh);
+    if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
+    logger::log(message);
+    std::cin.get();
     return nodal_temps;
 }
