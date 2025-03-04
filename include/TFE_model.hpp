@@ -3,6 +3,7 @@
 #include "FE_entities.hpp"
 #include "Materials.hpp"
 #include "LQube_IP.hpp"
+#include "Output.hpp"
 // Eigen
 #include <IterativeLinearSolvers>
 // STL
@@ -49,7 +50,7 @@ class TFE_model
         Eigen::SparseVector<double> NLV(const double q, const double eps, const Eigen::VectorXd& nodal_temps) const; // Вектор узловых нагрузок
 
         /*Решение нестационарной задачи с заданными начальными условиями, временем расчёта и шагом.*/
-        std::tuple<std::vector<Eigen::VectorXd>, std::vector<std::vector<double>>> transient_analisys(const std::vector<std::pair<int, double>>& constraints, const float q) const; 
+        Results_transient transient_analisys(const std::vector<std::pair<int, double>>& constraints, const float q) const; 
         Eigen::VectorXd steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q) const;
         /*Вывод объектов*/
         const std::vector<Node>& Nodes() const;

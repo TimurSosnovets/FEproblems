@@ -37,7 +37,30 @@ class logger
         }
 };
 
-
+// Контейнер результатов
+struct Results_transient
+{
+    // Векторы узловых температур в обозначенные моменты времени
+    std::vector<std::pair<float, Eigen::VectorXd>> VNT_samples; 
+    // Значение температур некоторых узлов во времени
+    std::vector<std::pair<size_t, std::vector<double>>> NT_samples;
+    // Конструктор
+    Results_transient(std::vector<float>& time_moments, std::vector<size_t>& node_numbers, size_t DOF, size_t time_steps)
+    {
+        VNT_samples.reserve(time_moments.size());
+        NT_samples.reserve(node_numbers.size());
+        for (size_t i = 0; i < time_moments.size(); ++i)
+        {
+            VNT_samples[i].first = time_moments[i];
+            VNT_samples[i].second.resize(DOF);
+        }
+        for (size_t i = 0; i < node_numbers.size(); ++i)
+        {
+            NT_samples[i].first = node_numbers[i];
+            NT_samples[i].second.reserve(time_steps);
+        }
+    }
+};
 
 // Вывод столбцов и заголовков у ним в файл .xlsx
 template <typename DataV>

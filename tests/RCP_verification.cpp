@@ -76,6 +76,7 @@ void make_model(TFE_model& model, const std::array<float, 3> dimentions, const s
 
 int main()
 {
+    std::string message;
     /*Взятие значений*/
     logger::log("Mesh test");
     std::array<float, 3> dim = {0.01, 0.05, 0.1};
@@ -104,7 +105,7 @@ int main()
     int constraint_count = (fec[0] + 1) * (fec[2] + 1) * 2;
     std::vector<std::pair<int, double>> LBC;
 
-    logger::log("Enter constraint temperature:");
+    logger::log("Enter constraint temperature (K):");
     std::cin >> constraint_temp;
 
     // Формирование вектора закреплений
@@ -118,11 +119,20 @@ int main()
     {
         LBC.emplace_back(i, constraint_temp);
     }
+    auto results = model.transient_analisys(LBC, 0.0);
 
-    Eigen::VectorXd temps = model.transient_analisys(initial_temp, LBC, 0.0, time, time_step);
+    // std::tuple<std::vector<Eigen::VectorXd>, std::vector<std::vector<double>>>
+    std::cout << results.NT_samples.size() << " " << results.NT_samples[0].second.size();
+    message = "Temperatures across time for node ";
+    for (const auto& n_res : results.NT_samples)
+    {
+        logger::log(message + std::to_string(n_res.first) + ":");
+        for (const auto& temp : n_res.second)
+        {
+            std::cout << temp << std::endl;
+        }
+    }
 
-    logger::log("Nodal temperatures:");
-    std::cout << temps;
     std::cin.get();
     return 0;
 }

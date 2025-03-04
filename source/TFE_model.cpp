@@ -212,12 +212,12 @@ Eigen::SparseVector<double> TFE_model::NLV(const double q, const double eps, con
 }
 
 // Динамический расчет 
-std::tuple<std::vector<Eigen::VectorXd>, std::vector<std::vector<double>>> TFE_model::transient_analisys(const std::vector<std::pair<int, double>>& constraints, const float q) const
+Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int, double>>& constraints, const float q) const
 {
     /*Инициализация ввода данных*/
     float max_time, time_step, time_step_output, initial_temp;
-    std::vector<int> node_samples;
-    int node_sample;
+    std::vector<size_t> node_samples;
+    size_t node_sample;
     std::vector<float> time_samples;
     float time_sample;
     float eps = 1e-6;
@@ -246,37 +246,10 @@ std::tuple<std::vector<Eigen::VectorXd>, std::vector<std::vector<double>>> TFE_m
         }
 
         // Проверка адекватности введённого значения по диапазону
-        if (node_sample != -1 && (node_sample < 1 || node_sample > _elements.size() + 1)) 
-        {
-            std::cin.setstate(std::ios::failbit); // Force cin to fail
-            logger::log("Value out of range.");
-            std::cout << "Value out of range. Please enter an integer between 0 and 100.\n";
-            continue;
-        }
-
-        if (node_sample == -1) {break;}
-
-        node_samples.push_back(node_sample);
-    }
-
-    logger::log("Enter numbers of nodes (1 based) you want to check through time (-1 to finish input)");
-    while (true) {
-        std::cin >> node_sample;
-
-        // Проверка адекватности введённого значения по типу
-        if (std::cin.fail()) 
-        {
-            std::cin.clear(); 
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
-            logger::log("Invalid input. Please enter an integer value.");
-            continue; 
-        }
-
-        // Проверка адекватности введённого значения по диапазону
         if (node_sample != -1 && (node_sample < 1 || node_sample > _nodes.size() + 1)) 
         {
             std::cin.setstate(std::ios::failbit); // Force cin to fail
-            logger::log("Value out of range.");
+            logger::log("Value out of range. Should be above 0 and below " + std::to_string(_nodes.size() + 1) + ".");
             continue;
         }
 
@@ -285,7 +258,7 @@ std::tuple<std::vector<Eigen::VectorXd>, std::vector<std::vector<double>>> TFE_m
         node_samples.push_back(node_sample);
     }
 
-    logger::log("Enter time step for outputed values (s) (must be a multiple of actual time step for computation):");
+    logger::log("Enter time step for outputed values (s) (better be a multiple of actual time step for computation):");
     std::cin >> time_step_output;
 
     logger::log("Enter specific time moments (s) in which you want nodal temperatures to be outputed (-1 to finish input):");
@@ -322,14 +295,8 @@ std::tuple<std::vector<Eigen::VectorXd>, std::vector<std::vector<double>>> TFE_m
     Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
     Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver; // Решатель
     // Заготовка под вывод значений
-    std::vector<std::vector<double>> node_temp_samples(node_samples.size());
-    for (auto& sample : node_temp_samples) 
-    {
-        sample.reserve(max_time / time_step_output);
-        sample[0] = initial_temp;
-    }
-    std::vector<Eigen::VectorXd> NDL_Ts(time_samples.size());
-
+    Results_transient results(time_samples, node_samples, _DOF, static_cast<size_t>(std::ceil(max_time / time_step_output)));
+    //Results_transient results(time_samples, node_samples, _DOF, 10);
     logger::log("Started transient analysis calculation.");
     /*Расчёт*/
     for (size_t t = 0; t * time_step < max_time; ++t)
@@ -351,6 +318,11 @@ std::tuple<std::vector<Eigen::VectorXd>, std::vector<std::vector<double>>> TFE_m
             }
         }
         Lh.prune(0.0);
+        // std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
+        // std::cin.get();
+        // std::cout << "Right hand vector:\n" << Rh << std::endl;
+        // std::cin.get();
+        // std::cin.get();
         // Решение матричного уравнения
         solver.compute(Lh);
         if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
@@ -358,18 +330,19 @@ std::tuple<std::vector<Eigen::VectorXd>, std::vector<std::vector<double>>> TFE_m
         if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
         else {std::cout << "Time step " << t << " done." << std::endl;}
         
-        // Запись значений
-        for (const auto& t_sample : time_samples)
-        {
-            if (abs(t_sample - t * time_step) < time_step) {NDL_Ts.push_back(nodal_temps);}
-        }
+        // // Запись значений
+        // for (int i = 0; i < time_samples.size(); ++i)
+        // {
+        //     if (abs(time_samples[i] - t * time_step) < time_step) {results.VNT_samples[i].second = nodal_temps;}
+        // }
 
-        if (std::remainder((t * time_step), time_step_output) < eps)
+        // if (std::remainder((t * time_step), time_step_output) < eps)
+        if (true)
         {
-            int i = 0;
-            for (auto& n_sample : node_samples)
+            results.NT_samples[0].second[0] = 0.0;
+            for (int i = 0; i < node_samples.size(); ++i)
             {
-                node_temp_samples[i].push_back(nodal_temps(n_sample - 1));
+                results.NT_samples[i].second.emplace_back(nodal_temps(node_samples[i] - 1));
                 ++i;
             }
         }
@@ -382,7 +355,7 @@ std::tuple<std::vector<Eigen::VectorXd>, std::vector<std::vector<double>>> TFE_m
     logger::log(message);
     std::cin.get();
 
-    return std::make_tuple(NDL_Ts, node_temp_samples);
+    return results;
 }
 
 Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q) const
