@@ -12,6 +12,7 @@ void make_model(TFE_model& model, const std::array<float, 3> dimentions, const s
     int element_number = 1;
     std::vector<const Node*> vertices(8);
     double eps = 1e-6; // Для сравнения координат
+    std::vector<int> output_nodes(4); // Номера узлов, на которые нужно будет смотреть
 
     // Создание узлов
     for (int step_y = 0; (step_y) < mesh[1] + 1; ++step_y)
@@ -24,6 +25,7 @@ void make_model(TFE_model& model, const std::array<float, 3> dimentions, const s
             {
                 x = step_x * dx;
                 model.add_node(Point(x, y, z), node_number);
+                if (y - ly/2 < eps) {output_nodes.emplace_back(node_number - 1);}
                 ++node_number;
             }
         }
@@ -104,15 +106,6 @@ int main()
 
     logger::log("Enter constraint temperature:");
     std::cin >> constraint_temp;
-
-    logger::log("Enter initial temperature:");
-    std::cin >> initial_temp;
-
-    logger::log("Enter the calculation time interval (integer, s):");
-    std::cin >> time;
-
-    logger::log("Enter time step (integer, s):");
-    std::cin >> time_step;
 
     // Формирование вектора закреплений
         // Левая грань
