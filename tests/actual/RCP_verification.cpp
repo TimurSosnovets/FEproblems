@@ -121,8 +121,6 @@ int main()
     }
     auto results = model.transient_analisys(LBC, 0.0);
 
-    // std::tuple<std::vector<Eigen::VectorXd>, std::vector<std::vector<double>>>
-    std::cout << results.NT_samples.size() << " " << results.NT_samples[0].second.size();
     message = "Temperatures across time for node ";
     for (const auto& n_res : results.NT_samples)
     {

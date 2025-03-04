@@ -21,7 +21,7 @@ add_subdirectory(lib/OpenXLSX)
 file(GLOB SOURCE_FILES source/*.cpp)
 
 # Collect all test files (*.cpp) from tests/ folder
-file(GLOB TEST_FILES tests/*.cpp)
+file(GLOB TEST_FILES tests/actual/*.cpp)
 
 # Create an executable for each test file
 foreach(TEST_FILE ${TEST_FILES})

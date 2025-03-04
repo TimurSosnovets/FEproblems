@@ -330,20 +330,17 @@ Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int,
         if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
         else {std::cout << "Time step " << t << " done." << std::endl;}
         
-        // // Запись значений
-        // for (int i = 0; i < time_samples.size(); ++i)
-        // {
-        //     if (abs(time_samples[i] - t * time_step) < time_step) {results.VNT_samples[i].second = nodal_temps;}
-        // }
-
-        // if (std::remainder((t * time_step), time_step_output) < eps)
-        if (true)
+        // Запись значений
+        for (int i = 0; i < time_samples.size(); ++i)
         {
-            results.NT_samples[0].second[0] = 0.0;
+            if (abs(time_samples[i] - t * time_step) < time_step) {results.VNT_samples[i].second = nodal_temps;}
+        }
+
+        if (t % static_cast<int>(time_step_output / time_step) < eps)
+        {
             for (int i = 0; i < node_samples.size(); ++i)
             {
                 results.NT_samples[i].second.emplace_back(nodal_temps(node_samples[i] - 1));
-                ++i;
             }
         }
     }    
