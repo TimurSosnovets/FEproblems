@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <chrono>
 #include <algorithm>
+#include <iomanip> // for std::setprecision
 
 // Для вычисления уникальных комбинаций строка-столбец на базе КЭ сетки
 struct PairHash 

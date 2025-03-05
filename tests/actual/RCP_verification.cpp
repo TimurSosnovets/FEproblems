@@ -138,8 +138,9 @@ int main()
     for (const auto& vnt_res : results.VNT_samples)
     {
         logger::log(message + std::to_string(vnt_res.first) + " s:");
-        std::cout << vnt_res.second << std::endl;
+        std::cout << vnt_res.second << std::endl << std::endl;
     }
+    std::cout << "Calculation has ended. Press enter to escape...";
     std::cin.get();
 
     return 0;

@@ -303,7 +303,7 @@ Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int,
  
     /*Расчёт*/
     logger::log("Started transient analysis calculation.");
-    for (size_t t = 0; t * time_step < max_time; ++t)
+    for (size_t t = 1; (t-1) * time_step < max_time; ++t)
     {
         // Вычисление значений на шаге
         Lh = GCM(nodal_temps) + (2 / time_step) * (GDM(nodal_temps));
@@ -329,10 +329,14 @@ Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int,
         if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
         nodal_temps = solver.solve(Rh);
         if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
-        else {std::cout << "Time step " << t << " done." << std::endl;}
+        else 
+        {
+            std::cout << "\rProgress: " << std::fixed << std::setprecision(2)
+              << (100.0 * t * time_step / max_time) << "% " << std::flush;
+        }
         
         // Запись значений
-        if (abs(*t_ptr - t * time_step) < time_step)
+        if (abs(*t_ptr - t * time_step) < eps)
         {
             results.VNT_samples.emplace_back(std::make_pair(*t_ptr, nodal_temps));
             if (t_ptr != last_t) {++t_ptr;}
