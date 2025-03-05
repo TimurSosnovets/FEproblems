@@ -47,13 +47,12 @@ struct Results_transient
     // Конструктор
     Results_transient(std::vector<float>& time_moments, std::vector<size_t>& node_numbers, size_t DOF, size_t time_steps)
     {
-        VNT_samples.resize(time_moments.size());
+        VNT_samples.reserve(time_moments.size());
         NT_samples.resize(node_numbers.size());
-        for (size_t i = 0; i < time_moments.size(); ++i)
-        {
-            VNT_samples[i].first = time_moments[i];
-            VNT_samples[i].second.resize(DOF);
-        }
+        // for (size_t i = 0; i < time_moments.size(); ++i)
+        // {
+        //     VNT_samples[i].second.resize(DOF);
+        // }
         for (size_t i = 0; i < node_numbers.size(); ++i)
         {
             NT_samples[i].first = node_numbers[i];

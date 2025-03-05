@@ -119,8 +119,10 @@ int main()
     {
         LBC.emplace_back(i, constraint_temp);
     }
+    /*Расчёт*/
     auto results = model.transient_analisys(LBC, 0.0);
 
+    /*Вывод результатов*/
     message = "Temperatures across time for node ";
     for (const auto& n_res : results.NT_samples)
     {
@@ -130,7 +132,15 @@ int main()
             std::cout << temp << std::endl;
         }
     }
+    std::cout << std::endl;
 
+    message = "Nodal temperatures in time ";
+    for (const auto& vnt_res : results.VNT_samples)
+    {
+        logger::log(message + std::to_string(vnt_res.first) + " s:");
+        std::cout << vnt_res.second << std::endl;
+    }
     std::cin.get();
+
     return 0;
 }

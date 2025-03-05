@@ -265,6 +265,8 @@ Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int,
     while (true) {
         std::cin >> time_sample;
 
+        if (time_sample == -1) {break;}
+
         // Проверка адекватности введённого значения по типу
         if (std::cin.fail()) 
         {
@@ -278,15 +280,17 @@ Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int,
         if (time_sample != -1 && (time_sample <= 0 || time_sample > max_time)) 
         {
             std::cin.setstate(std::ios::failbit); // Force cin to fail
-            logger::log("Value out of range. Please enter value above zero.");
+            logger::log("Value out of range. Please enter value above zero and below " + std::to_string(max_time) + " seconds.");
             continue;
         }
 
-        if (time_sample == -1) {break;}
-
         time_samples.push_back(time_sample);
     }
-    
+    // Сортировка значений времени по возрастанию
+    std::sort(time_samples.begin(), time_samples.end(), [](float a, float b) {return abs(a) < abs(b);});
+    float* t_ptr = time_samples.data();
+    float* last_t = t_ptr + time_samples.size() - 1;
+
     /*Инициализация расчёта*/
     auto start = std::chrono::high_resolution_clock::now(); // Таймер
     std::string message;
@@ -296,15 +300,16 @@ Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int,
     Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver; // Решатель
     // Заготовка под вывод значений
     Results_transient results(time_samples, node_samples, _DOF, static_cast<size_t>(std::ceil(max_time / time_step_output)));
-    //Results_transient results(time_samples, node_samples, _DOF, 10);
-    logger::log("Started transient analysis calculation.");
+ 
     /*Расчёт*/
+    logger::log("Started transient analysis calculation.");
     for (size_t t = 0; t * time_step < max_time; ++t)
     {
         // Вычисление значений на шаге
         Lh = GCM(nodal_temps) + (2 / time_step) * (GDM(nodal_temps));
         Rh = ((2 / time_step) * GDM(nodal_temps) - GCM(nodal_temps)) * nodal_temps + 2 * NLV(q, 0.0, nodal_temps);
-        // Закрепления
+
+        // Закрепление системы
         if (!constraints.empty())
         {
             for (const auto& LBC : constraints)
@@ -318,11 +323,7 @@ Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int,
             }
         }
         Lh.prune(0.0);
-        // std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
-        // std::cin.get();
-        // std::cout << "Right hand vector:\n" << Rh << std::endl;
-        // std::cin.get();
-        // std::cin.get();
+        
         // Решение матричного уравнения
         solver.compute(Lh);
         if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
@@ -331,9 +332,10 @@ Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int,
         else {std::cout << "Time step " << t << " done." << std::endl;}
         
         // Запись значений
-        for (int i = 0; i < time_samples.size(); ++i)
+        if (abs(*t_ptr - t * time_step) < time_step)
         {
-            if (abs(time_samples[i] - t * time_step) < time_step) {results.VNT_samples[i].second = nodal_temps;}
+            results.VNT_samples.emplace_back(std::make_pair(*t_ptr, nodal_temps));
+            if (t_ptr != last_t) {++t_ptr;}
         }
 
         if (t % static_cast<int>(time_step_output / time_step) < eps)
@@ -396,5 +398,6 @@ Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int
     message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
     logger::log(message);
     std::cin.get();
+
     return nodal_temps;
 }
