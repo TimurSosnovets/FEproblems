@@ -1,6 +1,7 @@
 #include "Output.hpp"
 #include "TFE_model.hpp"
 
+std::vector<int> output_nodes; // Номера узлов, на которые нужно будет смотреть
 void make_model(TFE_model& model, const std::array<float, 3> dimentions, const std::array<int, 3> mesh)
 {
     /*Создание КЭ модели пластины (параллеллепипеда) по размерам*/
@@ -12,7 +13,6 @@ void make_model(TFE_model& model, const std::array<float, 3> dimentions, const s
     int element_number = 1;
     std::vector<const Node*> vertices(8);
     double eps = 1e-6; // Для сравнения координат
-    std::vector<int> output_nodes(4); // Номера узлов, на которые нужно будет смотреть
 
     // Создание узлов
     for (int step_y = 0; (step_y) < mesh[1] + 1; ++step_y)
@@ -25,7 +25,7 @@ void make_model(TFE_model& model, const std::array<float, 3> dimentions, const s
             {
                 x = step_x * dx;
                 model.add_node(Point(x, y, z), node_number);
-                if (y - ly/2 < eps) {output_nodes.emplace_back(node_number - 1);}
+                if ((x < eps) && (z < eps)) {output_nodes.emplace_back(node_number - 1);} // Узлы в плоскости XoZ
                 ++node_number;
             }
         }
@@ -133,13 +133,32 @@ int main()
         }
     }
     std::cout << std::endl;
+    
+    std::vector<Eigen::VectorXd> thickness_distribution;
+    thickness_distribution.reserve(results.VNT_samples.size());
+    for (const auto& dist : results.VNT_samples)
+    {   
+        // std::cout << "/nReserving for t = " << dist.first;
+        Eigen::VectorXd temp = Eigen::VectorXd::Zero(output_nodes.size());
+        for (int i = 0; i < output_nodes.size(); ++i)
+        {
+            temp(i) = dist.second[output_nodes[i]];
+        }
+        thickness_distribution.emplace_back(temp);
+        // std::cout << " -> size = " << thickness_distribution.size();
+    }
+    int i = 0;
+    
 
-    message = "Nodal temperatures in time ";
+    message = "Thickness distribution temperatures in time ";
     for (const auto& vnt_res : results.VNT_samples)
     {
         logger::log(message + std::to_string(vnt_res.first) + " s:");
-        std::cout << vnt_res.second << std::endl << std::endl;
+        std::cout << thickness_distribution[i] << std::endl << std::endl;
+        ++i;
     }
+
+
     std::cout << "Calculation has ended. Press enter to escape...";
     std::cin.get();
 
