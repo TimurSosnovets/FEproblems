@@ -132,18 +132,20 @@ double LQube::Element_Temp(const Eigen::VectorXd& nodal_temps) const
     double T_rep = 0; 
     double T;
 
-    /*Численное интегрирование*/
-    for (int i = 0; i < int_pnts.size(); ++i)
-    {
-        for (int j = 0; j < int_pnts.size(); ++j)
-        {   
-            for (int k = 0; k < int_pnts.size(); ++k)
-            {
-                T = Point_Temp(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first, nodal_temps); // Температура в точках интегрирования
-                T_rep += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * T;
-            }
-        }
-    }
+    // /*Численное интегрирование*/
+    // for (int i = 0; i < int_pnts.size(); ++i)
+    // {
+    //     for (int j = 0; j < int_pnts.size(); ++j)
+    //     {   
+    //         for (int k = 0; k < int_pnts.size(); ++k)
+    //         {
+    //             T = Point_Temp(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first, nodal_temps); // Температура в точках интегрирования
+    //             T_rep += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * T;
+    //         }
+    //     }
+    // }
+
+    for (const auto temp : nodal_temps) {T_rep += temp;}
 
     return T_rep / 8;
 }

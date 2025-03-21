@@ -125,17 +125,17 @@ double LWedge::Element_Temp(const Eigen::VectorXd& nodal_temps) const
     double T_rep = 0; 
     double T;
 
-    /*Численное интегрирование*/
+    // /*Численное интегрирование*/
 
-    for (int i = 0; i < linear_int.size(); ++i)
-    {
-        for (int t = 0; t < triang_int.size(); ++t)
-        {
-            T = Point_Temp(triang_int[t].first, triang_int[t].second, linear_int[i].first, nodal_temps); // Температура в точках интегрирования
-            T_rep += linear_int[i].second * 1/3.0 * T;
-        }
-    }
-
+    // for (int i = 0; i < linear_int.size(); ++i)
+    // {
+    //     for (int t = 0; t < triang_int.size(); ++t)
+    //     {
+    //         T = Point_Temp(triang_int[t].first, triang_int[t].second, linear_int[i].first, nodal_temps); // Температура в точках интегрирования
+    //         T_rep += linear_int[i].second * 1.0/6.0 * T;
+    //     }
+    // }
+    for (const auto temp : nodal_temps) {T_rep += temp;}
     return T_rep / 6;
 }
 
@@ -183,7 +183,7 @@ Eigen::MatrixXd LWedge::Cond_Mat(const Element& FE, const Eigen::VectorXd& nodal
                 detJ = J.determinant();
             }
 
-            H += linear_int[i].second * 1.0/3.0 * B_T * D * B * detJ;
+            H += linear_int[i].second * 1.0/6.0 * B_T * D * B * detJ;
         }
     } 
 
@@ -229,7 +229,7 @@ Eigen::MatrixXd LWedge::Damp_Mat(const Element& FE, const Eigen::VectorXd& nodal
             }
             c = FE.material->get_SHC(T_rep);
 
-            C += linear_int[i].second * 1.0/3.0 * rho * c * N_T * N * detJ;
+            C += linear_int[i].second * 1.0/6.0 * rho * c * N_T * N * detJ;
         }
     }
 
@@ -243,8 +243,27 @@ Eigen::VectorXd LWedge::Heat_Load_Surf(const Element& FE, const double heat_flux
 
     /*Инициализация*/
     const float sigma = 5.67e-8; // Постоянная Стефана-Больцмана
-    double T_surf = 0.0; // Температура излучающей поверхности
-    double area;
+    double T_surf; // Температура излучающей поверхности
+    double J_surf;
+    if (FE.is_surface) 
+    {
+    // Compute edge vectors of the triangular face
+    Eigen::Vector3d edge1, edge2;
+    edge1 << FE.vertices[1]->point.x - FE.vertices[0]->point.x,
+             FE.vertices[1]->point.y - FE.vertices[0]->point.y,
+             FE.vertices[1]->point.z - FE.vertices[0]->point.z;
+
+    edge2 << FE.vertices[2]->point.x - FE.vertices[0]->point.x,
+             FE.vertices[2]->point.y - FE.vertices[0]->point.y,
+             FE.vertices[2]->point.z - FE.vertices[0]->point.z;
+
+    T_surf = 1.0/3.0 * (nodal_temps[0] + nodal_temps[1] + nodal_temps[2]);
+    // Compute the surface Jacobian as the norm of the cross product of the edge vectors
+    J_surf = edge1.cross(edge2).norm();
+    } else {
+    // If not a surface, set the surface Jacobian to zero
+    J_surf = 0;
+    }
     Eigen::RowVector<double, 6> N_T; // Матрица функций форм (транспонированная)
     Eigen::Vector<double, 6> F = Eigen::Vector<double, 6>::Zero(); // Вектор узловых нагрузок [Вт]
     int surf = 0; // Счётчик
@@ -254,9 +273,7 @@ Eigen::VectorXd LWedge::Heat_Load_Surf(const Element& FE, const double heat_flux
 
     /*Численное интегрирование (по поверхности элемента -> z = -1)*/
     for (int t = 0; t < triang_int.size(); ++t)
-    {
-        area = Jacobian(triang_int[t].first, triang_int[t].second, -1, FE).topLeftCorner(2, 2).determinant();
-        std::cout << "area is " << area << "\n";
+    {      
         if (FE.has_cache())
         {
             N_T = FE.cache.SF_s[surf];
@@ -266,7 +283,7 @@ Eigen::VectorXd LWedge::Heat_Load_Surf(const Element& FE, const double heat_flux
         {
             N_T = Shape_Func(triang_int[t].first, triang_int[t].second, -1.0).transpose();
         }
-        F += (1.0/3.0) * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * area;
+        F += (1.0/6.0) * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * J_surf;
     }
 
     return F;

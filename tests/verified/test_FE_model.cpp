@@ -12,8 +12,11 @@
 Node n1(Point(0,0,0), 1), n2(Point(0.01,0,0), 2), n3(Point(0.01,0.01,0), 3), n4(Point(0,0.01,0), 4); // Низ элемента
 Node n5(Point(0,0,0.006), 5), n6(Point(0.01,0,0.006), 6), n7(Point(0.01,0.01,0.006), 7), n8(Point(0,0.01,0.006), 8); // Верх элемента
 
-Node w1(Point(0,0,0), 1), w2(Point(0.01,0,0), 2), w3(Point(0,0.01,0), 3); // Низ элемента
-Node w4(Point(0,0,0.006), 4), w5(Point(0.01,0,0.006), 5), w6(Point(0,0.01,0.006), 6); // Верх элемента
+// Node w1(Point(0,0,0), 1), w2(Point(0.01,0,0), 2), w3(Point(0,0.01,0), 3); // Низ элемента
+// Node w4(Point(0,0,0.006), 4), w5(Point(0.01,0,0.006), 5), w6(Point(0,0.01,0.006), 6); // Верх элемента
+
+Node w1(Point(0,0,0), 1), w3(Point(0.01,0,0), 3), w2(Point(0,0,0.01), 2); // Низ элемента
+Node w4(Point(0,0.006,0), 4), w6(Point(0.01,0.006,0), 6), w5(Point(0,0.006,0.01), 5); // Верх элемента
 
 std::vector<const Node*> Q_Verts = {&n1, &n2, &n3, &n4, &n5, &n6, &n7, &n8};
 std::vector<const Node*> W_Verts = {&w1, &w2, &w3, &w4, &w5, &w6};
@@ -135,7 +138,9 @@ int main()
                 else {Lh.coeffRef(i, j) = 0;}
             }
         }
-
+        // Rh.coeffRef(0) = 33.33333;
+        // Rh.coeffRef(1) = 33.33333;
+        // Rh.coeffRef(2) = 33.33333;
         std::cout << "\n\nLeft hand of the equation:\n" << Lh.toDense() << "\n\nThe right one:\n" << Rh.toDense() << std::endl;
         std::cin.get();
 
