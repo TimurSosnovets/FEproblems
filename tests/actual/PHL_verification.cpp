@@ -45,10 +45,42 @@ void make_model(TFE_model& model, const std::array<float, 3> dimentions, const s
     }
     std::cin.get();
 
-    // Создание элементов
+    // Создание элементов (кубы)
     for (const auto& node : model.Nodes())
     {
         // Учитываем только базовые узлы
+        if (node.coords().y > ly / 2.0) {continue;}
+        if (abs(node.coords().y - ly / 2.0) < eps) {break;}
+        // if (abs(node.coords().y - ly) < eps) {break;}
+        if ((abs(node.coords().x - lx) < eps) || (abs(node.coords().z - lz) < eps)) {continue;}
+        if (node.coords().y != 0) {is_surface = false; surface_area = 0.0;}
+        // Создание элемента
+        int v1 = node.global_number() - 1;
+        int v2 = next_x(v1);
+        int v3 = next_z(v2);
+        int v4 = next_z(v1);
+        int v5 = next_y(v1);
+        int v6 = next_y(v2);
+        int v7 = next_y(v3);
+        int v8 = next_y(v4);
+        vertices[0] = &model.Nodes()[v2];
+        vertices[1] = &model.Nodes()[v1];
+        vertices[2] = &model.Nodes()[v4];
+        vertices[3] = &model.Nodes()[v3];
+        vertices[4] = &model.Nodes()[v6];
+        vertices[5] = &model.Nodes()[v5];
+        vertices[6] = &model.Nodes()[v8];
+        vertices[7] = &model.Nodes()[v7];
+        model.add_element(ElementType::LQube, vertices, element_number, &AMg_6, is_surface, surface_area);
+        ++element_number;
+    }
+
+    vertices.resize(6);
+    // Создание элементов (клины)
+    for (const auto& node : model.Nodes())
+    {
+        // Учитываем только базовые узлы
+        if (node.coords().y < ly / 2.0) {continue;}
         if (abs(node.coords().y - ly) < eps) {break;}
         if ((abs(node.coords().x - lx) < eps) || (abs(node.coords().z - lz) < eps)) {continue;}
         if (node.coords().y != 0) {is_surface = false; surface_area = 0.0;}
@@ -61,25 +93,24 @@ void make_model(TFE_model& model, const std::array<float, 3> dimentions, const s
         int v6 = next_y(v2);
         int v7 = next_y(v3);
         int v8 = next_y(v4);
-        // vertices[0] = &model.Nodes()[v1];
-        // vertices[1] = &model.Nodes()[v2];
-        // vertices[2] = &model.Nodes()[v3];
-        // vertices[3] = &model.Nodes()[v4];
-        // vertices[4] = &model.Nodes()[v5];
-        // vertices[5] = &model.Nodes()[v6];
-        // vertices[6] = &model.Nodes()[v7];
-        // vertices[7] = &model.Nodes()[v8];
+        vertices[0] = &model.Nodes()[v1];
+        vertices[1] = &model.Nodes()[v4];
+        vertices[2] = &model.Nodes()[v2];
+        vertices[3] = &model.Nodes()[v5];
+        vertices[4] = &model.Nodes()[v8];
+        vertices[5] = &model.Nodes()[v6];
+        model.add_element(ElementType::LWedge, vertices, element_number, &AMg_6, is_surface, surface_area);
+        ++element_number;
         vertices[0] = &model.Nodes()[v2];
-        vertices[1] = &model.Nodes()[v1];
-        vertices[2] = &model.Nodes()[v4];
-        vertices[3] = &model.Nodes()[v3];
-        vertices[4] = &model.Nodes()[v6];
-        vertices[5] = &model.Nodes()[v5];
-        vertices[6] = &model.Nodes()[v8];
-        vertices[7] = &model.Nodes()[v7];
-        model.add_element(ElementType::LQube, vertices, element_number, &AMg_6, is_surface, surface_area);
+        vertices[1] = &model.Nodes()[v4];
+        vertices[2] = &model.Nodes()[v3];
+        vertices[3] = &model.Nodes()[v6];
+        vertices[4] = &model.Nodes()[v8];
+        vertices[5] = &model.Nodes()[v7];
+        model.add_element(ElementType::LWedge, vertices, element_number, &AMg_6, is_surface, surface_area);
         ++element_number;
     }
+
 }
 
 int main()
@@ -103,6 +134,8 @@ int main()
     model.mesh_info();
     std::cin.get();
     model.pre_calculate();
+    std::cin.get();
+    model.mesh_check();
     
     /*Решение*/
     // Ввод значений

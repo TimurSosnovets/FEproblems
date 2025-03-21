@@ -72,6 +72,7 @@ class Node
         // Номер элемента
         int global_number() const;
         friend class LQube;
+        friend class LWedge;
         friend class TFE_model;
 };
 
@@ -107,6 +108,7 @@ class Element
         
         // Друзья
         friend class LQube;
+        friend class LWedge;
         friend class TFE_model;
 };
 

@@ -3,6 +3,7 @@
 #include "FE_entities.hpp"
 #include "Materials.hpp"
 #include "LQube_IP.hpp"
+#include "LWedge_IP.hpp"
 #include "Output.hpp"
 // Eigen
 #include <IterativeLinearSolvers>
@@ -25,7 +26,7 @@ class TFE_model
         /*Параметры класса*/
         std::vector<Node> _nodes; // Массив узлов
         std::vector<Element> _elements; // Массив элементов
-        const size_t _DOF; // Степень свободы модели (в данном случае оно же - количество узлов)
+        size_t _DOF = 0; // Степень свободы модели (в данном случае оно же - количество узлов)
         size_t unique_DOF = 0; // Количество ненулевых значений в матрицах (зависит только от сетки)
         size_t unique_DOF_surf = 0; // Количество ненулевых значений в векторе нагрузок (зависит только от сетки)
 

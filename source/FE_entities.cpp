@@ -1,5 +1,6 @@
 #include "FE_entities.hpp"
 #include "LQube_IP.hpp"
+#include "LWedge_IP.hpp"
 
 /*Узел*/
 Node::Node() : point(), gn(0) {} // Дефолтный конструктор
@@ -37,7 +38,8 @@ void Element::get_info(const bool to_console, const std::string& filename) const
         // Тип элемента 
     if (type) 
     {
-        if (dynamic_cast<LQube*>(type.get())) {m_type = "LQube";} 
+        if (dynamic_cast<LQube*>(type.get())) {m_type = "LQube";}
+        else if (dynamic_cast<LWedge*>(type.get())) {m_type = "LWedge";}
         else {m_type = "Unknown Type";}
     } 
     else {m_type = "Not assigned";}

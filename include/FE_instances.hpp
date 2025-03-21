@@ -51,5 +51,5 @@ class Isoparametric_3D
 enum class ElementType 
 {
     LQube,
-    LQuad
+    LWedge
 };

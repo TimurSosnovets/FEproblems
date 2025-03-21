@@ -3,9 +3,9 @@
 #include "Output.hpp"
 
 // Конструктор класса
-TFE_model::TFE_model(const size_t dx, const size_t dy, const size_t dz) : _DOF((dx+1) * (dy+1) * (dz+1))
+TFE_model::TFE_model(const size_t dx, const size_t dy, const size_t dz)
 {
-    _nodes.reserve(_DOF);
+    _nodes.reserve((dx+1) * (dy+1) * (dz+1));
     _elements.reserve(dx * dy * dz);
 }
 
@@ -51,6 +51,7 @@ void TFE_model::add_element(const ElementType fe_type, const std::vector<const N
 {
     std::unique_ptr<Isoparametric_3D> type;
     if (fe_type == ElementType::LQube) {type = std::make_unique<LQube>();}
+    if (fe_type == ElementType::LWedge) {type = std::make_unique<LWedge>();}
     auto& new_element = _elements.emplace_back(std::move(type), verts, g_nbr, material, is_surf, surf_area);
     if (layer) {new_element.set_layer(layer);}
     if (primitive) {new_element.set_primitive(primitive);}
@@ -83,6 +84,7 @@ void TFE_model::assembly(std::vector<Eigen::Triplet<double>>& t , const Eigen::M
 // Проверка количества ненулевых значений в глобальных матрицах
 void TFE_model::mesh_check()
 {
+    _DOF = _nodes.size();
     std::unordered_set<std::pair<int, int>, PairHash> nnz_entries;
 
     for (const auto& element : _elements)
@@ -121,6 +123,7 @@ void TFE_model::surface_check()
 // Глобальная матрица теплопроводности
 Eigen::SparseMatrix<double> TFE_model::GCM(const Eigen::VectorXd& nodal_temps) const
 {
+    if (_DOF == 0) {throw std::invalid_argument("Mesh check is required!");}
     /*Инициализация*/
     Eigen::SparseMatrix<double> GCM(_DOF, _DOF);
     std::vector<Eigen::Triplet<double>> triplets;
@@ -152,6 +155,7 @@ Eigen::SparseMatrix<double> TFE_model::GCM(const Eigen::VectorXd& nodal_temps) c
 // Глобальная матрица демфирования
 Eigen::SparseMatrix<double> TFE_model::GDM(const Eigen::VectorXd& nodal_temps) const
 {
+    if (_DOF == 0) {throw std::invalid_argument("Mesh check is required!");}
     /*Инициализация*/
     Eigen::SparseMatrix<double> GDM(_DOF, _DOF);
     std::vector<Eigen::Triplet<double>> triplets;
@@ -182,6 +186,7 @@ Eigen::SparseMatrix<double> TFE_model::GDM(const Eigen::VectorXd& nodal_temps) c
 // Вектор узловых нагрузок
 Eigen::SparseVector<double> TFE_model::NLV(const double q, const double eps, const Eigen::VectorXd& nodal_temps) const
 {
+    if (_DOF == 0) {throw std::invalid_argument("Mesh check is required!");}
     /*Инициализация*/
     Eigen::SparseVector<double> NLV(_DOF);
     // Размерность векторов
@@ -307,7 +312,7 @@ Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int,
     {
         // Вычисление значений на шаге
         Lh = GCM(nodal_temps) + (2 / time_step) * (GDM(nodal_temps));
-        Rh = ((2 / time_step) * GDM(nodal_temps) - GCM(nodal_temps)) * nodal_temps + 2 * NLV(q, 0.0, nodal_temps);
+        Rh = ((2 / time_step) * GDM(nodal_temps) - GCM(nodal_temps)) * nodal_temps - 2 * NLV(q, 0.0, nodal_temps);
 
         // Закрепление системы
         if (!constraints.empty())
