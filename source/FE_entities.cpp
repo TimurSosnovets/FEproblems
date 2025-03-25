@@ -33,7 +33,6 @@ void Element::get_info(const bool to_console, const std::string& filename) const
 {   
     /*Инициализация*/
     std::string message, m_type, m_surface, m_layer, m_primitive, nodes;
-        
     /*Определение качественных характеристик*/
         // Тип элемента 
     if (type) 
@@ -48,7 +47,7 @@ void Element::get_info(const bool to_console, const std::string& filename) const
         // В каком слое находится
     m_layer = (layer == nullptr) ? "not assigned" : *layer;
         // Частью какой геометрии является
-        m_primitive = (primitive == nullptr) ? "not assigned" : *primitive;      
+    m_primitive = (primitive == nullptr) ? "not assigned" : *primitive;      
     /*Массив номеров узлов через пробел*/
     for (size_t i = 0; i < vertices.size(); ++i)
     {
@@ -58,7 +57,7 @@ void Element::get_info(const bool to_console, const std::string& filename) const
 
     /*Непосредственно сообщение*/
     message = "Element " + std::to_string(gn) + ": " + m_type + ", " + m_surface + ", layer - " + m_layer + ", primitive - " + m_primitive + ", nodes {" + nodes + "}.\n";
-        
+
     /*Вывод сообщения*/
     logger::log(message, to_console, filename);
 }

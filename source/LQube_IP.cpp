@@ -264,7 +264,25 @@ Eigen::VectorXd LQube::Heat_Load_Surf(const Element& FE, const double heat_flux,
     Eigen::RowVector<double, 8> N_T; // Матрица функций форм (транспонированная)
     Eigen::Vector<double, 8> F = Eigen::Vector<double, 8>::Zero(); // Вектор узловых нагрузок [Вт]
     int surf = 0; // Счётчик
+    double J_surf;
+    if (FE.is_surface) 
+    {
+    // Compute edge vectors of the triangular face
+    Eigen::Vector3d edge1, edge2;
+    edge1 << FE.vertices[1]->point.x - FE.vertices[0]->point.x,
+             FE.vertices[1]->point.y - FE.vertices[0]->point.y,
+             FE.vertices[1]->point.z - FE.vertices[0]->point.z;
 
+    edge2 << FE.vertices[3]->point.x - FE.vertices[0]->point.x,
+             FE.vertices[3]->point.y - FE.vertices[0]->point.y,
+             FE.vertices[3]->point.z - FE.vertices[0]->point.z;
+
+    // Compute the surface Jacobian as the norm of the cross product of the edge vectors
+    J_surf = edge1.cross(edge2).norm();
+    } else {
+    // If not a surface, set the surface Jacobian to zero
+    J_surf = 0;
+    }
     /*Определение репрезентативной температуры излучающей поверхности*/ // Поверхность всегда - на (-1) по Z
     for (int i = 0; i < 4; ++i) {T_surf += (1.0 / 4.0) * nodal_temps(i);}
 
@@ -283,7 +301,7 @@ Eigen::VectorXd LQube::Heat_Load_Surf(const Element& FE, const double heat_flux,
                 N_T = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
             }
 
-            F += (1.0/4.0) * int_pnts[i].second * int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * FE.surface_area; 
+            F += (1.0/4.0) * int_pnts[i].second * int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * FE.surface_area * J_surf; 
         }
     }
 

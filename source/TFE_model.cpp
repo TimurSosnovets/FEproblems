@@ -27,8 +27,9 @@ void TFE_model::mesh_info() const
     message = "TFE model: " + std::to_string(_nodes.size()) + " nodes, " + std::to_string(_elements.size()) + " elements.\n";
     logger::log(message, to_console, filename);
 
+    std::cin.get();
     /*Вывод информации по элементам*/
-    message = "\n============\nElement info\n============\n";
+    message = "============\nElement info\n============\n";
     logger::log(message, to_console, filename);
     for (const auto& element : _elements)
     {
@@ -366,7 +367,7 @@ Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int,
     return results;
 }
 
-Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q) const
+Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation) const
 {
     /*Инициализация*/
     auto start = std::chrono::high_resolution_clock::now(); // Таймер
@@ -376,9 +377,10 @@ Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int
     Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
     Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
     logger::log("Started transient analysis calculation.");
-
+    double eps = 0;
+    if (radiation) {eps = 0.9;}
     Lh = GCM(300 * Eigen::VectorXd::Ones(_DOF));
-    Rh = NLV(q, 0.0, 300 * Eigen::VectorXd::Ones(_DOF));
+    Rh = NLV(q, eps, 300 * Eigen::VectorXd::Ones(_DOF));
 
     // Закрепления
     if (!constraints.empty())
