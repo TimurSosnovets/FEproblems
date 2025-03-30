@@ -41,6 +41,29 @@ struct Layers
     }
 };
 
+// Модель геометрии
+struct Geometry
+{
+    // Геометрия
+    double R_sphere;
+    std::array<double, 4> x_refers;
+    std::array<double, 4> r_refers;
+    std::array<std::string, 5> names = {"Sphere", "First cone", "Second cone", "Cylinder", "Bottom"};
+
+    // КЭ разбиение
+    int FE_sph, FE_cone1, FE_cone2, FE_cyl, FE_all;
+    double step_sph, step_cone1, step_cone2, step_cyl;
+
+    std::string* get_name(int iter)
+    {
+        if (iter < FE_sph) {return &names[0];}
+        else if (iter < FE_cone1) {return &names[1];}
+        else if (iter < FE_cone2) {return &names[2];}
+        else if (iter < FE_cyl) {return &names[3];}
+        else return &names[4];
+    }
+};
+
 // Градусы в радианы
 double deg2rad(double deg)
 {
@@ -53,7 +76,7 @@ double r_circle(double x, double h, double R_sphere)
     return sqrt( pow(R_sphere - h, 2) - pow(x - R_sphere, 2) );
 }
 
-void make_model(TFE_model& model, Layers& layer, int c_x, int c_phi)
+void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
 {
     /*Геометрия*/
     double R_sph = 0.336;
@@ -65,8 +88,8 @@ void make_model(TFE_model& model, Layers& layer, int c_x, int c_phi)
     double r, h, phi;
     double d_x, d_phi = 2 * M_PI / c_phi;
 
-    // Первые узлы
-    for (int it_h = 0; it_h < layer.FRNT + 1; ++it_h)
+    // СФЕРА - первые узлы
+    for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
     {
         y = 0;
         z = 0;
@@ -75,12 +98,54 @@ void make_model(TFE_model& model, Layers& layer, int c_x, int c_phi)
         ++nbr;
     }
 
-    // Основные узлы
-    for (int it_x = 1; it_x < c_x + 1; ++it_x)
+    // // СФЕРА - основные узлы
+    // for (int it_x = 1; it_x < c_x + 1; ++it_x)
+    // {
+    //     for (int it_phi = 0; it_phi < c_phi; ++it_phi)
+    //     {
+    //         for (int it_h = 0; it_h < layer.FRNT + 1; ++it_h)
+    //         {
+    //             h = layer.depth(it_h);
+    //             d_x = (x_sph - h) / c_x;
+    //             x = h + it_x * d_x;
+    //             r = r_circle(x, h, R_sph);
+    //             phi = it_phi * d_phi;
+    //             y = (-1) * r * cos(phi);
+    //             z = r * sin(phi);
+
+    //             model.add_node(Point(x, y, z), nbr);
+    //             ++nbr;
+    //         }
+    //     }
+    // }
+
+    // СФЕРА - основные узлы
+    for (int it_x = 1; it_x <= geom.FE_sph; ++it_x)
     {
         for (int it_phi = 0; it_phi < c_phi; ++it_phi)
         {
-            for (int it_h = 0; it_h < layer.FRNT + 1; ++it_h)
+            for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
+            {
+                h = layer.depth(it_h);
+                d_x = (geom.x_refers[0] - h) / geom.FE_sph;
+                x = h + it_x * d_x;
+                r = r_circle(x, h, geom.R_sphere);
+                phi = it_phi * d_phi;
+                y = (-1) * r * cos(phi);
+                z = r * sin(phi);
+
+                model.add_node(Point(x, y, z), nbr);
+                ++nbr;
+            }
+        }
+    }
+
+    // КОНУС 1
+    for (int it_x = geom.FE_sph + 1; it_x <= geom.FE_cone1; ++it_x)
+    {
+        for (int it_phi = 0; it_phi < c_phi; ++it_phi)
+        {
+            for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
             {
                 h = layer.depth(it_h);
                 d_x = (x_sph - h) / c_x;
@@ -95,7 +160,6 @@ void make_model(TFE_model& model, Layers& layer, int c_x, int c_phi)
             }
         }
     }
-
     // Номера соседних узлов
     auto next_x = [layer, c_x, c_phi] (int node) -> int 
     {
@@ -125,52 +189,45 @@ void make_model(TFE_model& model, Layers& layer, int c_x, int c_phi)
     }
     
     /*Заполнение массива элементов*/
-    std::vector<const Node*> vts(6);
-    vts.resize(6);
+    std::vector<const Node*> vts;
     nbr = 1;
     int base, v1 = 1, v2, v3, v4, v5, v6, v7, v8;
 
     // Носик
-    for (int i = 0; i < layer.FRNT; ++i)
+    vts.resize(6);
+    base = 1;
+    for (int it_h = 0; it_h < layer.FRNT; ++it_h)
     {
-        v2 = next_x(v1);
-        v3 = next_phi(v2);
-        v4 = next_h(v1);
-        v5 = next_h(v2);
-        v6 = next_h(v3);
-
-        vts[0] = &model.Nodes()[v1 - 1];
-        vts[1] = &model.Nodes()[v3 - 1];
-        vts[2] = &model.Nodes()[v2 - 1];
-        vts[3] = &model.Nodes()[v4 - 1];
-        vts[4] = &model.Nodes()[v6 - 1];
-        vts[5] = &model.Nodes()[v5 - 1];
-
-        bool is_surface = true;
-        if (i > 0) {is_surface = false;}
-        // const Material* material = layer.get_material(i);
-        const Material* material = &AMg_6;
-        std::string* layer_name = layer.get_name(i);
-        model.add_element(ElementType::LWedge, vts, nbr, material, is_surface, 1.0, layer_name);
-        ++nbr;
-
-        for (int p = 1; p < c_phi; ++p)
+        v1 = base;
+        for (int it_p = 0; it_p < c_phi; ++it_p)
         {
-            v2 = next_phi(v2);
-            v3 = next_phi(v3);
-            v5 = next_phi(v5);
-            v6 = next_phi(v6);
-
+            // Формируем массив вершин
+            v2 = next_x(v1);
+            v3 = next_phi(v2);
+            v4 = next_h(v1);
+            v5 = next_h(v2);
+            v6 = next_h(v3);
+            vts[0] = &model.Nodes()[v1 - 1];
             vts[1] = &model.Nodes()[v3 - 1];
             vts[2] = &model.Nodes()[v2 - 1];
+            vts[3] = &model.Nodes()[v4 - 1];
             vts[4] = &model.Nodes()[v6 - 1];
             vts[5] = &model.Nodes()[v5 - 1];
 
+            // Характеристики элемента
+            bool is_surface = true;
+            if (it_h > 0) {is_surface = false;}
+            // const Material* material = layer.get_material(it_h);
+            const Material* material = &AMg_6;
+            std::string* layer_name = layer.get_name(it_h);
+            
+            // Создание элемента
             model.add_element(ElementType::LWedge, vts, nbr, material, is_surface, 1.0, layer_name);
             ++nbr;
-        }
 
-        v1 = next_h(v1);
+            v1 = next_phi(v1);
+        }
+        base = next_h(base);
     }
 
     // Остальная сфера
@@ -183,6 +240,7 @@ void make_model(TFE_model& model, Layers& layer, int c_x, int c_phi)
         {
             for (int it_p = 0; it_p < c_phi; ++it_p)
             {
+                // Формируем массив вершин
                 v2 = next_phi(v1);
                 v3 = next_x(v2);
                 v4 = next_x(v1);
@@ -190,7 +248,6 @@ void make_model(TFE_model& model, Layers& layer, int c_x, int c_phi)
                 v6 = next_h(v2);
                 v7 = next_h(v3);
                 v8 = next_h(v4);
-
                 vts[0] = &model.Nodes()[v1 - 1];
                 vts[1] = &model.Nodes()[v2 - 1];
                 vts[2] = &model.Nodes()[v3 - 1];
@@ -200,13 +257,17 @@ void make_model(TFE_model& model, Layers& layer, int c_x, int c_phi)
                 vts[6] = &model.Nodes()[v7 - 1];
                 vts[7] = &model.Nodes()[v8 - 1];
 
+                // Характеристики элемента
                 bool is_surface = true;
                 if (it_h > 0) {is_surface = false;}
                 // const Material* material = layer.get_material(it_h);
                 const Material* material = &AMg_6;
                 std::string* layer_name = layer.get_name(it_h);
+                
+                // Создание элемента
                 model.add_element(ElementType::LQube, vts, nbr, material, is_surface, 1.0, layer_name);
                 ++nbr;
+
                 v1 = next_phi(v1);
             }
             v1 = next_h(v1);
