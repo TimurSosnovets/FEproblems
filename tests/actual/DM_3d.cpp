@@ -1,6 +1,33 @@
 #include "TFE_model.hpp"
 #include "Output.hpp"
+#include "Vec2D.hpp"
 #include <cmath>
+
+// Градусы в радианы
+double deg2rad(double deg)
+{
+    return (deg / 180) * M_PI;
+}
+
+// Y-координата в плоскости xOy (Сфера)
+double r_circle(double x, double h, double R_sphere)
+{
+    return sqrt( pow(R_sphere - h, 2) - pow(x - R_sphere, 2) );
+}
+
+// Y-координата в плоскости xOy (Прямая)
+double r_line(double x, double h, Point base1, Point base2)
+{
+    double x1 = base1.x, x2 = base2.x, y1 = base1.y, y2 = base2.y;
+    // Вектор смещения по нормали
+    Vec2D V(x2 - x1, y2 - y1);
+    Vec2D normal = V.perpendicular();
+    normal.set_length(h);
+    // Новые точки (смещенные по нормали)
+    std::pair<double, double> new_base1 = normal.p2p({x1, y1}), new_base2 = normal.p2p({x2, y2});
+    
+    return new_base1.second + (new_base2.second - new_base1.second) / (new_base2.first - new_base1.first) * x;
+}
 
 // Модель слоёв
 struct Layers
@@ -46,8 +73,8 @@ struct Geometry
 {
     // Геометрия
     double R_sphere;
-    std::array<double, 4> x_refers;
-    std::array<double, 4> r_refers;
+    std::array<double, 4> x_refers = {R_sphere * (1 - cos(deg2rad(69))), (10000 - 4800 - 2320) / 1000, (10000 - 2320) / 1000, (10000) / 1000};
+    std::array<double, 4> r_refers = {R_sphere, R_sphere + x_refers[1] * atan(deg2rad(69)), 4.0 - 4.8 * atan(deg2rad(82)), 4.0};
     std::array<std::string, 5> names = {"Sphere", "First cone", "Second cone", "Cylinder", "Bottom"};
 
     // КЭ разбиение
@@ -63,18 +90,6 @@ struct Geometry
         else return &names[4];
     }
 };
-
-// Градусы в радианы
-double deg2rad(double deg)
-{
-    return (deg / 180) * M_PI;
-}
-
-// Y-координата в плоскости xOy (Сфера)
-double r_circle(double x, double h, double R_sphere)
-{
-    return sqrt( pow(R_sphere - h, 2) - pow(x - R_sphere, 2) );
-}
 
 void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
 {
@@ -141,16 +156,16 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
     }
 
     // КОНУС 1
-    for (int it_x = geom.FE_sph + 1; it_x <= geom.FE_cone1; ++it_x)
+    for (int it_x = 0; it_x <= geom.FE_cone1; ++it_x)
     {
         for (int it_phi = 0; it_phi < c_phi; ++it_phi)
         {
             for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
             {
                 h = layer.depth(it_h);
-                d_x = (x_sph - h) / c_x;
-                x = h + it_x * d_x;
-                r = r_circle(x, h, R_sph);
+                d_x = (geom.x_refers[1]- geom.x_refers[0]) / geom.FE_cone1;
+                x = geom.x_refers[0] + it_x * d_x;
+                r = 
                 phi = it_phi * d_phi;
                 y = (-1) * r * cos(phi);
                 z = r * sin(phi);
