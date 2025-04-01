@@ -21,12 +21,19 @@ double r_line(double x, double h, Point base1, Point base2)
     double x1 = base1.x, x2 = base2.x, y1 = base1.y, y2 = base2.y;
     // Вектор смещения по нормали
     Vec2D V(x2 - x1, y2 - y1);
+    std::cout << "u = " << V.u << ", v = " << V.v;
     Vec2D normal = V.perpendicular();
     normal.set_length(h);
+    std::cout << "\nNormal? dot = " << V.u * normal.u + V.v * normal.v << "length = " << normal.norm << std::endl;
     // Новые точки (смещенные по нормали)
     std::pair<double, double> new_base1 = normal.p2p({x1, y1}), new_base2 = normal.p2p({x2, y2});
-    
-    return new_base1.second + (new_base2.second - new_base1.second) / (new_base2.first - new_base1.first) * x;
+    std::cout << "base1: " << new_base1.first << " " << new_base1.second << ", base2: " << new_base2.first << " " << new_base2.second;
+    std::cout << " end!" << std::endl;
+    x1 = new_base1.first;
+    x2 = new_base2.first;
+    y1 = new_base1.second;
+    y2 = new_base2.second;
+    return y1 + ((x - x1) / (x2 - x1)) * (y2 - y1);
 }
 
 // Модель слоёв
@@ -72,9 +79,9 @@ struct Layers
 struct Geometry
 {
     // Геометрия
-    double R_sphere;
-    std::array<double, 4> x_refers = {R_sphere * (1 - cos(deg2rad(69))), (10000 - 4800 - 2320) / 1000, (10000 - 2320) / 1000, (10000) / 1000};
-    std::array<double, 4> r_refers = {R_sphere, R_sphere + x_refers[1] * atan(deg2rad(69)), 4.0 - 4.8 * atan(deg2rad(82)), 4.0};
+    double R_sphere = 0.336;
+    std::array<double, 4> x_refers = {R_sphere * (1 - cos(deg2rad(69))), (10000.0 - 4800.0 - 2320.0) / 1000.0, (10000.0 - 2320.0) / 1000.0, (10000.0) / 1000.0};
+    std::array<double, 4> r_refers = {R_sphere * sin(deg2rad(69)), R_sphere * sin(deg2rad(69)) + x_refers[1] * atan(deg2rad(69)), 4.0 - 4.8 * tan(deg2rad(8)), 4.0};
     std::array<std::string, 5> names = {"Sphere", "First cone", "Second cone", "Cylinder", "Bottom"};
 
     // КЭ разбиение
@@ -84,11 +91,14 @@ struct Geometry
     std::string* get_name(int iter)
     {
         if (iter < FE_sph) {return &names[0];}
-        else if (iter < FE_cone1) {return &names[1];}
-        else if (iter < FE_cone2) {return &names[2];}
-        else if (iter < FE_cyl) {return &names[3];}
+        else if (iter < FE_cone1 + FE_sph) {return &names[1];}
+        else if (iter < FE_cone2 + FE_cone1 + FE_sph) {return &names[2];}
+        else if (iter < FE_cyl + FE_cone2 + FE_cone1 + FE_sph) {return &names[3];}
         else return &names[4];
     }
+
+    Geometry(const int Sphere, const int Cone1, const int Cone2, const int Cylinder) :
+    FE_sph(Sphere), FE_cone1(Cone1), FE_cone2(Cone2), FE_cyl(Cylinder), FE_all(Sphere + Cone1 + Cone2 + Cylinder) {}
 };
 
 void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
@@ -154,9 +164,10 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
             }
         }
     }
-
+    
     // КОНУС 1
-    for (int it_x = 0; it_x <= geom.FE_cone1; ++it_x)
+    Point Sph_Cn1(geom.x_refers[0], -geom.r_refers[0]), Cn1_Cn2(geom.x_refers[1], -geom.r_refers[1]); // Точки перехода поверхностей внешних обводов СА
+    for (int it_x = 1; it_x <= geom.FE_cone1; ++it_x)
     {
         for (int it_phi = 0; it_phi < c_phi; ++it_phi)
         {
@@ -165,7 +176,7 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
                 h = layer.depth(it_h);
                 d_x = (geom.x_refers[1]- geom.x_refers[0]) / geom.FE_cone1;
                 x = geom.x_refers[0] + it_x * d_x;
-                r = 
+                r = - r_line(x, h, Sph_Cn1, Cn1_Cn2);
                 phi = it_phi * d_phi;
                 y = (-1) * r * cos(phi);
                 z = r * sin(phi);
@@ -176,13 +187,13 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
         }
     }
     // Номера соседних узлов
-    auto next_x = [layer, c_x, c_phi] (int node) -> int 
+    auto next_x = [layer, c_phi] (int node) -> int 
     {
         if (node <= layer.FRNT + 1) {return  node + layer.FRNT + 1;}
         else {return node + (layer.FRNT + 1) * c_phi;}
     };
-    auto next_h = [layer, c_x, c_phi] (int node) -> int {return node + 1;};
-    auto next_phi = [layer, c_x, c_phi] (int node) -> int 
+    auto next_h = [layer, c_phi] (int node) -> int {return node + 1;};
+    auto next_phi = [layer, c_phi] (int node) -> int 
     {
         if (node <= layer.FRNT + 1) {return node;}
 
@@ -235,9 +246,10 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
             // const Material* material = layer.get_material(it_h);
             const Material* material = &AMg_6;
             std::string* layer_name = layer.get_name(it_h);
+            std::string* primitive_name = geom.get_name(0);
             
             // Создание элемента
-            model.add_element(ElementType::LWedge, vts, nbr, material, is_surface, 1.0, layer_name);
+            model.add_element(ElementType::LWedge, vts, nbr, material, is_surface, 1.0, layer_name, primitive_name);
             ++nbr;
 
             v1 = next_phi(v1);
@@ -245,10 +257,10 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
         base = next_h(base);
     }
 
-    // Остальная сфера
+    // Основная часть
     vts.resize(8);
     base = next_x(1);
-    for (int it_x = 1; it_x < c_x; ++it_x)
+    for (int it_x = 1; it_x < geom.FE_sph + geom.FE_cone1; ++it_x)
     {
         v1 = base;
         for (int it_h = 0; it_h < layer.FRNT; ++it_h)
@@ -278,9 +290,10 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
                 // const Material* material = layer.get_material(it_h);
                 const Material* material = &AMg_6;
                 std::string* layer_name = layer.get_name(it_h);
+                std::string* primitive_name = geom.get_name(it_x);
                 
                 // Создание элемента
-                model.add_element(ElementType::LQube, vts, nbr, material, is_surface, 1.0, layer_name);
+                model.add_element(ElementType::LQube, vts, nbr, material, is_surface, 1.0, layer_name, primitive_name);
                 ++nbr;
 
                 v1 = next_phi(v1);
@@ -295,12 +308,23 @@ int main()
 {
     /*Геометрия*/
     Layers layer({0.015, 0.045, 0.002}, {1, 1, 1});
-
+    Geometry geom(1, 1, 1, 1);
+    // Проверка
+    std::cout << "Geometry check:\n" << "X: " << geom.x_refers[0] << " " <<  geom.x_refers[1] << " " << geom.x_refers[2] << " " << geom.x_refers[3] << ";\n";
+    std::cout << "R: " << geom.r_refers[0] << " " <<  geom.r_refers[1] << " " << geom.r_refers[2] << " " << geom.r_refers[3] << ";\n";
+    // Отладка прямой
+    logger::log("Line fix");
+    Point Sph_Cn1(geom.x_refers[0], -geom.r_refers[0]), Cn1_Cn2(geom.x_refers[1], -geom.r_refers[1]);
+    Point test1(10, 0), test2(20, 0);
+    // double y = r_line(geom.x_refers[1], 0.063, Sph_Cn1, Cn1_Cn2);
+    double y = r_line(15, 0.063, test1, test2);
+    std::cout << "\nx = " << geom.x_refers[1] << ", y = " << y << std::endl << std::endl;
+    
     /*КЭ модель*/
     TFE_model DM_FE(10, 10, 10);
     
     // Заполнение массива узлов
-    make_model(DM_FE, layer, 2, 4);
+    make_model(DM_FE, layer, geom, 4);
     logger::log("Model has been made successfully!");
     std::cin.get();
 
