@@ -375,12 +375,15 @@ Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int
     Eigen::VectorXd nodal_temps; // Глобальный вектор узловых температур
     Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
     Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
-    Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
-    logger::log("Started transient analysis calculation.");
+    // Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
+    Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver;
+    logger::log("Started steady state analysis calculation.");
     double eps = 0;
     if (radiation) {eps = 0.9;}
     Lh = GCM(300 * Eigen::VectorXd::Ones(_DOF));
+    logger::log("Lh was setted!");
     Rh = NLV(q, eps, 300 * Eigen::VectorXd::Ones(_DOF));
+    logger::log("Rh was setted!");
 
     // Закрепления
     if (!constraints.empty())
@@ -396,8 +399,8 @@ Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int
     }
     Lh.prune(0.0);
 
-    std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
-    std::cout << "Right hand vector:\n" << Rh << std::endl;
+    // std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
+    // std::cout << "Right hand vector:\n" << Rh << std::endl;
 
     solver.compute(Lh);
     if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}

@@ -21,14 +21,10 @@ double r_line(double x, double h, Point base1, Point base2)
     double x1 = base1.x, x2 = base2.x, y1 = base1.y, y2 = base2.y;
     // Вектор смещения по нормали
     Vec2D V(x2 - x1, y2 - y1);
-    std::cout << "u = " << V.u << ", v = " << V.v;
     Vec2D normal = V.perpendicular();
     normal.set_length(h);
-    std::cout << "\nNormal? dot = " << V.u * normal.u + V.v * normal.v << "length = " << normal.norm << std::endl;
     // Новые точки (смещенные по нормали)
     std::pair<double, double> new_base1 = normal.p2p({x1, y1}), new_base2 = normal.p2p({x2, y2});
-    std::cout << "base1: " << new_base1.first << " " << new_base1.second << ", base2: " << new_base2.first << " " << new_base2.second;
-    std::cout << " end!" << std::endl;
     x1 = new_base1.first;
     x2 = new_base2.first;
     y1 = new_base1.second;
@@ -81,7 +77,7 @@ struct Geometry
     // Геометрия
     double R_sphere = 0.336;
     std::array<double, 4> x_refers = {R_sphere * (1 - cos(deg2rad(69))), (10000.0 - 4800.0 - 2320.0) / 1000.0, (10000.0 - 2320.0) / 1000.0, (10000.0) / 1000.0};
-    std::array<double, 4> r_refers = {R_sphere * sin(deg2rad(69)), R_sphere * sin(deg2rad(69)) + x_refers[1] * atan(deg2rad(69)), 4.0 - 4.8 * tan(deg2rad(8)), 4.0};
+    std::array<double, 4> r_refers = {R_sphere * sin(deg2rad(69)), R_sphere * sin(deg2rad(69)) + (x_refers[1] - x_refers[0]) * tan(deg2rad(21)), 4.0 - 4.8 * tan(deg2rad(8)), 4.0};
     std::array<std::string, 5> names = {"Sphere", "First cone", "Second cone", "Cylinder", "Bottom"};
 
     // КЭ разбиение
@@ -186,6 +182,51 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
             }
         }
     }
+
+    // КОНУС 2
+    Point Cn2_Cyl(geom.x_refers[2], -geom.r_refers[2]); // Точки перехода поверхностей внешних обводов СА
+    for (int it_x = 1; it_x <= geom.FE_cone2; ++it_x)
+    {
+        for (int it_phi = 0; it_phi < c_phi; ++it_phi)
+        {
+            for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
+            {
+                h = layer.depth(it_h);
+                d_x = (geom.x_refers[2]- geom.x_refers[1]) / geom.FE_cone2;
+                x = geom.x_refers[1] + it_x * d_x;
+                r = - r_line(x, h, Cn1_Cn2, Cn2_Cyl);
+                phi = it_phi * d_phi;
+                y = (-1) * r * cos(phi);
+                z = r * sin(phi);
+
+                model.add_node(Point(x, y, z), nbr);
+                ++nbr;
+            }
+        }
+    }
+
+    // Цилиндр
+    Point Cyl_Bot(geom.x_refers[3], -geom.r_refers[3]); // Точки перехода поверхностей внешних обводов СА
+    for (int it_x = 1; it_x <= geom.FE_cyl; ++it_x)
+    {
+        for (int it_phi = 0; it_phi < c_phi; ++it_phi)
+        {
+            for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
+            {
+                h = layer.depth(it_h);
+                d_x = (geom.x_refers[3]- geom.x_refers[2]) / geom.FE_cyl;
+                x = geom.x_refers[2] + it_x * d_x;
+                r = - r_line(x, h, Cn2_Cyl, Cyl_Bot);
+                phi = it_phi * d_phi;
+                y = (-1) * r * cos(phi);
+                z = r * sin(phi);
+
+                model.add_node(Point(x, y, z), nbr);
+                ++nbr;
+            }
+        }
+    }
+
     // Номера соседних узлов
     auto next_x = [layer, c_phi] (int node) -> int 
     {
@@ -260,7 +301,7 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
     // Основная часть
     vts.resize(8);
     base = next_x(1);
-    for (int it_x = 1; it_x < geom.FE_sph + geom.FE_cone1; ++it_x)
+    for (int it_x = 1; it_x < geom.FE_all; ++it_x)
     {
         v1 = base;
         for (int it_h = 0; it_h < layer.FRNT; ++it_h)
@@ -307,24 +348,17 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
 int main()
 {
     /*Геометрия*/
-    Layers layer({0.015, 0.045, 0.002}, {1, 1, 1});
-    Geometry geom(1, 1, 1, 1);
+    Layers layer({0.015, 0.045, 0.002}, {5, 10, 1});
+    Geometry geom(10, 5, 5, 5);
     // Проверка
     std::cout << "Geometry check:\n" << "X: " << geom.x_refers[0] << " " <<  geom.x_refers[1] << " " << geom.x_refers[2] << " " << geom.x_refers[3] << ";\n";
     std::cout << "R: " << geom.r_refers[0] << " " <<  geom.r_refers[1] << " " << geom.r_refers[2] << " " << geom.r_refers[3] << ";\n";
-    // Отладка прямой
-    logger::log("Line fix");
-    Point Sph_Cn1(geom.x_refers[0], -geom.r_refers[0]), Cn1_Cn2(geom.x_refers[1], -geom.r_refers[1]);
-    Point test1(10, 0), test2(20, 0);
-    // double y = r_line(geom.x_refers[1], 0.063, Sph_Cn1, Cn1_Cn2);
-    double y = r_line(15, 0.063, test1, test2);
-    std::cout << "\nx = " << geom.x_refers[1] << ", y = " << y << std::endl << std::endl;
     
     /*КЭ модель*/
     TFE_model DM_FE(10, 10, 10);
     
     // Заполнение массива узлов
-    make_model(DM_FE, layer, geom, 4);
+    make_model(DM_FE, layer, geom, 12);
     logger::log("Model has been made successfully!");
     std::cin.get();
 
@@ -344,9 +378,26 @@ int main()
     }
 
     Eigen::VectorXd temps = DM_FE.steady_state_analysis(LBC, 1e5, true);
+
+    std::vector<int> nodes_keel;
+    for (const auto& node : DM_FE.Nodes())
+    {
+        if ((node.coords().z < 1e-8) && (node.coords().y < 0))
+        {
+            nodes_keel.emplace_back(node.global_number());
+        }
+    }
+
+    Eigen::VectorXd out(nodes_keel.size());
+    int it = 0;
+    for (const auto& nbr : nodes_keel)
+    {
+        out(it) = temps(nbr - 1);
+        ++it;
+    }
     
     logger::log("Nodal temperatures:");
-    std::cout << temps;
+    std::cout << out;
     std::cin.get();
     return 0;
 
