@@ -377,6 +377,8 @@ Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int
     Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
     // Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
     Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver;
+    solver.setMaxIterations(1);
+    solver.setTolerance(1e-3);
     logger::log("Started steady state analysis calculation.");
     double eps = 0;
     if (radiation) {eps = 0.9;}
@@ -402,6 +404,16 @@ Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int
     // std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
     // std::cout << "Right hand vector:\n" << Rh << std::endl;
 
+    // Step 1: Compute permutation to reduce bandwidth
+    Eigen::AMDOrdering<int> ordering;
+    Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm;
+    ordering(Lh, perm);  // Compute permutation
+
+    // Step 2: Apply reordering to matrix and RHS
+    Lh = perm * Lh * perm.transpose();
+    Rh = perm * Rh;
+
+    Lh.makeCompressed();
     solver.compute(Lh);
     if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
     nodal_temps = solver.solve(Rh);
@@ -413,5 +425,6 @@ Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int
     logger::log(message);
     std::cin.get();
 
-    return nodal_temps;
+    return perm.transpose() * nodal_temps;
+    // return nodal_temps;
 }

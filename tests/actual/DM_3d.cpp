@@ -77,7 +77,7 @@ struct Geometry
     // Геометрия
     double R_sphere = 0.336;
     std::array<double, 4> x_refers = {R_sphere * (1 - cos(deg2rad(69))), (10000.0 - 4800.0 - 2320.0) / 1000.0, (10000.0 - 2320.0) / 1000.0, (10000.0) / 1000.0};
-    std::array<double, 4> r_refers = {R_sphere * sin(deg2rad(69)), R_sphere * sin(deg2rad(69)) + (x_refers[1] - x_refers[0]) * tan(deg2rad(21)), 4.0 - 4.8 * tan(deg2rad(8)), 4.0};
+    std::array<double, 4> r_refers = {R_sphere * sin(deg2rad(69)), R_sphere * sin(deg2rad(69)) + (x_refers[1] - x_refers[0]) * tan(deg2rad(21)), 2.0 - 2.4 * tan(deg2rad(8)), 4.0 / 2.0};
     std::array<std::string, 5> names = {"Sphere", "First cone", "Second cone", "Cylinder", "Bottom"};
 
     // КЭ разбиение
@@ -118,27 +118,6 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
         model.add_node(Point(x, y, z), nbr);
         ++nbr;
     }
-
-    // // СФЕРА - основные узлы
-    // for (int it_x = 1; it_x < c_x + 1; ++it_x)
-    // {
-    //     for (int it_phi = 0; it_phi < c_phi; ++it_phi)
-    //     {
-    //         for (int it_h = 0; it_h < layer.FRNT + 1; ++it_h)
-    //         {
-    //             h = layer.depth(it_h);
-    //             d_x = (x_sph - h) / c_x;
-    //             x = h + it_x * d_x;
-    //             r = r_circle(x, h, R_sph);
-    //             phi = it_phi * d_phi;
-    //             y = (-1) * r * cos(phi);
-    //             z = r * sin(phi);
-
-    //             model.add_node(Point(x, y, z), nbr);
-    //             ++nbr;
-    //         }
-    //     }
-    // }
 
     // СФЕРА - основные узлы
     for (int it_x = 1; it_x <= geom.FE_sph; ++it_x)
@@ -214,7 +193,7 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
             for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
             {
                 h = layer.depth(it_h);
-                d_x = (geom.x_refers[3]- geom.x_refers[2]) / geom.FE_cyl;
+                d_x = (geom.x_refers[3]- geom.x_refers[2] - h) / geom.FE_cyl;
                 x = geom.x_refers[2] + it_x * d_x;
                 r = - r_line(x, h, Cn2_Cyl, Cyl_Bot);
                 phi = it_phi * d_phi;
@@ -225,6 +204,16 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
                 ++nbr;
             }
         }
+    }
+
+    // ДНИЩЕ - Последние узлы
+    for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
+    {
+        y = 0;
+        z = 0;
+        x = geom.x_refers[3] - layer.depth(it_h);
+        model.add_node(Point(x, y, z), nbr);
+        ++nbr;
     }
 
     // Номера соседних узлов
@@ -243,6 +232,7 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
 
         return node + layer.FRNT + 1;
     };
+    auto bot_iter = [layer, c_phi] (int node) -> int {return node - (layer.FRNT + 1);};
     
     // Вывод информации об узлах
     for (const auto& node : model.Nodes())
@@ -266,10 +256,10 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
     for (int it_h = 0; it_h < layer.FRNT; ++it_h)
     {
         v1 = base;
+        v2 = next_x(v1);
         for (int it_p = 0; it_p < c_phi; ++it_p)
         {
             // Формируем массив вершин
-            v2 = next_x(v1);
             v3 = next_phi(v2);
             v4 = next_h(v1);
             v5 = next_h(v2);
@@ -293,7 +283,7 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
             model.add_element(ElementType::LWedge, vts, nbr, material, is_surface, 1.0, layer_name, primitive_name);
             ++nbr;
 
-            v1 = next_phi(v1);
+            v2 = next_phi(v2);
         }
         base = next_h(base);
     }
@@ -343,13 +333,53 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
         }
         base = next_x(base);
     }
+
+    // Днище
+    vts.resize(6);
+    base = model.Nodes().size() - layer.FRNT;
+    for (int it_h = 0; it_h < layer.FRNT; ++it_h)
+    {
+        v1 = base;
+        v2 = bot_iter(v1);
+        for (int it_p = 0; it_p < c_phi; ++it_p)
+        {
+            // Формируем массив вершин
+            v3 = next_phi(v2);
+            v4 = next_h(v1);
+            v5 = next_h(v2);
+            v6 = next_h(v3);
+            vts[0] = &model.Nodes()[v1 - 1];
+            vts[1] = &model.Nodes()[v2 - 1];
+            vts[2] = &model.Nodes()[v3 - 1];
+            vts[3] = &model.Nodes()[v4 - 1];
+            vts[4] = &model.Nodes()[v5 - 1];
+            vts[5] = &model.Nodes()[v6 - 1];
+
+            // Характеристики элемента
+            bool is_surface = true;
+            if (it_h > 0) {is_surface = false;}
+            // const Material* material = layer.get_material(it_h);
+            const Material* material = &AMg_6;
+            std::string* layer_name = layer.get_name(it_h);
+            std::string* primitive_name = &geom.names[4];
+            
+            // Создание элемента
+            model.add_element(ElementType::LWedge, vts, nbr, material, is_surface, 1.0, layer_name, primitive_name);
+            ++nbr;
+
+            v2 = next_phi(v2);
+        }
+        // base = next_h(base);
+        base += 1;
+    }
 }
 
 int main()
 {
     /*Геометрия*/
     Layers layer({0.015, 0.045, 0.002}, {5, 10, 1});
-    Geometry geom(10, 5, 5, 5);
+    Geometry geom(15, 10, 10, 5);
+    int c_phi = 12;
     // Проверка
     std::cout << "Geometry check:\n" << "X: " << geom.x_refers[0] << " " <<  geom.x_refers[1] << " " << geom.x_refers[2] << " " << geom.x_refers[3] << ";\n";
     std::cout << "R: " << geom.r_refers[0] << " " <<  geom.r_refers[1] << " " << geom.r_refers[2] << " " << geom.r_refers[3] << ";\n";
@@ -358,7 +388,7 @@ int main()
     TFE_model DM_FE(10, 10, 10);
     
     // Заполнение массива узлов
-    make_model(DM_FE, layer, geom, 12);
+    make_model(DM_FE, layer, geom, c_phi);
     logger::log("Model has been made successfully!");
     std::cin.get();
 
@@ -396,8 +426,53 @@ int main()
         ++it;
     }
     
-    logger::log("Nodal temperatures:");
-    std::cout << out;
+    auto next_x = [layer, c_phi] (int node) -> int 
+    {
+        if (node <= layer.FRNT + 1) {return  node + layer.FRNT + 1;}
+        else {return node + (layer.FRNT + 1) * c_phi;}
+    };
+    int nbr = 0;
+    logger::log("Nodal temperatures (phi = 0, h = 0):");
+    
+    logger::log("===Sphere===");
+    for (int i = 0; i < geom.FE_sph; ++i)
+    {
+        logger::log(std::to_string(temps[nbr]));
+        nbr = next_x(nbr);
+    }
+    logger::log("============");
+
+    logger::log("===First cone===");
+    for (int i = 0; i < geom.FE_cone1; ++i)
+    {
+        logger::log(std::to_string(temps[nbr]));
+        nbr = next_x(nbr);
+    }
+    logger::log("================");
+
+    logger::log("===Second cone===");
+    for (int i = 0; i < geom.FE_cone2; ++i)
+    {
+        logger::log(std::to_string(temps[nbr]));
+        nbr = next_x(nbr);
+    }
+    logger::log("=================");
+
+    logger::log("===Cylinder===");
+    for (int i = 0; i < geom.FE_cyl; ++i)
+    {
+        logger::log(std::to_string(temps[nbr]));
+        nbr = next_x(nbr);
+    }
+    logger::log("==============");
+
+    logger::log("===Bottom===");
+    nbr = DM_FE.Nodes().size() - layer.FRNT - 1;
+    logger::log(std::to_string(temps[nbr]));
+    logger::log("============");
+
+    logger::log("Whole temps");
+    // std::cout << temps;
     std::cin.get();
     return 0;
 

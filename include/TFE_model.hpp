@@ -7,6 +7,8 @@
 #include "Output.hpp"
 // Eigen
 #include <IterativeLinearSolvers>
+#include <SparseCore>
+#include <OrderingMethods>
 // STL
 #include <unordered_set>
 #include <chrono>
