@@ -35,16 +35,12 @@ struct Point
 
 struct Cache
 {
-    // Матрица градиентов
-    std::vector<Eigen::MatrixXd> GM; 
-    std::vector<Eigen::MatrixXd> GM_T;
-    // Матрица функций форм
-    std::vector<Eigen::RowVectorXd> SF;
-    std::vector<Eigen::VectorXd> SF_T;
+    // Удельная матрица проводимости
+    Eigen::MatrixXd B; 
+    // Удельная матрица демфирования
+    Eigen::MatrixXd C;
     // Матрица функций форм поверхности
     std::vector<Eigen::VectorXd> SF_s;
-    // Определитель якобиана преобразования
-    std::vector<double> J_det;
 };
 
 // Узел

@@ -155,6 +155,14 @@ Eigen::MatrixXd LQube::Cond_Mat(const Element& FE, const Eigen::VectorXd& nodal_
 {   
     if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
 
+    /*Если есть кэш*/
+    if (FE.has_cache())
+    {
+        const double T_rep = Element_Temp(nodal_temps);
+        double Lambda = FE.material->get_TCC(T_rep);
+        return Lambda * FE.cache.B;
+    }
+
     /*Инициализация*/
     Eigen::Matrix<double, 3, 8> B; // Матрица градиентов
     Eigen::Matrix<double, 8, 3> B_T; // Матрица градиентов (транспонированная)
@@ -181,22 +189,12 @@ Eigen::MatrixXd LQube::Cond_Mat(const Element& FE, const Eigen::VectorXd& nodal_
         {   
             for (int k = 0; k < int_pnts.size(); ++k)
             {   
-                if (FE.has_cache())
-                {
-                    B = FE.cache.GM[nbr];
-                    B_T = FE.cache.GM_T[nbr];
-                    detJ = FE.cache.J_det[nbr];
-                    ++nbr;
-                }
-                else
-                {
-                    J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first, FE);
-                    B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-                    B_T = B.transpose();
-                    detJ = J.determinant();
-                }
+                J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first, FE);
+                B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                B_T = B.transpose();
+                detJ = J.determinant();
 
-                H += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * B_T * D * B * detJ; 
+                H += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * B_T * Lambda * B * detJ; 
             }
         }
     }
@@ -208,6 +206,15 @@ Eigen::MatrixXd LQube::Cond_Mat(const Element& FE, const Eigen::VectorXd& nodal_
 Eigen::MatrixXd LQube::Damp_Mat(const Element& FE, const Eigen::VectorXd& nodal_temps) const
 {
     if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
+
+    /*Если есть кэш*/
+    if (FE.has_cache())
+    {
+        const double T_rep = Element_Temp(nodal_temps);
+        double c = FE.material->get_SHC(T_rep);
+        double rho = FE.material->dens();
+        return c * rho * FE.cache.C;
+    }
 
     /*Инициализация*/
     Eigen::RowVector<double, 8> N; // Матрица функций форм
@@ -221,6 +228,7 @@ Eigen::MatrixXd LQube::Damp_Mat(const Element& FE, const Eigen::VectorXd& nodal_
 
     /*Определение репрезентативной температуры элемента*/
     const double T_rep = Element_Temp(nodal_temps);
+    c = FE.material->get_SHC(T_rep);
 
     /*Численное интегрирование*/
     for (int i = 0; i < int_pnts.size(); ++i)
@@ -229,21 +237,10 @@ Eigen::MatrixXd LQube::Damp_Mat(const Element& FE, const Eigen::VectorXd& nodal_
         {   
             for (int k = 0; k < int_pnts.size(); ++k)
             {
-                if (FE.has_cache())
-                {
-                    N = FE.cache.SF[nbr];
-                    N_T = FE.cache.SF_T[nbr];
-                    detJ = FE.cache.J_det[nbr];
-                    ++nbr;
-                }
-                else
-                {
-                    N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
-                    N_T = N.transpose();
-                    J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first, FE);
-                    detJ = J.determinant();
-                }
-                c = FE.material->get_SHC(T_rep);
+                N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
+                N_T = N.transpose();
+                J = Jacobian(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first, FE);
+                detJ = J.determinant();
 
                 C += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * rho * c * N_T * N * detJ; 
             }
@@ -312,12 +309,9 @@ Eigen::VectorXd LQube::Heat_Load_Surf(const Element& FE, const double heat_flux,
 void LQube::calculate_element(Element& FE) const
 {   
     /*Инициализация*/
-    FE.cache.GM.resize(8);
-    FE.cache.GM_T.resize(8);
-    FE.cache.SF.resize(8);
-    FE.cache.SF_T.resize(8);
+    FE.cache.B.resize(8, 8);
+    FE.cache.C.resize(8, 8);
     FE.cache.SF_s.resize(8);
-    FE.cache.J_det.resize(8);
     int nbr = 0, surf = 0; // Счётчики
 
     /*Заполнение*/
@@ -334,11 +328,8 @@ void LQube::calculate_element(Element& FE) const
                 Eigen::MatrixXd B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
                 double dJ = J.determinant(); 
 
-                FE.cache.GM[nbr] = B;
-                FE.cache.GM_T[nbr] = B.transpose();
-                FE.cache.SF[nbr] = N;
-                FE.cache.SF_T[nbr] = N.transpose();
-                FE.cache.J_det[nbr] = dJ;
+                FE.cache.B += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * B.transpose() * B * dJ;
+                FE.cache.C += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * N.transpose() * N * dJ;
                 ++nbr;
             }
         }

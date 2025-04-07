@@ -27,7 +27,7 @@ void Element::set_layer(std::string* lr) {layer = lr;}
 // Указание геометрического примитива
 void Element::set_primitive(std::string* pr) {primitive = pr;}
 // Наличие предрасчитанных значений
-bool Element::has_cache() const {return !cache.GM.empty();}
+bool Element::has_cache() const {return !cache.SF_s.empty();}
 // Информация об элементе
 void Element::get_info(const bool to_console, const std::string& filename) const
 {   

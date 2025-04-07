@@ -144,6 +144,14 @@ Eigen::MatrixXd LWedge::Cond_Mat(const Element& FE, const Eigen::VectorXd& nodal
 {   
     if (!FE.vertices.size() == 6) {throw std::invalid_argument("6 nodes exactly LWedge must have...");}
 
+    /*Если есть кэш*/
+    if (FE.has_cache())
+    {
+        const double T_rep = Element_Temp(nodal_temps);
+        double Lambda = FE.material->get_TCC(T_rep);
+        return Lambda * FE.cache.B;
+    }
+
     /*Инициализация*/
     Eigen::Matrix<double, 3, 6> B; // Матрица градиентов
     Eigen::Matrix<double, 6, 3> B_T; // Матрица градиентов (транспонированная)
@@ -168,21 +176,11 @@ Eigen::MatrixXd LWedge::Cond_Mat(const Element& FE, const Eigen::VectorXd& nodal
     {
         for (int i = 0; i < linear_int.size(); ++i)
         {
-            if (FE.has_cache())
-            {
-                B = FE.cache.GM[nbr];
-                B_T = FE.cache.GM_T[nbr];
-                detJ = FE.cache.J_det[nbr];
-                ++nbr;
-            }
-            else
-            {
-                J = Jacobian(triang_int[t].first, triang_int[t].second, linear_int[i].first, FE);
-                B = J.inverse() * Grad_Mat(triang_int[t].first, triang_int[t].second, linear_int[i].first);
-                B_T = B.transpose();
-                detJ = J.determinant();
-            }
-
+            J = Jacobian(triang_int[t].first, triang_int[t].second, linear_int[i].first, FE);
+            B = J.inverse() * Grad_Mat(triang_int[t].first, triang_int[t].second, linear_int[i].first);
+            B_T = B.transpose();
+            detJ = J.determinant();
+            
             H += linear_int[i].second * 1.0/6.0 * B_T * D * B * detJ;
         }
     } 
@@ -194,6 +192,15 @@ Eigen::MatrixXd LWedge::Cond_Mat(const Element& FE, const Eigen::VectorXd& nodal
 Eigen::MatrixXd LWedge::Damp_Mat(const Element& FE, const Eigen::VectorXd& nodal_temps) const
 {
     if (!FE.vertices.size() == 6) {throw std::invalid_argument("6 nodes exactly LWedge must have...");}
+
+    /*Если есть кэш*/
+    if (FE.has_cache())
+    {
+        const double T_rep = Element_Temp(nodal_temps);
+        double c = FE.material->get_SHC(T_rep);
+        double rho = FE.material->dens();
+        return c * rho * FE.cache.C;
+    }
 
     /*Инициализация*/
     Eigen::RowVector<double, 6> N; // Матрица функций форм
@@ -207,27 +214,17 @@ Eigen::MatrixXd LWedge::Damp_Mat(const Element& FE, const Eigen::VectorXd& nodal
 
     /*Определение репрезентативной температуры элемента*/
     const double T_rep = Element_Temp(nodal_temps);
+    c = FE.material->get_SHC(T_rep);
 
     /*Численное интегрирование*/
     for (int t = 0; t < triang_int.size(); ++t)
     {
         for (int i = 0; i < linear_int.size(); ++i)
         {
-            if (FE.has_cache())
-            {
-                N = FE.cache.SF[nbr];
-                N_T = FE.cache.SF_T[nbr];
-                detJ = FE.cache.J_det[nbr];
-                ++nbr;
-            }
-            else
-            {
-                N = Shape_Func(triang_int[t].first, triang_int[t].second, linear_int[i].first);
-                N_T = N.transpose();
-                J = Jacobian(triang_int[t].first, triang_int[t].second, linear_int[i].first, FE);
-                detJ = J.determinant();
-            }
-            c = FE.material->get_SHC(T_rep);
+            N = Shape_Func(triang_int[t].first, triang_int[t].second, linear_int[i].first);
+            N_T = N.transpose();
+            J = Jacobian(triang_int[t].first, triang_int[t].second, linear_int[i].first, FE);
+            detJ = J.determinant();
 
             C += linear_int[i].second * 1.0/6.0 * rho * c * N_T * N * detJ;
         }
@@ -293,12 +290,9 @@ Eigen::VectorXd LWedge::Heat_Load_Surf(const Element& FE, const double heat_flux
 void LWedge::calculate_element(Element& FE) const
 {   
     /*Инициализация*/
-    FE.cache.GM.resize(6);
-    FE.cache.GM_T.resize(6);
-    FE.cache.SF.resize(6);
-    FE.cache.SF_T.resize(6);
+    FE.cache.B.resize(6, 6);
+    FE.cache.C.resize(6, 6);
     FE.cache.SF_s.resize(6);
-    FE.cache.J_det.resize(6);
     int nbr = 0, surf = 0; // Счётчики
 
     /*Заполнение*/
@@ -306,7 +300,7 @@ void LWedge::calculate_element(Element& FE) const
     {
         FE.cache.SF_s[surf] = Shape_Func(triang_int[t].first, triang_int[t].second, -1.0).transpose();
         ++surf;
-        //std::cout << "triangle steps " << triang_int[t].first << " " << triang_int[t].second << std::endl;
+        
         for (int i = 0; i < linear_int.size(); ++i)
         {
             Eigen::VectorXd N = Shape_Func(triang_int[t].first, triang_int[t].second, linear_int[i].first);
@@ -314,11 +308,9 @@ void LWedge::calculate_element(Element& FE) const
             Eigen::MatrixXd B = J.inverse() * Grad_Mat(triang_int[t].first, triang_int[t].second, linear_int[i].first);
             double dJ = J.determinant(); 
 
-            FE.cache.GM[nbr] = B;
-            FE.cache.GM_T[nbr] = B.transpose();
-            FE.cache.SF[nbr] = N;
-            FE.cache.SF_T[nbr] = N.transpose();
-            FE.cache.J_det[nbr] = dJ;
+            FE.cache.B += linear_int[i].second * 1.0/6.0 * B.transpose() * B * dJ; 
+            FE.cache.C += linear_int[i].second * 1.0/6.0 * N.transpose() * N * dJ;
+            
             ++nbr;
         }
     } 
