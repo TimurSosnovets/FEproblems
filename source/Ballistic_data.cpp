@@ -1,7 +1,7 @@
 #include "Ballistic_data.hpp"
 
 // Конструктор
-explicit Ballistic_data::Ballistic_data(const std::string& csv_file) 
+Ballistic_data::Ballistic_data(const std::string& csv_file) 
 {
     parse_CSV(csv_file);
     if (velocities.empty()) 

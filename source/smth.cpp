@@ -422,9 +422,9 @@ void fill_FEmodel(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
 // Угол между векторами
 double compute_angle(Eigen::Vector3d& V1, Eigen::Vector3d& V2)
 {
-    Eigen::Quaternionf q;
-    q.setFromTwoVectors(V1, V2);
-    Eigen::AngleAxisf angleAxis(q);
+    Eigen::Quaterniond q;
+    q.setFromTwoVectors(V1.normalized(), V2.normalized());
+    Eigen::AngleAxisd angleAxis(q);
     return angleAxis.angle();
 }
 
