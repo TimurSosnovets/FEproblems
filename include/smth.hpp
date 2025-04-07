@@ -84,9 +84,6 @@ struct Geometry
     Geometry(const int Sphere, const int Cone1, const int Cone2, const int Cylinder);
 };
 
-// Заполнение FE модели
-void fill_FEmodel(TFE_model& model, Layers& layer, Geometry& geom, int c_phi);
-
 // Нормаль к поверхности аппарата
 Eigen::Vector3d compute_surf_normal(const double x, const double y, const double z, const Geometry& geom);
 
@@ -98,3 +95,15 @@ double heat_angle(const double x, const double y, const double z, const Geometry
 
 // Нагрузка
 double heat_load(const double vel, const double dens, const double Kn, const double angle, const double Dm = 4.0);
+
+// Характерные узлы
+struct output_temps
+{   
+    const double bal_ang = deg2rad(20); 
+    int brake_point;
+    std::vector<int> keel;
+    std::vector<int> under_brake;
+};
+
+// Заполнение FE модели
+void fill_FEmodel(TFE_model& model, Layers& layer, Geometry& geom, int c_phi, output_temps& samples);

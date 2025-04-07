@@ -147,7 +147,7 @@ Geometry::Geometry(const int Sphere, const int Cone1, const int Cone2, const int
 FE_sph(Sphere), FE_cone1(Cone1), FE_cone2(Cone2), FE_cyl(Cylinder), FE_all(Sphere + Cone1 + Cone2 + Cylinder) {}
 
 // Заполнение КЭ модели
-void fill_FEmodel(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
+void fill_FEmodel(TFE_model& model, Layers& layer, Geometry& geom, int c_phi, output_temps& samples)
 {
     /*Геометрия*/
     double R_sph = 0.336;
@@ -166,6 +166,8 @@ void fill_FEmodel(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
         z = 0;
         x = layer.depth(it_h);
         model.add_node(Point(x, y, z), nbr);
+        // Выборка узлов
+        
         ++nbr;
     }
 
@@ -492,6 +494,8 @@ double heat_load(const double vel, const double dens, const double Kn, const dou
     /*Радиационная составляющая*/
     double q_r = 2.195 * 1e-22 * pow(vel, 7.9) * pow(dens, 1.2) * pow(Dm, 0.49);
 
+    if (angle > M_PI / 2.0) {return q_r;}
+
     /*Конвективная составляющая*/
     double q_lam = 3.3 * 1e-5 * pow(vel, 3.2) * sqrt(dens / Dm) * (0.1 + 0.9 * pow(cos(angle), 2));
     double q_turb = 1.06 * 1e-4 * pow(vel, 3.19) * pow(pow(dens, 4) / Dm, 0.2) * (15 * pow(sin(angle), 2) - 14 * pow(sin(angle), 4));
@@ -500,10 +504,10 @@ double heat_load(const double vel, const double dens, const double Kn, const dou
     if (q_lam >= q_turb)
     { q_conv_dens = q_lam; } else { q_conv_dens = q_turb; }
 
-    if (Kn < 0.01) { return q_conv_dens; }
+    if (Kn < 0.01) { return q_conv_dens + q_r; }
 
     double q_conv_amend = 0.5 * dens * pow(vel, 3.0) * pow(cos(angle), 3.0);
     double q_conv_mixed = (q_conv_dens + Kn * q_conv_amend) / (1 + Kn);
 
-    return q_conv_mixed;
+    return q_conv_mixed + q_r;
 }

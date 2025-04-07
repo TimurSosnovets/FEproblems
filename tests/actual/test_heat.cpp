@@ -29,7 +29,7 @@ int main()
 
     double x, y, z, angle;
     double vel, dens, Kn;
-    double time = 1;
+    double time = 100.01;
     // std::cout << "Current path: " << std::filesystem::current_path() << std::endl;
     Ballistic_data data("Ballistics_CD.csv");
     vel = data.get_Velocity(time);
