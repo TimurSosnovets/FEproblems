@@ -1,5 +1,6 @@
 #include "Ballistic_data.hpp"
 
+
 // Конструктор
 Ballistic_data::Ballistic_data(const std::string& csv_file) 
 {
@@ -17,11 +18,12 @@ void Ballistic_data::parse_CSV(const std::string& filename)
     if (!file.is_open()) 
     {
         throw std::runtime_error("Failed to open file: " + filename);
+        std::cin.get();
     }
 
     std::string line;
     // Skip header if exists
-    std::getline(file, line);
+    // std::getline(file, line);
 
     while (std::getline(file, line)) 
     {
@@ -31,9 +33,6 @@ void Ballistic_data::parse_CSV(const std::string& filename)
 
         try 
         {
-            std::getline(ss, value, ';');
-            t = std::stod(value);
-            
             std::getline(ss, value, ';');
             v = std::stod(value);
             

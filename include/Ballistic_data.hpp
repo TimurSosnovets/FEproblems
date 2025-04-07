@@ -5,6 +5,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <cmath>
+#include <iostream>
+#include <filesystem>
 
 class Ballistic_data
 {

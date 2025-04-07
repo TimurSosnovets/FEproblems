@@ -6,6 +6,11 @@ double deg2rad(double deg)
     return (deg / 180) * M_PI;
 }
 
+double rad2deg(double rad)
+{
+    return (rad / M_PI) * 180;
+}
+
 //Функции сравнения
 bool are_close_enough(double a, double b, double tol) 
 {return (abs((a-b))<=tol);};
@@ -438,7 +443,11 @@ Eigen::Vector3d compute_surf_normal(const double x, const double y, const double
     // Угол в плоскости XoY
     double cos_psi, sin_psi;
 
-    if (x < geom.x_refers[0])
+    if (x == 0)
+    {
+        return Eigen::Vector3d(-1, 0, 0);
+    }
+    else if (x < geom.x_refers[0])
     {
         cos_psi = (geom.R_sphere - x) / (geom.R_sphere);
         sin_psi = sqrt(1 - cos_psi*cos_psi);
@@ -470,7 +479,7 @@ Eigen::Vector3d compute_surf_normal(const double x, const double y, const double
 // Угол между нормалью к поверхности и скоростью аппарата
 double heat_angle(const double x, const double y, const double z, const Geometry& geom, const double alpha)
 {
-   Eigen::Vector3d Velocity(-cos(alpha), 0, -sin(alpha));
+   Eigen::Vector3d Velocity(-cos(alpha), -sin(alpha), 0);
 
    Eigen::Vector3d Surface_normal = compute_surf_normal(x, y, z, geom);
 

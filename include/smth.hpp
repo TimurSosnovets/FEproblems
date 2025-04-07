@@ -14,6 +14,7 @@
 /*Специальные функции для удобства*/
 // Градусы в радианы
 double deg2rad(double deg);
+double rad2deg(double rad);
 
 //Функции сравнения
 bool are_close_enough(double a, double b, double tol=pow(10.0,-10.0));
