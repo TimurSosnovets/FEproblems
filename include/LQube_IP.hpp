@@ -43,7 +43,8 @@ class LQube : public Isoparametric_3D
         // Матрица демфпирования (теплоёмкости) 
         Eigen::MatrixXd Damp_Mat(const Element& FE, const Eigen::VectorXd& nodal_temps) const override;
         // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности) 
-        Eigen::VectorXd Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::VectorXd& nodal_temps) const override; 
+        Eigen::VectorXd Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::VectorXd& nodal_temps) const override;
+        Eigen::VectorXd Ball_heat_load(const Element& FE, const Geometry& geom, const float eps, const double vel, const double dens, const double Kn, const Eigen::VectorXd& nodal_temps) const override; 
 
         /*Числовые значения элемента*/
         // Температура заданной точке элемента

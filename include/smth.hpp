@@ -8,7 +8,6 @@
 #include <Geometry>
 // Current project
 #include "FE_entities.hpp"
-#include "TFE_model.hpp"
 #include "Output.hpp"
 
 /*Специальные функции для удобства*/
@@ -104,6 +103,3 @@ struct output_temps
     std::vector<int> keel;
     std::vector<int> under_brake;
 };
-
-// Заполнение FE модели
-void fill_FEmodel(TFE_model& model, Layers& layer, Geometry& geom, int c_phi, output_temps& samples);

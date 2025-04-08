@@ -14,10 +14,10 @@ int main()
     std::cout << "R: " << geom.r_refers[0] << " " <<  geom.r_refers[1] << " " << geom.r_refers[2] << " " << geom.r_refers[3] << ";\n";
     
     /*КЭ модель*/
-    TFE_model DM_FE(10, 10, 10);
+    TFE_model DM_FE(geom, layer);
     
     // Заполнение массива узлов
-    fill_FEmodel(DM_FE, layer, geom, c_phi);
+    make_model(DM_FE, layer, geom, c_phi);
     logger::log("Model has been made successfully!");
     std::cin.get();
 

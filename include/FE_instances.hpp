@@ -6,6 +6,11 @@
 // Current project
 #include "FE_entities.hpp"
 #include "Materials.hpp"
+#include "smth.hpp"
+
+// struct Geometry;
+// struct Layers;
+
 
 // Базовый класс конечного элемента
 class Isoparametric_3D
@@ -38,8 +43,10 @@ class Isoparametric_3D
         virtual Eigen::MatrixXd Cond_Mat(const Element& FE, const Eigen::VectorXd& nodal_temps) const = 0; 
         // Матрица демфпирования (теплоёмкости)
         virtual Eigen::MatrixXd Damp_Mat(const Element& FE, const Eigen::VectorXd& nodal_temps) const = 0; 
-        // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
-        virtual Eigen::VectorXd Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::VectorXd& nodal_temps) const = 0; 
+        // Вектор узловых нагрузок при постоянном нагружении (с учётом излучения и кривизны поверхности)
+        virtual Eigen::VectorXd Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::VectorXd& nodal_temps) const = 0;
+        // Вектор узловых нагрузок при баллистическом спуске (с учётом излучения и кривизны поверхности)
+        virtual Eigen::VectorXd Ball_heat_load(const Element& FE, const Geometry& geom, const float eps, const double vel, const double dens, const double Kn, const Eigen::VectorXd& nodal_temps) const = 0;
 
         /*Числовые значения элемента*/
         // Температура заданной точке элемента

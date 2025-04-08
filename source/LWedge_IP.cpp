@@ -286,6 +286,60 @@ Eigen::VectorXd LWedge::Heat_Load_Surf(const Element& FE, const double heat_flux
     return F;
 }
 
+Eigen::VectorXd LWedge::Ball_heat_load(const Element& FE, const Geometry& geom, const float eps, const double vel, const double dens, const double Kn, const Eigen::VectorXd& nodal_temps) const
+{
+    if (!FE.vertices.size() == 6) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
+    if (!FE.is_surface) { return Eigen::Vector<double, 6>::Zero(); }
+
+    /*Инициализация*/
+    const float sigma = 5.67e-8; // Постоянная Стефана-Больцмана
+    double T_surf; // Температура излучающей поверхности
+    double J_surf;
+    int surf = 0; // Счётчик
+    Eigen::RowVector<double, 6> N_T; // Матрица функций форм (транспонированная)
+    Eigen::Vector<double, 6> F = Eigen::Vector<double, 6>::Zero(); // Вектор узловых нагрузок [Вт]
+
+    // Для формирования нагрузки
+    double heat_flux; // Плотность теплового потока в точке на поверхности
+    double x, y, z;
+    double angle;
+
+    // Compute edge vectors of the triangular face
+    Eigen::Vector3d edge1, edge2;
+    edge1 << FE.vertices[1]->point.x - FE.vertices[0]->point.x,
+             FE.vertices[1]->point.y - FE.vertices[0]->point.y,
+             FE.vertices[1]->point.z - FE.vertices[0]->point.z;
+
+    edge2 << FE.vertices[2]->point.x - FE.vertices[0]->point.x,
+             FE.vertices[2]->point.y - FE.vertices[0]->point.y,
+             FE.vertices[2]->point.z - FE.vertices[0]->point.z;
+
+    T_surf = 1.0/3.0 * (nodal_temps[0] + nodal_temps[1] + nodal_temps[2]);
+    // Compute the surface Jacobian as the norm of the cross product of the edge vectors
+    J_surf = edge1.cross(edge2).norm();
+
+    /*Численное интегрирование (по поверхности элемента -> z = -1)*/
+    for (int t = 0; t < triang_int.size(); ++t)
+    {      
+        if (FE.has_cache())
+        {
+            N_T = FE.cache.SF_s[surf];
+            ++surf;
+        }
+        else
+        {
+            N_T = Shape_Func(triang_int[t].first, triang_int[t].second, -1.0).transpose();
+        }
+        Point integr = Mapping(triang_int[t].first, triang_int[t].second, -1.0, FE);
+        angle = heat_angle(integr.x, integr.y, integr.z, geom);
+        heat_flux = heat_load(vel, dens, Kn, angle);
+
+        F += (1.0/6.0) * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * J_surf;
+    }
+    
+    return F;
+}
+
 // Предрасчёт характеристик
 void LWedge::calculate_element(Element& FE) const
 {   

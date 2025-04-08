@@ -5,6 +5,7 @@
 #include "LQube_IP.hpp"
 #include "LWedge_IP.hpp"
 #include "Output.hpp"
+#include "Ballistic_data.hpp"
 // Eigen
 #include <IterativeLinearSolvers>
 #include <SparseCore>
@@ -31,13 +32,15 @@ class TFE_model
         size_t _DOF = 0; // Степень свободы модели (в данном случае оно же - количество узлов)
         size_t unique_DOF = 0; // Количество ненулевых значений в матрицах (зависит только от сетки)
         size_t unique_DOF_surf = 0; // Количество ненулевых значений в векторе нагрузок (зависит только от сетки)
+        const Geometry& geometry;
+        const Layers& layers;
 
         /*Внутренние методы*/
         void assembly(std::vector<Eigen::Triplet<double>>& t, const Eigen::MatrixXd& a, const Element& FE) const; // Ассамблирование матрицы A размерности [DOF x DOF] из меньшей матрицы a
 
     public:
         /*Конструктор класса*/
-        TFE_model(const size_t dx, const size_t dy, const size_t dz); // Инициализация сетки с заданным количеством элементов по каждому направлению
+        TFE_model(Geometry& g, Layers& l); // Инициализация сетки с заданным количеством элементов по каждому направлению
 
         /*Добавление структурных единиц*/
         void add_node(const Point p, const int g_nbr);
@@ -53,9 +56,11 @@ class TFE_model
         Eigen::SparseMatrix<double> GCM(const Eigen::VectorXd& nodal_temps) const; // Глобальная матрица теплопроводности
         Eigen::SparseMatrix<double> GDM(const Eigen::VectorXd& nodal_temps) const; // Глобальная матрица демпфирования
         Eigen::SparseVector<double> NLV(const double q, const double eps, const Eigen::VectorXd& nodal_temps) const; // Вектор узловых нагрузок
+        Eigen::SparseVector<double> Ball_NLV(const double eps, const double vel, const double dens, const double Kn, const Eigen::VectorXd& nodal_temps) const; // Вектор узловых нагрузок
 
         /*Решение нестационарной задачи с заданными начальными условиями, временем расчёта и шагом.*/
-        Results_transient transient_analisys(const std::vector<std::pair<int, double>>& constraints, const float q) const; 
+        Results_transient transient_analisys(const std::vector<std::pair<int, double>>& constraints, const float q) const;
+        void transient_analisys() const; 
         Eigen::VectorXd steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation = false) const;
         /*Вывод объектов*/
         const std::vector<Node>& Nodes() const;
@@ -64,3 +69,6 @@ class TFE_model
         /*Вывод информации*/
         void mesh_info() const;
 };
+
+// Заполнение FE модели
+void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi);

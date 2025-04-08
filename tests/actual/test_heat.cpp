@@ -6,16 +6,16 @@
 int main()
 {
     /*Геометрия*/
-    Layers layer({0.015, 0.045, 0.002}, {1, 1, 1});
-    Geometry geom(10, 5, 5, 5);
-    int c_phi = 4;
+    Layers layer({0.015, 0.045, 0.002}, {3, 10, 1});
+    Geometry geom(10, 5, 5, 2);
+    int c_phi = 6;
     // Проверка
     std::cout << "Geometry check:\n" << "X: " << geom.x_refers[0] << " " <<  geom.x_refers[1] << " " << geom.x_refers[2] << " " << geom.x_refers[3] << ";\n";
     std::cout << "R: " << geom.r_refers[0] << " " <<  geom.r_refers[1] << " " << geom.r_refers[2] << " " << geom.r_refers[3] << ";\n";
     
     /*КЭ модель*/
-    TFE_model DM_FE(10, 10, 10);
-    fill_FEmodel(DM_FE, layer, geom, c_phi);
+    TFE_model DM_FE(geom, layer);
+    make_model(DM_FE, layer, geom, c_phi);
     logger::log("Model has been made successfully!");
     std::cin.get();
 
@@ -124,6 +124,14 @@ int main()
     logger::log("Whole temps");
     // std::cout << temps;
     std::cin.get();
+
+    DM_FE.mesh_info();
+    std::cin.get();
+
+    DM_FE.mesh_check();
+    logger::log("Successful mesh check!");
+
+    DM_FE.transient_analisys();
     return 0;
 
 }

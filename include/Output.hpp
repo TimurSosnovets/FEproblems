@@ -66,9 +66,9 @@ template <typename DataV>
 void Save_xlsx(const std::vector<std::pair<std::string, DataV>>& Data)
 {
     // Ввод имени файла
-    std::string filename;
-    std::cout << "Enter the name of output file:\n";
-    std::getline(std::cin, filename);
+    std::string filename = "results";
+    // std::cout << "Enter the name of output file:\n";
+    // std::getline(std::cin, filename);
     // Ensure .xlsx extension
     if (filename.find(".xlsx") == std::string::npos) 
     {
