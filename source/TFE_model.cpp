@@ -21,9 +21,8 @@ void TFE_model::mesh_info() const
 
     /*Общая информация*/
     message = "TFE model: " + std::to_string(_nodes.size()) + " nodes, " + std::to_string(_elements.size()) + " elements.\n";
-    logger::log(message, to_console, filename);
+    logger::log(message, true, filename);
 
-    std::cin.get();
     /*Вывод информации по элементам*/
     message = "============\nElement info\n============\n";
     logger::log(message, to_console, filename);
@@ -478,31 +477,31 @@ void TFE_model::transient_analisys() const
     logger::log("Enter time step for outputed values (s) (better be a multiple of actual time step for computation):");
     std::cin >> time_step_output;
 
-    logger::log("Enter specific time moments (s) in which you want nodal temperatures to be outputed (-1 to finish input):");
-    while (true) {
-        std::cin >> time_sample;
+    // logger::log("Enter specific time moments (s) in which you want nodal temperatures to be outputed (-1 to finish input):");
+    // while (true) {
+    //     std::cin >> time_sample;
 
-        if (time_sample == -1) {break;}
+    //     if (time_sample == -1) {break;}
 
-        // Проверка адекватности введённого значения по типу
-        if (std::cin.fail()) 
-        {
-            std::cin.clear(); 
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
-            logger::log("Invalid input. Please enter an integer or float value.");
-            continue; 
-        }
+    //     // Проверка адекватности введённого значения по типу
+    //     if (std::cin.fail()) 
+    //     {
+    //         std::cin.clear(); 
+    //         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
+    //         logger::log("Invalid input. Please enter an integer or float value.");
+    //         continue; 
+    //     }
 
-        // Проверка адекватности введённого значения по диапазону
-        if (time_sample != -1 && (time_sample <= 0 || time_sample > max_time)) 
-        {
-            std::cin.setstate(std::ios::failbit); // Force cin to fail
-            logger::log("Value out of range. Please enter value above zero and below " + std::to_string(max_time) + " seconds.");
-            continue;
-        }
+    //     // Проверка адекватности введённого значения по диапазону
+    //     if (time_sample != -1 && (time_sample <= 0 || time_sample > max_time)) 
+    //     {
+    //         std::cin.setstate(std::ios::failbit); // Force cin to fail
+    //         logger::log("Value out of range. Please enter value above zero and below " + std::to_string(max_time) + " seconds.");
+    //         continue;
+    //     }
 
-        time_samples.push_back(time_sample);
-    }
+    //     time_samples.push_back(time_sample);
+    // }
     // Сортировка значений времени по возрастанию
     std::sort(time_samples.begin(), time_samples.end(), [](float a, float b) {return abs(a) < abs(b);});
     float* t_ptr = time_samples.data();
@@ -518,7 +517,7 @@ void TFE_model::transient_analisys() const
 
     /*Решатель и его настройки*/
     Eigen::ConjugateGradient<Eigen::SparseMatrix<double>> solver; 
-    solver.setMaxIterations(100);
+    solver.setMaxIterations(1000);
     solver.setTolerance(1e-6);
 
     /*Расчёт*/
@@ -548,19 +547,36 @@ void TFE_model::transient_analisys() const
         }
         
         // Запись значений
-        if (abs(*t_ptr - t * time_step) < eps)
+        // if (abs(*t_ptr - t * time_step) < eps)
+        // {
+        //     std::string header = "time " + std::to_string(t * time_step) + " s";
+        //     results.emplace_back(std::make_pair(header, nodal_temps));
+        //     logger::log("Temperatures for " + header + " were written!");
+        //     if (t_ptr != last_t) {++t_ptr;}
+        // }
+        if (t % static_cast<int>(time_step_output / time_step) < eps)
         {
             std::string header = "time " + std::to_string(t * time_step) + " s";
             results.emplace_back(std::make_pair(header, nodal_temps));
-            logger::log("Temperatures for " + header + " were written!");
-            if (t_ptr != last_t) {++t_ptr;}
         }
     }    
     Save_xlsx(results);
     /*Вывод времени расчёта*/
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end - start;
-    message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
+    std::string time_dim = " seconds.";
+    double exec_time = elapsed_seconds.count();
+    if (exec_time > 60.0) 
+    {
+        exec_time = exec_time / 60.0;
+        time_dim = " minutes.";
+    }
+    if (exec_time > 60.0) 
+    {
+        exec_time = exec_time / 60.0;
+        time_dim = " hours.";
+    }
+    message = "Execution time: " + std::to_string(exec_time) + time_dim;
     logger::log(message);
     std::cin.get();
 }
@@ -705,16 +721,16 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
     };
     auto bot_iter = [layer, c_phi] (int node) -> int {return node - (layer.FRNT + 1);};
     
-    // Вывод информации об узлах
-    for (const auto& node : model.Nodes())
-    {
-        std::cout << std::fixed << std::setprecision(2) 
-        << "Node: " << node.global_number() 
-        << " X = " << node.coords().x * 1000 << ", Y = " << node.coords().y * 1000 << ", Z = " << node.coords().z * 1000<< ".\n"; 
-        std::cout << "next_x " << next_x(node.global_number()) << std::endl;
-        std::cout << "next_h " << next_h(node.global_number()) << std::endl;
-        std::cout << "next_phi " << next_phi(node.global_number()) << std::endl << std::endl;
-    }
+    // // Вывод информации об узлах
+    // for (const auto& node : model.Nodes())
+    // {
+    //     std::cout << std::fixed << std::setprecision(2) 
+    //     << "Node: " << node.global_number() 
+    //     << " X = " << node.coords().x * 1000 << ", Y = " << node.coords().y * 1000 << ", Z = " << node.coords().z * 1000<< ".\n"; 
+    //     std::cout << "next_x " << next_x(node.global_number()) << std::endl;
+    //     std::cout << "next_h " << next_h(node.global_number()) << std::endl;
+    //     std::cout << "next_phi " << next_phi(node.global_number()) << std::endl << std::endl;
+    // }
     
     /*Заполнение массива элементов*/
     std::vector<const Node*> vts;
@@ -745,8 +761,8 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
             // Характеристики элемента
             bool is_surface = true;
             if (it_h > 0) {is_surface = false;}
-            const Material* material = layer.get_material(it_h);
-            // const Material* material = &AMg_6;
+            // const Material* material = layer.get_material(it_h);
+            const Material* material = &AMg_6;
             std::string* layer_name = layer.get_name(it_h);
             std::string* primitive_name = geom.get_name(0);
             
@@ -789,8 +805,8 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
                 // Характеристики элемента
                 bool is_surface = true;
                 if (it_h > 0) {is_surface = false;}
-                const Material* material = layer.get_material(it_h);
-                // const Material* material = &AMg_6;
+                // const Material* material = layer.get_material(it_h);
+                const Material* material = &AMg_6;
                 std::string* layer_name = layer.get_name(it_h);
                 std::string* primitive_name = geom.get_name(it_x);
                 
@@ -829,8 +845,8 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
             // Характеристики элемента
             bool is_surface = true;
             if (it_h > 0) {is_surface = false;}
-            const Material* material = layer.get_material(it_h);
-            // const Material* material = &AMg_6;
+            // const Material* material = layer.get_material(it_h);
+            const Material* material = &AMg_6;
             std::string* layer_name = layer.get_name(it_h);
             std::string* primitive_name = &geom.names[4];
             

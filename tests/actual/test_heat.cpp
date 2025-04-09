@@ -6,9 +6,9 @@
 int main()
 {
     /*Геометрия*/
-    Layers layer({0.015, 0.045, 0.002}, {3, 10, 1});
-    Geometry geom(10, 5, 5, 2);
-    int c_phi = 6;
+    Layers layer({0.015, 0.045, 0.002}, {10, 15, 1});
+    Geometry geom(20, 15, 10, 5);
+    int c_phi = 12;
     // Проверка
     std::cout << "Geometry check:\n" << "X: " << geom.x_refers[0] << " " <<  geom.x_refers[1] << " " << geom.x_refers[2] << " " << geom.x_refers[3] << ";\n";
     std::cout << "R: " << geom.r_refers[0] << " " <<  geom.r_refers[1] << " " << geom.r_refers[2] << " " << geom.r_refers[3] << ";\n";
@@ -132,6 +132,7 @@ int main()
     logger::log("Successful mesh check!");
 
     DM_FE.transient_analisys();
+    std::cin.get();
     return 0;
 
 }
