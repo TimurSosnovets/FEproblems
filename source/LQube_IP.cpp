@@ -75,7 +75,7 @@ Eigen::MatrixXd LQube::Grad_Mat(const double xi, const double eta, const double 
 // Функция отображения
 Point LQube::Mapping(const double xi, const double eta, const double zeta, const Element& FE) const
 {
-    if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
+    if (FE.vertices.size() != 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
     /*Инициализация*/
     double x = 0.0, y = 0.0, z = 0.0;
     Eigen::RowVectorXd N = Shape_Func(xi, eta, zeta);
@@ -93,7 +93,7 @@ Point LQube::Mapping(const double xi, const double eta, const double zeta, const
 // Якобиан преобразования
 Eigen::Matrix3d LQube::Jacobian(const double xi, const double eta, const double zeta, const Element& FE) const
 {
-    if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
+    if (FE.vertices.size() != 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
     /*Инициализация*/
     Eigen::Matrix3d J, A;
     std::array<Eigen::RowVectorXd, 3> dN = Shape_Func_PD(xi, eta, zeta);
@@ -153,7 +153,7 @@ double LQube::Element_Temp(const Eigen::VectorXd& nodal_temps) const
 // Матрица теплопроводности при заданных узловых температурах
 Eigen::MatrixXd LQube::Cond_Mat(const Element& FE, const Eigen::VectorXd& nodal_temps) const
 {   
-    if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
+    if (FE.vertices.size() != 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
 
     /*Если есть кэш*/
     if (FE.has_cache())
@@ -205,7 +205,7 @@ Eigen::MatrixXd LQube::Cond_Mat(const Element& FE, const Eigen::VectorXd& nodal_
 // Матрица демфпирования (теплоёмкости) при заданных узловых температурах
 Eigen::MatrixXd LQube::Damp_Mat(const Element& FE, const Eigen::VectorXd& nodal_temps) const
 {
-    if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
+    if (FE.vertices.size() != 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
 
     /*Если есть кэш*/
     if (FE.has_cache())
@@ -253,7 +253,7 @@ Eigen::MatrixXd LQube::Damp_Mat(const Element& FE, const Eigen::VectorXd& nodal_
 // Вектор узловых нагрузок (с учётом излучения и кривизны поверхности)
 Eigen::VectorXd LQube::Heat_Load_Surf(const Element& FE, const double heat_flux, const float eps, const Eigen::VectorXd& nodal_temps) const
 {
-    if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
+    if (FE.vertices.size() != 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
 
     /*Инициализация*/
     const float sigma = 5.67e-8; // Постоянная Стефана-Больцмана
@@ -308,7 +308,7 @@ Eigen::VectorXd LQube::Heat_Load_Surf(const Element& FE, const double heat_flux,
 // Нагрузки при спуске
 Eigen::VectorXd LQube::Ball_heat_load(const Element& FE, const Geometry& geom, const float eps, const double vel, const double dens, const double Kn, const Eigen::VectorXd& nodal_temps) const
 {
-    if (!FE.vertices.size() == 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
+    if (FE.vertices.size() != 8) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
     if (!FE.is_surface) { return Eigen::Vector<double, 8>::Zero(); }
 
     /*Инициализация*/

@@ -1,8 +1,10 @@
 #pragma once
-// STL
+#define _USE_MATH_DEFINES
 #include <cmath>
+// STL
 #include <iostream>
 #include <string>
+#include <numeric>
 // Eigen
 #include <Dense>
 #include <Geometry>
