@@ -122,7 +122,8 @@ double Layers::depth(int iter) const
 const Material* Layers::get_material(int iter) const
 {
     if (iter < fragment[0]) {return &GC_2500;}
-    else if (iter < fragment[0] + fragment[1]) {return &TZMK_10;}
+    // else if (iter < fragment[0] + fragment[1]) {return &TZMK_10;}
+    else if (iter < fragment[0] + fragment[1]) {return &GC_2500;}
     else return &AMg_6;
 }
 

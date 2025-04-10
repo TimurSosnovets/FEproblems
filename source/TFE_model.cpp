@@ -463,6 +463,7 @@ void TFE_model::transient_analisys() const
     std::vector<float> time_samples;
     float time_sample;
     float eps = 1e-6;
+    std::string filename;
 
     /*Непосредственный ввод данных*/
     logger::log("Enter initial temperature (K):");
@@ -476,6 +477,10 @@ void TFE_model::transient_analisys() const
 
     logger::log("Enter time step for outputed values (s) (better be a multiple of actual time step for computation):");
     std::cin >> time_step_output;
+
+    logger::log("Enter file name to save results:");
+    std::cin >> filename;
+
 
     // logger::log("Enter specific time moments (s) in which you want nodal temperatures to be outputed (-1 to finish input):");
     // while (true) {
@@ -560,7 +565,6 @@ void TFE_model::transient_analisys() const
             results.emplace_back(std::make_pair(header, nodal_temps));
         }
     }    
-    Save_xlsx(results);
     /*Вывод времени расчёта*/
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end - start;
@@ -578,6 +582,9 @@ void TFE_model::transient_analisys() const
     }
     message = "Execution time: " + std::to_string(exec_time) + time_dim;
     logger::log(message);
+    logger::log("Performing data sve...");
+    Save_xlsx(results, filename);
+    // logger::log("Data saved successfully!");
     std::cin.get();
 }
 
@@ -761,8 +768,8 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
             // Характеристики элемента
             bool is_surface = true;
             if (it_h > 0) {is_surface = false;}
-            // const Material* material = layer.get_material(it_h);
-            const Material* material = &AMg_6;
+            const Material* material = layer.get_material(it_h);
+            // const Material* material = &AMg_6;
             std::string* layer_name = layer.get_name(it_h);
             std::string* primitive_name = geom.get_name(0);
             
@@ -805,8 +812,8 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
                 // Характеристики элемента
                 bool is_surface = true;
                 if (it_h > 0) {is_surface = false;}
-                // const Material* material = layer.get_material(it_h);
-                const Material* material = &AMg_6;
+                const Material* material = layer.get_material(it_h);
+                // const Material* material = &AMg_6;
                 std::string* layer_name = layer.get_name(it_h);
                 std::string* primitive_name = geom.get_name(it_x);
                 
@@ -845,8 +852,8 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
             // Характеристики элемента
             bool is_surface = true;
             if (it_h > 0) {is_surface = false;}
-            // const Material* material = layer.get_material(it_h);
-            const Material* material = &AMg_6;
+            const Material* material = layer.get_material(it_h);
+            // const Material* material = &AMg_6;
             std::string* layer_name = layer.get_name(it_h);
             std::string* primitive_name = &geom.names[4];
             

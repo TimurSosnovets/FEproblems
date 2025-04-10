@@ -63,10 +63,10 @@ struct Results_transient
 
 // Вывод столбцов и заголовков у ним в файл .xlsx
 template <typename DataV>
-void Save_xlsx(const std::vector<std::pair<std::string, DataV>>& Data)
+void Save_xlsx(const std::vector<std::pair<std::string, DataV>>& Data, std::string filename)
 {
     // Ввод имени файла
-    std::string filename = "results";
+    // std::string filename = "results";
     // std::cout << "Enter the name of output file:\n";
     // std::getline(std::cin, filename);
     // Ensure .xlsx extension
