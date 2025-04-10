@@ -12,11 +12,13 @@
 #include <IterativeLinearSolvers>
 #include <SparseCore>
 #include <OrderingMethods>
+#include <PardisoSupport>
 // STL
 #include <unordered_set>
 #include <chrono>
 #include <algorithm>
 #include <iomanip> // for std::setprecision
+#include <omp.h>
 
 // Для вычисления уникальных комбинаций строка-столбец на базе КЭ сетки
 struct PairHash 

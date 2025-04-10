@@ -16,6 +16,7 @@ int main()
     std::cin.get();
 
     DM_FE.mesh_info();
+    logger::log("Model has been made successfully!");
     std::cin.get();
 
     DM_FE.mesh_check();
