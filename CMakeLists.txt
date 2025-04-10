@@ -16,12 +16,46 @@ include_directories(lib/Eigen)  # Eigen is header-only
 # Add OpenXLSX as a subdirectory
 add_subdirectory(lib/OpenXLSX)
 
-# Enable MKL for Eigen
-add_definitions(-DEIGEN_USE_MKL_ALL)
+# MKL Configuration ----------------------------------------------------------
+option(USE_MKL "Use Intel MKL for Eigen" ON)
 
-# Find MKL (Intel oneAPI sets MKLROOT env var)
-set(MKL_ROOT $ENV{MKLROOT})
-find_package(MKL REQUIRED)
+if(USE_MKL)
+    # Set explicit paths for oneAPI MKL
+    set(MKL_ROOT "$ENV{MKLROOT}" CACHE PATH "Path to Intel MKL")
+    if(NOT MKL_ROOT)
+        set(MKL_ROOT "C:/Program Files (x86)/Intel/oneAPI/mkl/latest")
+    endif()
+
+    set(MKL_INCLUDE_DIRS "${MKL_ROOT}/include")
+    set(MKL_LIBRARY_DIRS "${MKL_ROOT}/lib/intel64")
+
+    # Find MKL components
+    find_path(MKL_INCLUDE_DIR mkl.h PATHS ${MKL_INCLUDE_DIRS} REQUIRED)
+    find_library(MKL_CORE_LIB NAMES mkl_core PATHS ${MKL_LIBRARY_DIRS} REQUIRED)
+    find_library(MKL_SEQUENTIAL_LIB NAMES mkl_sequential PATHS ${MKL_LIBRARY_DIRS} REQUIRED)
+    find_library(MKL_INTEL_ILP64_LIB NAMES mkl_intel_ilp64 PATHS ${MKL_LIBRARY_DIRS} REQUIRED)
+
+    if(MKL_INCLUDE_DIR AND MKL_CORE_LIB AND MKL_SEQUENTIAL_LIB AND MKL_INTEL_ILP64_LIB)
+        message(STATUS "MKL found at: ${MKL_ROOT}")
+        message(STATUS "MKL includes: ${MKL_INCLUDE_DIR}")
+        message(STATUS "MKL libraries: ${MKL_CORE_LIB};${MKL_SEQUENTIAL_LIB};${MKL_INTEL_ILP64_LIB}")
+        
+        add_definitions(-DEIGEN_USE_MKL_ALL)
+        include_directories(${MKL_INCLUDE_DIR})
+        
+        set(MKL_LIBRARIES 
+            ${MKL_INTEL_ILP64_LIB}
+            ${MKL_SEQUENTIAL_LIB}
+            ${MKL_CORE_LIB}
+            pthread
+            m
+            dl
+        )
+    else()
+        message(WARNING "MKL not found - falling back to standard Eigen")
+        set(USE_MKL OFF)
+    endif()
+endif()
 
 # Compiler optimization flags
 if (CMAKE_CXX_COMPILER_ID MATCHES "IntelLLVM|Intel")
@@ -45,8 +79,25 @@ foreach(TEST_FILE ${TEST_FILES})
     # Link OpenXLSX
     target_link_libraries(${TEST_NAME} OpenXLSX::OpenXLSX)
 
-    # Link MKL to each target
-    target_include_directories(${TEST_NAME} PRIVATE ${MKL_INCLUDE_DIRS})
-    target_link_directories(${TEST_NAME} PRIVATE ${MKL_LIBRARY_DIRS})
-    target_link_libraries(${TEST_NAME} ${MKL_LIBRARIES})
+    # Link MKL if available
+    if(USE_MKL)
+        target_include_directories(${TEST_NAME} PRIVATE ${MKL_INCLUDE_DIR})
+        target_link_directories(${TEST_NAME} PRIVATE ${MKL_LIBRARY_DIRS})
+        target_link_libraries(${TEST_NAME} ${MKL_LIBRARIES})
+    endif()
+
+    # Add OpenMP support
+    if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        target_compile_options(${TEST_NAME} PRIVATE /openmp)
+    else()
+        find_package(OpenMP REQUIRED)
+        target_link_libraries(${TEST_NAME} PRIVATE OpenMP::OpenMP_CXX)
+    endif()
 endforeach()
+
+# Windows-specific settings
+if(WIN32)
+    # Add resource compiler for Windows builds
+    set(CMAKE_RC_COMPILER "C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/rc.exe")
+    enable_language(RC)
+endif()
