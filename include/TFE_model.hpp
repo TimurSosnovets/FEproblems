@@ -76,3 +76,4 @@ class TFE_model
 
 // Заполнение FE модели
 void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi);
+void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_phi);

@@ -6,8 +6,8 @@ echo ============================
 echo Setting up environment...
 echo ============================
 
-:: Option 1: Use MSVC environment (Visual Studio 2022)
-
+:: Clear build folder
+::rmdir /s /q build
 
 :: Option 2: Use Intel oneAPI environment (uncomment to use icx instead of MSVC)
 call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"

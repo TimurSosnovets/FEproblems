@@ -23,6 +23,20 @@ void TFE_model::mesh_info() const
     message = "TFE model: " + std::to_string(_nodes.size()) + " nodes, " + std::to_string(_elements.size()) + " elements.\n";
     logger::log(message, true, filename);
 
+    /*Вывод информации по узлам*/
+    message = "============\nNode info\n============\n";
+    logger::log(message, to_console, filename);
+    std::string gn, x, y, z;
+    for (const auto& node : _nodes)
+    {   
+        gn = std::to_string(node.gn);
+        x = std::to_string(node.point.x);
+        y = std::to_string(node.point.y);
+        z = std::to_string(node.point.z);
+        message = "Node " + gn + " : {" + x + ", " + y + ", " + z + "}";
+        logger::log(message, to_console, filename); 
+    }
+
     /*Вывод информации по элементам*/
     message = "============\nElement info\n============\n";
     logger::log(message, to_console, filename);
@@ -815,6 +829,320 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
             v2 = next_phi(v2);
         }
         // base = next_h(base);
+        base += 1;
+    }
+}
+
+// Заполнение КЭ модели
+void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
+{
+    /*Геометрия*/
+    double R_sph = 0.336;
+    double x_sph = R_sph * (1 - cos(deg2rad(69.0)));
+
+    /*Заполнение массива узлов*/
+    size_t nbr = 1;
+    double x, y, z;
+    double r, h, phi;
+    double d_x, d_phi = 2 * M_PI / c_phi;
+
+    Point O_sph(R_sph, 0);
+    Point S_sph(0, 0);
+    Point Actual(0, 0);
+    Vec2D Radius(O_sph, S_sph);
+    Vec2D Depth_dir (0, 0);
+    double d_psi = deg2rad(69.0) / geom.FE_sph;
+
+    // СФЕРА
+    for (int it_x = 0; it_x <= geom.FE_sph; ++it_x)
+    {
+        for (int it_phi = 0; it_phi < c_phi; ++it_phi)
+        {
+            for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
+            {
+                // Направление в плоскости
+                Depth_dir = Radius.opposite();
+                // Положение по слою
+                h = layer.depth(it_h);
+                Depth_dir.set_length(h);
+                // Точка в плоскости
+                Actual = Depth_dir.move_by(S_sph);
+                // Искомые координаты
+                phi = it_phi * d_phi;
+                x = Actual.x;
+                y = Actual.y * cos(phi);
+                z = Actual.y * sin(phi);
+                // Создание узла
+                if ((it_x == 0) && (it_phi > 0)) continue;
+                model.add_node(Point(x, y, z), nbr);
+                ++nbr;
+            }
+        }
+        // Поворот вектора
+        Radius = Radius.rotate_ccw_rad(d_psi);
+        S_sph = Radius.move_by(O_sph);
+    }
+    
+    // КОНУС 1
+    Point Sph_Cn1(geom.x_refers[0], -geom.r_refers[0]), Cn1_Cn2(geom.x_refers[1], -geom.r_refers[1]); // Точки перехода поверхностей внешних обводов СА
+    Vec2D Generator(Sph_Cn1, Cn1_Cn2), Internal_normal (0, 0);
+    d_x = Generator.norm / geom.FE_cone1;
+    Generator.set_length(d_x);
+    Point on_surface = Generator.move_by(Sph_Cn1);
+    double ang_Cn1_Cn2 = deg2rad(6.5);
+    for (int it_x = 1; it_x <= geom.FE_cone1; ++it_x)
+    {
+        for (int it_phi = 0; it_phi < c_phi; ++it_phi)
+        {
+            for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
+            {
+                // Положение по слою
+                h = layer.depth(it_h);
+                Internal_normal = Generator.perpendicular();
+                if (it_x == geom.FE_cone1) 
+                {
+                    Internal_normal = Internal_normal.rotate_ccw_rad(ang_Cn1_Cn2);
+                    h = h / cos(ang_Cn1_Cn2);
+                }
+                Internal_normal.set_length(h);
+                Actual = Internal_normal.move_by(on_surface);
+                // Искомы координаты
+                phi = it_phi * d_phi;
+                x = Actual.x;
+                y = Actual.y * cos(phi);
+                z = Actual.y * sin(phi);
+                // Создание узла
+                model.add_node(Point(x, y, z), nbr);
+                ++nbr;
+            }
+        }
+        // Движение по образующей
+        on_surface = Generator.move_by(on_surface);
+    }
+
+    // КОНУС 2
+    Point Cn2_Cyl(geom.x_refers[2], -geom.r_refers[2]); // Точки перехода поверхностей внешних обводов СА
+    Generator = Vec2D(Cn1_Cn2, Cn2_Cyl);
+    d_x = Generator.norm / geom.FE_cone2;
+    Generator.set_length(d_x);
+    on_surface = Generator.move_by(Cn1_Cn2);
+    double ang_Cn2_Cyl = deg2rad(4);
+    for (int it_x = 1; it_x <= geom.FE_cone2; ++it_x)
+    {
+        for (int it_phi = 0; it_phi < c_phi; ++it_phi)
+        {
+            for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
+            {
+                // Положение по слою
+                h = layer.depth(it_h);
+                Internal_normal = Generator.perpendicular();
+                if (it_x == geom.FE_cone2) 
+                {
+                    Internal_normal = Internal_normal.rotate_ccw_rad(ang_Cn2_Cyl);
+                    h = h / cos(ang_Cn2_Cyl);
+                }
+                Internal_normal.set_length(h);
+                Actual = Internal_normal.move_by(on_surface);
+                // Искомы координаты
+                phi = it_phi * d_phi;
+                x = Actual.x;
+                y = Actual.y * cos(phi);
+                z = Actual.y  * sin(phi);
+                // Создание узла
+                model.add_node(Point(x, y, z), nbr);
+                ++nbr;
+            }
+        }
+        // Движение по образующей
+        on_surface = Generator.move_by(on_surface);
+    }
+
+    // ЦИЛИНДР
+    Point Cyl_Bot(geom.x_refers[3], -geom.r_refers[3]); // Точки перехода поверхностей внешних обводов СА
+    Generator = Vec2D(Cn2_Cyl, Cyl_Bot);
+    d_x = Generator.norm / geom.FE_cone2;
+    Generator.set_length(d_x);
+    on_surface = Generator.move_by(Cn2_Cyl);
+    Vec2D Bot_mover(-1, 0);
+    for (int it_x = 1; it_x <= geom.FE_cyl; ++it_x)
+    {
+        for (int it_phi = 0; it_phi < c_phi; ++it_phi)
+        {
+            for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
+            {
+                // Положение по слою
+                h = layer.depth(it_h);
+                Internal_normal = Generator.perpendicular();
+                Internal_normal.set_length(h);
+                Actual = Internal_normal.move_by(on_surface);
+                // if (it_x == geom.FE_cyl) 
+                // {
+                //     Bot_mover.set_length(h);
+                //     Actual = Bot_mover.move_by(Actual);
+                // }
+                // Искомы координаты
+                phi = it_phi * d_phi;
+                x = Actual.x;
+                y = Actual.y * cos(phi);
+                z = Actual.y  * sin(phi);
+                // Создание узла
+                model.add_node(Point(x, y, z), nbr);
+                ++nbr;
+            }
+        }
+        // Движение по образующей
+        on_surface = Generator.move_by(on_surface);
+    }
+
+    // ДНИЩЕ - Последние узлы
+    for (int it_h = 0; it_h <= layer.FRNT; ++it_h)
+    {
+        y = 0;
+        z = 0;
+        x = geom.x_refers[3] - layer.depth(it_h);
+        model.add_node(Point(x, y, z), nbr);
+        ++nbr;
+    }
+
+    // Номера соседних узлов
+    auto next_x = [layer, c_phi] (int node) -> int 
+    {
+        if (node <= layer.FRNT + 1) {return  node + layer.FRNT + 1;}
+        else {return node + (layer.FRNT + 1) * c_phi;}
+    };
+    auto next_h = [layer, c_phi] (int node) -> int {return node + 1;};
+    auto next_phi = [layer, c_phi] (int node) -> int 
+    {
+        if (node <= layer.FRNT + 1) {return node;}
+
+        int rem = (node - (layer.FRNT + 1)) % ((layer.FRNT + 1) * (c_phi));
+        if ((rem > (c_phi - 1) * (layer.FRNT + 1)) || (rem == 0)) {return node - (layer.FRNT + 1) * (c_phi - 1);}
+
+        return node + layer.FRNT + 1;
+    };
+    auto bot_iter = [layer, c_phi] (int node) -> int {return node - (layer.FRNT + 1);};
+    
+    /*Заполнение массива элементов*/
+    std::vector<const Node*> vts;
+    nbr = 1;
+    int base, v1 = 1, v2, v3, v4, v5, v6, v7, v8;
+
+    // Носик
+    vts.resize(6);
+    base = 1;
+    for (int it_h = 0; it_h < layer.FRNT; ++it_h)
+    {
+        v1 = base;
+        v2 = next_x(v1);
+        for (int it_p = 0; it_p < c_phi; ++it_p)
+        {
+            // Формируем массив вершин
+            v3 = next_phi(v2);
+            v4 = next_h(v1);
+            v5 = next_h(v2);
+            v6 = next_h(v3);
+            vts[0] = &model.Nodes()[v1 - 1];
+            vts[1] = &model.Nodes()[v3 - 1];
+            vts[2] = &model.Nodes()[v2 - 1];
+            vts[3] = &model.Nodes()[v4 - 1];
+            vts[4] = &model.Nodes()[v6 - 1];
+            vts[5] = &model.Nodes()[v5 - 1];
+
+            // Характеристики элемента
+            bool is_surface = true;
+            if (it_h > 0) {is_surface = false;}
+            const Material* material = layer.get_material(it_h);
+            std::string* layer_name = layer.get_name(it_h);
+            std::string* primitive_name = geom.get_name(0);
+            
+            // Создание элемента
+            model.add_element(ElementType::LWedge, vts, nbr, material, is_surface, 1.0, layer_name, primitive_name);
+            ++nbr;
+
+            v2 = next_phi(v2);
+        }
+        base = next_h(base);
+    }
+
+    // Основная часть
+    vts.resize(8);
+    base = next_x(1);
+    for (int it_x = 1; it_x < geom.FE_all; ++it_x)
+    {
+        v1 = base;
+        for (int it_h = 0; it_h < layer.FRNT; ++it_h)
+        {
+            for (int it_p = 0; it_p < c_phi; ++it_p)
+            {
+                // Формируем массив вершин
+                v2 = next_phi(v1);
+                v3 = next_x(v2);
+                v4 = next_x(v1);
+                v5 = next_h(v1);
+                v6 = next_h(v2);
+                v7 = next_h(v3);
+                v8 = next_h(v4);
+                vts[0] = &model.Nodes()[v1 - 1];
+                vts[1] = &model.Nodes()[v2 - 1];
+                vts[2] = &model.Nodes()[v3 - 1];
+                vts[3] = &model.Nodes()[v4 - 1];
+                vts[4] = &model.Nodes()[v5 - 1];
+                vts[5] = &model.Nodes()[v6 - 1];
+                vts[6] = &model.Nodes()[v7 - 1];
+                vts[7] = &model.Nodes()[v8 - 1];
+
+                // Характеристики элемента
+                bool is_surface = true;
+                if (it_h > 0) {is_surface = false;}
+                const Material* material = layer.get_material(it_h);
+                std::string* layer_name = layer.get_name(it_h);
+                std::string* primitive_name = geom.get_name(it_x);
+                
+                // Создание элемента
+                model.add_element(ElementType::LQube, vts, nbr, material, is_surface, 1.0, layer_name, primitive_name);
+                ++nbr;
+
+                v1 = next_phi(v1);
+            }
+            v1 = next_h(v1);
+        }
+        base = next_x(base);
+    }
+
+    // Днище
+    vts.resize(6);
+    base = model.Nodes().size() - layer.FRNT;
+    for (int it_h = 0; it_h < layer.FRNT; ++it_h)
+    {
+        v1 = base;
+        v2 = bot_iter(v1);
+        for (int it_p = 0; it_p < c_phi; ++it_p)
+        {
+            // Формируем массив вершин
+            v3 = next_phi(v2);
+            v4 = next_h(v1);
+            v5 = next_h(v2);
+            v6 = next_h(v3);
+            vts[0] = &model.Nodes()[v1 - 1];
+            vts[1] = &model.Nodes()[v2 - 1];
+            vts[2] = &model.Nodes()[v3 - 1];
+            vts[3] = &model.Nodes()[v4 - 1];
+            vts[4] = &model.Nodes()[v5 - 1];
+            vts[5] = &model.Nodes()[v6 - 1];
+
+            // Характеристики элемента
+            bool is_surface = true;
+            if (it_h > 0) {is_surface = false;}
+            const Material* material = layer.get_material(it_h);
+            std::string* layer_name = layer.get_name(it_h);
+            std::string* primitive_name = &geom.names[4];
+            
+            // Создание элемента
+            model.add_element(ElementType::LWedge, vts, nbr, material, is_surface, 1.0, layer_name, primitive_name);
+            ++nbr;
+
+            v2 = next_phi(v2);
+        }
         base += 1;
     }
 }

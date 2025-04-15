@@ -33,6 +33,13 @@ void Vec2D::set_norm()
     cosine = u / norm;
 }
 
+Vec2D::Vec2D(Point& start, Point& end) : u(end.x - start.x), v(end.y - start.y)
+{
+    set_norm();
+    sine = v / norm;
+    cosine = u / norm;
+}
+
     void Vec2D::normalize() 
 {
     u = u / (norm);
@@ -64,6 +71,23 @@ std::pair<double, double> Vec2D::p2p(const std::pair<double, double>& base) cons
     double x = base.first + u;
     double y = base.second + v;
     return std::make_pair(x, y);
+}
+
+Point Vec2D::move_by(Point& p) const
+{
+    return Point(p.x + u, p.y + v);
+}
+
+Vec2D Vec2D::rotate_ccw_rad(double angle_rad) const
+{
+    double c=cos(angle_rad);
+    double s=sin(angle_rad);
+    return Vec2D(u*c - v*s, u*s + v*c);
+}
+
+Vec2D Vec2D::opposite() const
+{
+    return Vec2D(-u, -v);
 }
 
 Vec2D operator+ (const Vec2D& v1, const Vec2D& v2) 
@@ -119,11 +143,15 @@ double Layers::depth(int iter) const
     else return thickness[0] + thickness[1] + (iter - fragment[0] - fragment[1]) * step[2];
 }
 
+// const Material* Layers::get_material(int iter) const
+// {
+//     if (iter < fragment[0]) {return &GC_2500;}
+//     else if (iter < fragment[0] + fragment[1]) {return &TZMK_10;}
+//     else return &AMg_6;
+// }
 const Material* Layers::get_material(int iter) const
 {
-    if (iter < fragment[0]) {return &GC_2500;}
-    else if (iter < fragment[0] + fragment[1]) {return &TZMK_10;}
-    else return &AMg_6;
+    return &AMg_6;
 }
 
 std::string* Layers::get_name(int iter)

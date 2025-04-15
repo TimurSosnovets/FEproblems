@@ -33,12 +33,17 @@ struct Vec2D
     double cosine;
 
     void set_norm();
-    Vec2D(double U, double V);
     void normalize();
     Vec2D perpendicular() const;
+    Vec2D rotate_ccw_rad(double angle_rad) const;
+    Vec2D opposite() const;
     void scale_by(double factor);
     void set_length(double length);
     std::pair<double, double> p2p(const std::pair<double, double>& base) const;
+    Point move_by(Point& p) const;
+
+    Vec2D(double U, double V);
+    Vec2D(Point& start, Point& end);
 };
 
 Vec2D operator+ (const Vec2D& v1, const Vec2D& v2);

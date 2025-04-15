@@ -60,3 +60,4 @@ Tasks.json for VSCode
 Modifications to VScode
 =======================
 ctrl+shift+p -> "C/C++: Edit Configurations (UI)" -> include path -> ${workspaceFolder}/**
+C:/Program Files (x86)/Intel/oneAPI/mkl/latest/include

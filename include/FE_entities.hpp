@@ -16,7 +16,7 @@ class LQube;
 
 struct Point 
 {
-    const double x, y, z;
+    double x, y, z;
 
     // Дефолтный конструктор
     Point() : x(0.0), y(0.0), z(0.0) {}

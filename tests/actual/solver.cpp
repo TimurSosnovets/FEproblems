@@ -6,9 +6,9 @@
 int main()
 {
     /*Геометрия*/
-    Layers layer({0.015, 0.045, 0.002}, {10, 15, 1});
-    Geometry geom(20, 15, 10, 5);
-    int c_phi = 12;
+    Layers layer({0.015, 0.045, 0.002}, {1, 1, 1});
+    Geometry geom(1, 1, 1, 1);
+    int c_phi = 4;
     /*КЭ модель*/
     TFE_model DM_FE(geom, layer);
     make_model(DM_FE, layer, geom, c_phi);
@@ -16,8 +16,6 @@ int main()
     std::cin.get();
 
     DM_FE.mesh_info();
-    logger::log("Model has been made successfully!");
-    std::cin.get();
 
     DM_FE.mesh_check();
     logger::log("Successful mesh check!");
@@ -25,5 +23,4 @@ int main()
     DM_FE.transient_analisys();
     std::cin.get();
     return 0;
-
 }
