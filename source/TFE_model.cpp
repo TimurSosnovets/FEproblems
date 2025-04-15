@@ -960,7 +960,7 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
     // ЦИЛИНДР
     Point Cyl_Bot(geom.x_refers[3], -geom.r_refers[3]); // Точки перехода поверхностей внешних обводов СА
     Generator = Vec2D(Cn2_Cyl, Cyl_Bot);
-    d_x = Generator.norm / geom.FE_cone2;
+    d_x = Generator.norm / geom.FE_cyl;
     Generator.set_length(d_x);
     on_surface = Generator.move_by(Cn2_Cyl);
     Vec2D Bot_mover(-1, 0);
@@ -974,6 +974,11 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 h = layer.depth(it_h);
                 Internal_normal = Generator.perpendicular();
                 Internal_normal.set_length(h);
+                if (it_x == geom.FE_cyl) 
+                {
+                    Internal_normal = Internal_normal.rotate_ccw_rad(deg2rad(45));
+                    h = h / cos(deg2rad(45));
+                }
                 Actual = Internal_normal.move_by(on_surface);
                 // if (it_x == geom.FE_cyl) 
                 // {
@@ -1042,11 +1047,11 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
             v5 = next_h(v2);
             v6 = next_h(v3);
             vts[0] = &model.Nodes()[v1 - 1];
-            vts[1] = &model.Nodes()[v3 - 1];
-            vts[2] = &model.Nodes()[v2 - 1];
+            vts[1] = &model.Nodes()[v2 - 1];
+            vts[2] = &model.Nodes()[v3 - 1];
             vts[3] = &model.Nodes()[v4 - 1];
-            vts[4] = &model.Nodes()[v6 - 1];
-            vts[5] = &model.Nodes()[v5 - 1];
+            vts[4] = &model.Nodes()[v5 - 1];
+            vts[5] = &model.Nodes()[v6 - 1];
 
             // Характеристики элемента
             bool is_surface = true;
@@ -1083,13 +1088,13 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 v7 = next_h(v3);
                 v8 = next_h(v4);
                 vts[0] = &model.Nodes()[v1 - 1];
-                vts[1] = &model.Nodes()[v2 - 1];
+                vts[1] = &model.Nodes()[v4 - 1];
                 vts[2] = &model.Nodes()[v3 - 1];
-                vts[3] = &model.Nodes()[v4 - 1];
+                vts[3] = &model.Nodes()[v2 - 1];
                 vts[4] = &model.Nodes()[v5 - 1];
-                vts[5] = &model.Nodes()[v6 - 1];
+                vts[5] = &model.Nodes()[v8 - 1];
                 vts[6] = &model.Nodes()[v7 - 1];
-                vts[7] = &model.Nodes()[v8 - 1];
+                vts[7] = &model.Nodes()[v6 - 1];
 
                 // Характеристики элемента
                 bool is_surface = true;
@@ -1124,11 +1129,11 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
             v5 = next_h(v2);
             v6 = next_h(v3);
             vts[0] = &model.Nodes()[v1 - 1];
-            vts[1] = &model.Nodes()[v2 - 1];
-            vts[2] = &model.Nodes()[v3 - 1];
+            vts[1] = &model.Nodes()[v3 - 1];
+            vts[2] = &model.Nodes()[v2 - 1];
             vts[3] = &model.Nodes()[v4 - 1];
-            vts[4] = &model.Nodes()[v5 - 1];
-            vts[5] = &model.Nodes()[v6 - 1];
+            vts[4] = &model.Nodes()[v6 - 1];
+            vts[5] = &model.Nodes()[v5 - 1];
 
             // Характеристики элемента
             bool is_surface = true;
