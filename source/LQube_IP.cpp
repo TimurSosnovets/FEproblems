@@ -2,6 +2,7 @@
 
 // Точки интегрирования и весовые коэффициенты
 std::array<std::pair<double, double>, 2> int_pnts = {{ {1/sqrt(3), 1.0}, {-1/sqrt(3), 1.0} }};
+std::array<std::pair<double, double>, 4> heat_int_pnts = {{ {0.861136312, 0.347854845}, {-0.861136312, 0.347854845}, {0.339981044, 0.652145155}, {-0.339981044, 0.652145155} }};
 
 // Функции формы
 Eigen::RowVectorXd LQube::Shape_Func(const double xi, const double eta, const double zeta) const
@@ -313,7 +314,7 @@ Eigen::VectorXd LQube::Ball_heat_load(const Element& FE, const Geometry& geom, c
 
     /*Инициализация*/
     const float sigma = 5.67e-8; // Постоянная Стефана-Больцмана
-    double T_surf = 0.0; // Температура излучающей поверхности
+    double T_surf = 0.0, T_env = 300.0; // Температура излучающей поверхности
     Eigen::RowVector<double, 8> N_T; // Матрица функций форм (транспонированная)
     Eigen::Vector<double, 8> F = Eigen::Vector<double, 8>::Zero(); // Вектор узловых нагрузок [Вт]
     int surf = 0; // Счётчик
@@ -335,13 +336,10 @@ Eigen::VectorXd LQube::Ball_heat_load(const Element& FE, const Geometry& geom, c
     // Compute the surface Jacobian as the norm of the cross product of the edge vectors
     J_surf = edge1.cross(edge2).norm();
 
-    /*Определение репрезентативной температуры излучающей поверхности*/ // Поверхность всегда - на (-1) по Z
-    for (int i = 0; i < 4; ++i) {T_surf += (1.0 / 4.0) * nodal_temps(i);}
-
     /*Численное интегрирование (по поверхности элемента -> z = -1)*/
-    for (int i = 0; i < int_pnts.size(); ++i)
+    for (int i = 0; i < heat_int_pnts.size(); ++i)
     {
-        for (int j = 0; j < int_pnts.size(); ++j)
+        for (int j = 0; j < heat_int_pnts.size(); ++j)
         {   
             if (FE.has_cache())
             {
@@ -350,13 +348,14 @@ Eigen::VectorXd LQube::Ball_heat_load(const Element& FE, const Geometry& geom, c
             }
             else
             {
-                N_T = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
+                N_T = Shape_Func(heat_int_pnts[i].first, heat_int_pnts[j].first, -1.0).transpose();
             }
-            Point integr = Mapping(int_pnts[i].first, int_pnts[j].first, -1.0, FE);
+            Point integr = Mapping(heat_int_pnts[i].first, heat_int_pnts[j].first, -1.0, FE);
             angle = heat_angle(integr.x, integr.y, integr.z, geom);
-            heat_flux = heat_load(vel, dens, Kn, angle);
+            heat_flux = heat_load(vel, dens, Kn, angle) + eps * sigma * pow(T_env, 4.0);
+            T_surf = Point_Temp(heat_int_pnts[i].first, heat_int_pnts[j].first, -1, nodal_temps);
 
-            F += (1.0/4.0) * int_pnts[i].second * int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * FE.surface_area * J_surf; 
+            F += (1.0/4.0) * heat_int_pnts[i].second * heat_int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * FE.surface_area * J_surf; 
         }
     }
 
@@ -369,7 +368,7 @@ void LQube::calculate_element(Element& FE) const
     /*Инициализация*/
     FE.cache.B.resize(8, 8);
     FE.cache.C.resize(8, 8);
-    FE.cache.SF_s.resize(8);
+    FE.cache.SF_s.resize(heat_int_pnts.size() * heat_int_pnts.size());
     int nbr = 0, surf = 0; // Счётчики
 
     /*Заполнение*/
@@ -377,8 +376,6 @@ void LQube::calculate_element(Element& FE) const
     {
         for (int j = 0; j < int_pnts.size(); ++j)
         {   
-            FE.cache.SF_s[surf] = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
-            ++surf;
             for (int k = 0; k < int_pnts.size(); ++k)
             {   
                 Eigen::VectorXd N = Shape_Func(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
@@ -391,5 +388,14 @@ void LQube::calculate_element(Element& FE) const
                 ++nbr;
             }
         }
-    }   
+    }
+
+    for (int i = 0; i < heat_int_pnts.size(); ++i)
+    {
+        for (int j = 0; j < heat_int_pnts.size(); ++j)
+        {   
+            FE.cache.SF_s[surf] = Shape_Func(heat_int_pnts[i].first, heat_int_pnts[j].first, -1.0).transpose();
+            ++surf;
+        }
+    }
 }

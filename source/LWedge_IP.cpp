@@ -3,6 +3,8 @@
 // Точки интегрирования и весовые коэффициенты
 std::array<std::pair<double, double>, 2> linear_int = {{ {1/sqrt(3), 1.0}, {-1/sqrt(3), 1.0} }};
 std::array<std::pair<double, double>, 3> triang_int = {{ {1/2.0, 1/2.0}, {1/2.0, 0}, {0, 1/2.0} }};
+std::array<std::pair<double, double>, 7> heat_triang_int = {{ {1.0/3.0, 1.0/3.0}, {1.0/2.0, 1.0/2.0}, {1.0/2.0, 0}, {0, 1.0/2.0}, {1.0, 0.0}, {0.0, 1.0}, {0.0, 0.0} }};
+std::array<double, 7> heat_triang_weigth = {27.0/60.0, 8.0/60.0, 8.0/60.0, 8.0/60.0, 3.0/60.0, 3.0/60.0, 3.0/60.0};
 
 // Функции формы (xi - L1; eta - L2)
 Eigen::RowVectorXd LWedge::Shape_Func(const double xi, const double eta, const double zeta) const
@@ -288,12 +290,12 @@ Eigen::VectorXd LWedge::Heat_Load_Surf(const Element& FE, const double heat_flux
 
 Eigen::VectorXd LWedge::Ball_heat_load(const Element& FE, const Geometry& geom, const float eps, const double vel, const double dens, const double Kn, const Eigen::VectorXd& nodal_temps) const
 {
-    if (FE.vertices.size() != 6) {throw std::invalid_argument("8 nodes exactly LQube must have...");}
+    if (FE.vertices.size() != 6) {throw std::invalid_argument("6 nodes exactly LWedge must have...");}
     if (!FE.is_surface) { return Eigen::Vector<double, 6>::Zero(); }
 
     /*Инициализация*/
     const float sigma = 5.67e-8; // Постоянная Стефана-Больцмана
-    double T_surf; // Температура излучающей поверхности
+    double T_surf, T_env = 300.0; // Температура излучающей поверхности
     double J_surf;
     int surf = 0; // Счётчик
     Eigen::RowVector<double, 6> N_T; // Матрица функций форм (транспонированная)
@@ -314,12 +316,11 @@ Eigen::VectorXd LWedge::Ball_heat_load(const Element& FE, const Geometry& geom, 
              FE.vertices[2]->point.y - FE.vertices[0]->point.y,
              FE.vertices[2]->point.z - FE.vertices[0]->point.z;
 
-    T_surf = 1.0/3.0 * (nodal_temps[0] + nodal_temps[1] + nodal_temps[2]);
     // Compute the surface Jacobian as the norm of the cross product of the edge vectors
     J_surf = edge1.cross(edge2).norm();
 
     /*Численное интегрирование (по поверхности элемента -> z = -1)*/
-    for (int t = 0; t < triang_int.size(); ++t)
+    for (int t = 0; t < heat_triang_int.size(); ++t)
     {      
         if (FE.has_cache())
         {
@@ -328,13 +329,14 @@ Eigen::VectorXd LWedge::Ball_heat_load(const Element& FE, const Geometry& geom, 
         }
         else
         {
-            N_T = Shape_Func(triang_int[t].first, triang_int[t].second, -1.0).transpose();
+            N_T = Shape_Func(heat_triang_int[t].first, heat_triang_int[t].second, -1.0).transpose();
         }
-        Point integr = Mapping(triang_int[t].first, triang_int[t].second, -1.0, FE);
+        Point integr = Mapping(heat_triang_int[t].first, heat_triang_int[t].second, -1.0, FE);
         angle = heat_angle(integr.x, integr.y, integr.z, geom);
-        heat_flux = heat_load(vel, dens, Kn, angle);
+        heat_flux = heat_load(vel, dens, Kn, angle) + eps * sigma * pow(T_env, 4.0);
+        T_surf = Point_Temp(heat_triang_int[t].first, heat_triang_int[t].second, -1, nodal_temps);
 
-        F += (1.0/6.0) * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * J_surf;
+        F += heat_triang_weigth[t] * (1.0/2.0) * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * J_surf;
     }
     
     return F;
@@ -346,15 +348,12 @@ void LWedge::calculate_element(Element& FE) const
     /*Инициализация*/
     FE.cache.B.resize(6, 6);
     FE.cache.C.resize(6, 6);
-    FE.cache.SF_s.resize(6);
+    FE.cache.SF_s.resize(7);
     int nbr = 0, surf = 0; // Счётчики
 
     /*Заполнение*/
     for (int t = 0; t < triang_int.size(); ++t)
-    {
-        FE.cache.SF_s[surf] = Shape_Func(triang_int[t].first, triang_int[t].second, -1.0).transpose();
-        ++surf;
-        
+    {        
         for (int i = 0; i < linear_int.size(); ++i)
         {
             Eigen::VectorXd N = Shape_Func(triang_int[t].first, triang_int[t].second, linear_int[i].first);
@@ -368,4 +367,10 @@ void LWedge::calculate_element(Element& FE) const
             ++nbr;
         }
     } 
+
+    for (int t; t < heat_triang_int.size(); ++t)
+    {
+        FE.cache.SF_s[surf] = Shape_Func(heat_triang_int[t].first, heat_triang_int[t].second, -1.0).transpose();
+        ++surf;
+    }
 }

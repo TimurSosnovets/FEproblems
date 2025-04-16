@@ -13,6 +13,7 @@
 // Точки интегрирования
 extern std::array<std::pair<double, double>, 2> linear_int;
 extern std::array<std::pair<double, double>, 3> triang_int;
+extern std::array<std::pair<double, double>, 7> heat_triang_int;
 
 // Изопараметрический линейный кубический элемент (xi - L1; eta - L2;)
 class LWedge : public Isoparametric_3D

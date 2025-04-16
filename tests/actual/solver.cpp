@@ -6,8 +6,8 @@
 int main()
 {
     /*Геометрия*/
-    Layers layer({0.020, 0.040, 0.002}, {8, 16, 2});
-    Geometry geom(69, 40, 20, 20);
+    Layers layer({0.020, 0.040, 0.002}, {5, 5, 2});
+    Geometry geom(10, 10, 10, 10);
     int c_phi = 12;
     /*КЭ модель*/
     TFE_model DM_FE(geom, layer);

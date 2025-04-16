@@ -505,7 +505,7 @@ void TFE_model::transient_analisys() const
     std::vector<std::pair<std::string, Eigen::VectorXd>> results;
 
     /*Решатель и его настройки*/
-    Eigen::PardisoLDLT<Eigen::SparseMatrix<double>> solver;
+    Eigen::PardisoLLT<Eigen::SparseMatrix<double>> solver;
 
     /*Расчёт*/
     logger::log("Started transient analysis calculation.");
