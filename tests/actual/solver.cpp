@@ -6,12 +6,12 @@
 int main()
 {
     /*Геометрия*/
-    Layers layer({0.015, 0.045, 0.002}, {1, 1, 1});
-    Geometry geom(1, 1, 1, 1);
-    int c_phi = 4;
+    Layers layer({0.020, 0.040, 0.002}, {8, 16, 2});
+    Geometry geom(69, 40, 20, 20);
+    int c_phi = 12;
     /*КЭ модель*/
     TFE_model DM_FE(geom, layer);
-    make_model(DM_FE, layer, geom, c_phi);
+    make_model_advance(DM_FE, layer, geom, c_phi);
     logger::log("Model has been made successfully!");
     std::cin.get();
 

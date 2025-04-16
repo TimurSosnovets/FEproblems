@@ -7,7 +7,7 @@ echo Setting up environment...
 echo ============================
 
 :: Clear build folder
-::rmdir /s /q build
+rmdir /s /q build
 
 :: Option 2: Use Intel oneAPI environment (uncomment to use icx instead of MSVC)
 call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
