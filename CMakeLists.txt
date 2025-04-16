@@ -9,6 +9,15 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/output)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/output)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/output)
 
+# Define data directory path relative to project root
+set(DATA_DIR "${CMAKE_SOURCE_DIR}/Data" CACHE PATH "Path to data directory")
+# Verify data directory exists
+if(NOT EXISTS "${DATA_DIR}")
+    message(WARNING "Data directory not found: ${DATA_DIR}")
+endif()
+# Pass data directory to source code
+add_definitions(-DDATA_DIR="${DATA_DIR}")
+
 # Include directories for headers
 include_directories(include)
 include_directories(lib/Eigen)  # Eigen is header-only
@@ -53,5 +62,5 @@ foreach(TEST_FILE ${TEST_FILES})
 endforeach()
 
 # Optional: Set Intel icx as the compiler (uncomment if desired)
-# set(CMAKE_C_COMPILER "icx")
-# set(CMAKE_CXX_COMPILER "icx")
+set(CMAKE_C_COMPILER "icx")
+set(CMAKE_CXX_COMPILER "icx")

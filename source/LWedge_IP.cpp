@@ -3,8 +3,10 @@
 // Точки интегрирования и весовые коэффициенты
 std::array<std::pair<double, double>, 2> linear_int = {{ {1/sqrt(3), 1.0}, {-1/sqrt(3), 1.0} }};
 std::array<std::pair<double, double>, 3> triang_int = {{ {1/2.0, 1/2.0}, {1/2.0, 0}, {0, 1/2.0} }};
-std::array<std::pair<double, double>, 7> heat_triang_int = {{ {1.0/3.0, 1.0/3.0}, {1.0/2.0, 1.0/2.0}, {1.0/2.0, 0}, {0, 1.0/2.0}, {1.0, 0.0}, {0.0, 1.0}, {0.0, 0.0} }};
-std::array<double, 7> heat_triang_weigth = {27.0/60.0, 8.0/60.0, 8.0/60.0, 8.0/60.0, 3.0/60.0, 3.0/60.0, 3.0/60.0};
+// std::array<std::pair<double, double>, 7> heat_triang_int = {{ {1.0/3.0, 1.0/3.0}, {1.0/2.0, 1.0/2.0}, {1.0/2.0, 0}, {0, 1.0/2.0}, {1.0, 0.0}, {0.0, 1.0}, {0.0, 0.0} }};
+// std::array<double, 7> heat_triang_weigth = {27.0/60.0, 8.0/60.0, 8.0/60.0, 8.0/60.0, 3.0/60.0, 3.0/60.0, 3.0/60.0};
+std::array<std::pair<double, double>, 3> heat_triang_int = {{ {1/2.0, 1/2.0}, {1/2.0, 0}, {0, 1/2.0} }};
+std::array<double, 3> heat_triang_weigth = {1/3.0, 1/3.0, 1/3.0};
 
 // Функции формы (xi - L1; eta - L2)
 Eigen::RowVectorXd LWedge::Shape_Func(const double xi, const double eta, const double zeta) const

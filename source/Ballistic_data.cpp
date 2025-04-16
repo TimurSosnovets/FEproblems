@@ -1,59 +1,101 @@
 #include "Ballistic_data.hpp"
+#ifndef DATA_DIR
+#define DATA_DIR "../Data"  // Fallback for IDE analysis
+#endif
 
-
-// Конструктор
-Ballistic_data::Ballistic_data(const std::string& csv_file) 
+// Helper function to locate data file
+std::filesystem::path Ballistic_data::find_data_file(const std::string& filename)
 {
-    parse_CSV(csv_file);
-    if (velocities.empty()) 
+    // 1. First check build directory (if DATA_DIR_BUILD is defined)
+    #ifdef DATA_DIR_BUILD
     {
-        throw std::runtime_error("No data loaded");
+        std::filesystem::path build_path(DATA_DIR_BUILD);
+        build_path /= filename;
+        if (std::filesystem::exists(build_path)) {
+            return build_path;
+        }
+    }
+    #endif
+
+    // 2. Check source data directory (DATA_DIR is always defined)
+    std::filesystem::path source_path(DATA_DIR);
+    source_path /= filename;
+    if (std::filesystem::exists(source_path)) {
+        return source_path;
+    }
+
+    // 3. Check current directory as last resort
+    if (std::filesystem::exists(filename)) {
+        return filename;
+    }
+
+    throw std::runtime_error("Cannot find data file '" + filename + 
+                           "' in:\n" +
+                           #ifdef DATA_DIR_BUILD
+                           "- Build directory: " + std::string(DATA_DIR_BUILD) + "\n" +
+                           #endif
+                           "- Source directory: " + std::string(DATA_DIR) + "\n" +
+                           "- Current directory");
+}
+
+// Constructor
+Ballistic_data::Ballistic_data(const std::string& csv_filename)
+{
+    std::filesystem::path file_path = find_data_file(csv_filename);
+    std::cout << "Loading ballistic data from: " << file_path << std::endl;
+    parse_CSV(file_path);
+    
+    if (velocities.empty()) {
+        throw std::runtime_error("No valid data loaded from file: " + file_path.string());
     }
 }
 
-// Парсинг файла
-void Ballistic_data::parse_CSV(const std::string& filename)
+// CSV parsing implementation
+void Ballistic_data::parse_CSV(const std::filesystem::path& filepath)
 {
-    std::ifstream file(filename);
-    if (!file.is_open()) 
-    {
-        throw std::runtime_error("Failed to open file: " + filename);
-        std::cin.get();
+    std::ifstream file(filepath);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + filepath.string());
     }
 
     std::string line;
-    // Skip header if exists
-    // std::getline(file, line);
+    size_t line_num = 0;
+    while (std::getline(file, line)) {
+        line_num++;
+        if (line.empty()) continue;
 
-    while (std::getline(file, line)) 
-    {
         std::stringstream ss(line);
         std::string value;
-        double t, v, d, k;
+        std::vector<double> row_values;
 
-        try 
-        {
-            std::getline(ss, value, ';');
-            v = std::stod(value);
-            
-            std::getline(ss, value, ';');
-            d = std::stod(value);
-            
-            std::getline(ss, value);
-            k = std::stod(value);
+        try {
+            while (std::getline(ss, value, ';')) {
+                if (!value.empty()) {
+                    row_values.push_back(std::stod(value));
+                }
+            }
 
-        } catch (...) 
-        {
-            throw std::runtime_error("Error parsing line: " + line);
+            if (row_values.size() >= 3) {
+                velocities.push_back(row_values[0]);
+                densities.push_back(row_values[1]);
+                knudsen.push_back(row_values[2]);
+            } else {
+                std::cerr << "Warning: Line " << line_num 
+                         << " has insufficient data (expected 3 values, got " 
+                         << row_values.size() << ")" << std::endl;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Error parsing line " << line_num << ": " << e.what() << std::endl;
+            continue;  // Skip bad lines but continue processing
         }
+    }
 
-        velocities.push_back(v);
-        densities.push_back(d);
-        knudsen.push_back(k);
+    if (velocities.size() != densities.size() || velocities.size() != knudsen.size()) {
+        throw std::runtime_error("Data size mismatch in file: " + filepath.string());
     }
 }
 
-// Линейная интерполяция с постоянным шагом
+// Interpolation and getter methods remain the same
 double Ballistic_data::interpolate(const std::vector<double>& data, double query_time) const
 {
     const double position = (query_time - start_time) / time_step;
@@ -62,12 +104,8 @@ double Ballistic_data::interpolate(const std::vector<double>& data, double query
 
     if (index >= data.size() - 1) return data.back();
     return data[index] * (1.0 - alpha) + data[index + 1] * alpha;
-};
+}
 
-// Значения
 double Ballistic_data::get_Velocity(double time) const { return interpolate(velocities, time); }
 double Ballistic_data::get_Density(double time) const { return interpolate(densities, time); }
 double Ballistic_data::get_Knudsen(double time) const { return interpolate(knudsen, time); }
-
-
-    

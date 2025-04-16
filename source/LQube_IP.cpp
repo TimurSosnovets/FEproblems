@@ -3,7 +3,7 @@
 // Точки интегрирования и весовые коэффициенты
 std::array<std::pair<double, double>, 2> int_pnts = {{ {1/sqrt(3), 1.0}, {-1/sqrt(3), 1.0} }};
 std::array<std::pair<double, double>, 4> heat_int_pnts = {{ {0.861136312, 0.347854845}, {-0.861136312, 0.347854845}, {0.339981044, 0.652145155}, {-0.339981044, 0.652145155} }};
-
+// std::array<std::pair<double, double>, 2> heat_int_pnts = {{ {1/sqrt(3), 1.0}, {-1/sqrt(3), 1.0} }};
 // Функции формы
 Eigen::RowVectorXd LQube::Shape_Func(const double xi, const double eta, const double zeta) const
 {
@@ -281,13 +281,11 @@ Eigen::VectorXd LQube::Heat_Load_Surf(const Element& FE, const double heat_flux,
     // If not a surface, set the surface Jacobian to zero
     J_surf = 0;
     }
-    /*Определение репрезентативной температуры излучающей поверхности*/ // Поверхность всегда - на (-1) по Z
-    for (int i = 0; i < 4; ++i) {T_surf += (1.0 / 4.0) * nodal_temps(i);}
 
     /*Численное интегрирование (по поверхности элемента -> z = -1)*/
-    for (int i = 0; i < int_pnts.size(); ++i)
+    for (int i = 0; i < heat_int_pnts.size(); ++i)
     {
-        for (int j = 0; j < int_pnts.size(); ++j)
+        for (int j = 0; j < heat_int_pnts.size(); ++j)
         {   
             if (FE.has_cache())
             {
@@ -296,10 +294,10 @@ Eigen::VectorXd LQube::Heat_Load_Surf(const Element& FE, const double heat_flux,
             }
             else
             {
-                N_T = Shape_Func(int_pnts[i].first, int_pnts[j].first, -1.0).transpose();
+                N_T = Shape_Func(heat_int_pnts[i].first, heat_int_pnts[j].first, -1.0).transpose();
             }
 
-            F += (1.0/4.0) * int_pnts[i].second * int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * FE.surface_area * J_surf; 
+            F += (1.0/4.0) * heat_int_pnts[i].second * heat_int_pnts[j].second * (heat_flux) * N_T * FE.surface_area * J_surf; 
         }
     }
 

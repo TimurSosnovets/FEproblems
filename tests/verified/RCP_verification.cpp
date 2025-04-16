@@ -90,7 +90,9 @@ int main()
     std::cin >> fec[2];
     std::cout << std::endl;
 
-    TFE_model model(fec[0], fec[1], fec[2]);
+    Layers layer({0.015, 0.045, 0.002}, {1, 1, 1});
+    Geometry geom(1, 1, 1, 1);
+    TFE_model model(geom, layer);
     make_model(model, dim, fec);
     std::cin.get();
     model.mesh_info();

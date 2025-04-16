@@ -11,8 +11,9 @@
 #include "Materials.hpp"
 
 // Точки интегрирования
-extern std::array<std::pair<double, double>, 2> int_pnts;
-extern std::array<std::pair<double, double>, 4> heat_int_pnts;
+// extern std::array<std::pair<double, double>, 2> int_pnts;
+// // extern std::array<std::pair<double, double>, 4> heat_int_pnts;
+// extern std::array<std::pair<double, double>, 2> heat_int_pnts;
 
 // Изопараметрический линейный кубический элемент
 class LQube : public Isoparametric_3D
