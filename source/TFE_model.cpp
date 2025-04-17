@@ -960,7 +960,6 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
     d_x = Generator.norm / geom.FE_cyl;
     Generator.set_length(d_x);
     on_surface = Generator.move_by(Cn2_Cyl);
-    Vec2D Bot_mover(-1, 0);
     for (int it_x = 1; it_x <= geom.FE_cyl; ++it_x)
     {
         for (int it_phi = 0; it_phi < c_phi; ++it_phi)
@@ -970,18 +969,13 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 // Положение по слою
                 h = layer.depth(it_h);
                 Internal_normal = Generator.perpendicular();
-                Internal_normal.set_length(h);
                 if (it_x == geom.FE_cyl) 
                 {
                     Internal_normal = Internal_normal.rotate_ccw_rad(deg2rad(45));
                     h = h / cos(deg2rad(45));
                 }
+                Internal_normal.set_length(h);
                 Actual = Internal_normal.move_by(on_surface);
-                // if (it_x == geom.FE_cyl) 
-                // {
-                //     Bot_mover.set_length(h);
-                //     Actual = Bot_mover.move_by(Actual);
-                // }
                 // Искомы координаты
                 phi = it_phi * d_phi;
                 x = Actual.x;

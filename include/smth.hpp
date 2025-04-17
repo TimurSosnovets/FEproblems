@@ -66,8 +66,9 @@ struct Layers
     std::array<std::string, 3> names = {"GC-2500", "TZMK-10", "AMg6"};
     double THCK;
     int FRNT;
+    bool force_AMg;
 
-    Layers(std::array<double, 3> t, std::array<int, 3> f);
+    Layers(std::array<double, 3> t, std::array<int, 3> f, bool is_AMg = false);
     double depth(int iter) const;
     const Material* get_material(int iter) const;
     std::string* get_name(int iter);
