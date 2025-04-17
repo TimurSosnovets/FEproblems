@@ -95,22 +95,22 @@ void TFE_model::assembly(std::vector<Eigen::Triplet<double>>& t , const Eigen::M
 void TFE_model::mesh_check()
 {
     _DOF = _nodes.size();
-    std::unordered_set<std::pair<int, int>, PairHash> nnz_entries;
+    // std::unordered_set<std::pair<int, int>, PairHash> nnz_entries;
 
-    for (const auto& element : _elements)
-    {
-        for (int i = 0; i < element.vertices.size(); ++i) 
-        {
-            for (int j = 0; j < element.vertices.size(); ++j) 
-            {
-                int row = element.vertices[i]->gn - 1;
-                int col = element.vertices[j]->gn - 1;
-                nnz_entries.emplace(row, col);
-            }
-        }
-    }
-    unique_DOF = nnz_entries.size();
-    std::cout << "Unique DOF count: " << unique_DOF << std::endl;
+    // for (const auto& element : _elements)
+    // {
+    //     for (int i = 0; i < element.vertices.size(); ++i) 
+    //     {
+    //         for (int j = 0; j < element.vertices.size(); ++j) 
+    //         {
+    //             int row = element.vertices[i]->gn - 1;
+    //             int col = element.vertices[j]->gn - 1;
+    //             nnz_entries.emplace(row, col);
+    //         }
+    //     }
+    // }
+    // unique_DOF = nnz_entries.size();
+    // std::cout << "Unique DOF count: " << unique_DOF << std::endl;
 }
 
 void TFE_model::surface_check()
@@ -494,6 +494,11 @@ void TFE_model::transient_analisys() const
 
     /*Решатель и его настройки*/
     Eigen::PardisoLLT<Eigen::SparseMatrix<double>> solver;
+    int refactor_interval;
+    std::cout << "Enter refactor interval:\n";
+    std::cin >> refactor_interval;
+    solver.pardisoParameterArray()[4] = 2; // хрень с переориентацией
+    solver.pardisoParameterArray()[7] = 2; // iteration of refinement
 
     /*Расчёт*/
     logger::log("Started transient analysis calculation.");
@@ -510,12 +515,16 @@ void TFE_model::transient_analisys() const
         
         // Решение матричного уравнения
         Lh.makeCompressed();
-        
-        solver.compute(Lh);
+        Lh = Lh.triangularView<Eigen::Upper>();
+
+        if ((t % refactor_interval == 0) || (t == 1)) {
+            solver.compute(Lh);
             if (solver.info() != Eigen::Success) {
                 std::cerr << "PARDISO factorization failed at t = " << t << "!\n";
+                std::cin.get();
                 return;
             }
+        }
 
         if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
         nodal_temps = solver.solve(Rh);

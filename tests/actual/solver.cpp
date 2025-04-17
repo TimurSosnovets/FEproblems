@@ -17,7 +17,7 @@ int main()
 
     DM_FE.mesh_info();
 
-    // DM_FE.mesh_check();
+    DM_FE.mesh_check();
     // DM_FE.pre_calculate();
     logger::log("Successful mesh check!");
 
