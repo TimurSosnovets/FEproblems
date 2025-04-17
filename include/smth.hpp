@@ -74,6 +74,15 @@ struct Layers
     std::string* get_name(int iter);
 };
 
+struct nodes_map
+{
+    int break_point = -1;
+    int sound_point = -1;
+    std::vector<int> under_break_point;
+    std::vector<int> under_sound_point;
+    std::vector<int> keel;
+};
+
 // Модель геометрии
 struct Geometry
 {
@@ -86,7 +95,7 @@ struct Geometry
     // КЭ разбиение
     int FE_sph, FE_cone1, FE_cone2, FE_cyl, FE_all;
     double step_sph, step_cone1, step_cone2, step_cyl;
-
+    nodes_map map;
     std::string* get_name(int iter);
     Geometry(const int Sphere, const int Cone1, const int Cone2, const int Cylinder);
 };

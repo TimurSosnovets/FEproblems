@@ -458,7 +458,7 @@ Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int
     return nodal_temps;
 }
 
-void TFE_model::transient_analisys() const
+std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() const
 {
     /*Инициализация ввода данных*/
     float max_time, time_step, time_step_output, initial_temp;
@@ -490,7 +490,7 @@ void TFE_model::transient_analisys() const
     Eigen::VectorXd nodal_temps = initial_temp * Eigen::VectorXd::Ones(_DOF); // Глобальный вектор узловых температур
     Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
     Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
-    std::vector<std::pair<std::string, Eigen::VectorXd>> results;
+    std::vector<std::pair<double, Eigen::VectorXd>> results;
 
     /*Решатель и его настройки*/
     Eigen::PardisoLLT<Eigen::SparseMatrix<double>> solver;
@@ -522,7 +522,6 @@ void TFE_model::transient_analisys() const
             if (solver.info() != Eigen::Success) {
                 std::cerr << "PARDISO factorization failed at t = " << t << "!\n";
                 std::cin.get();
-                return;
             }
         }
 
@@ -537,8 +536,9 @@ void TFE_model::transient_analisys() const
         
         if (t % static_cast<int>(time_step_output / time_step) < eps)
         {
-            std::string header = "time " + std::to_string(t * time_step) + " s";
-            results.emplace_back(std::make_pair(header, nodal_temps));
+            // std::string header = "time " + std::to_string(t * time_step) + " s";
+            double time = t * time_step;
+            results.emplace_back(std::make_pair(time, nodal_temps));
         }
     }    
     /*Вывод времени расчёта*/
@@ -546,8 +546,8 @@ void TFE_model::transient_analisys() const
     std::chrono::duration<double> elapsed_seconds = end - start;
     message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
     logger::log(message);
-    Save_xlsx(results);
-    std::cin.get();
+    // Save_xlsx(results);
+    return results;
 }
 
 // Заполнение КЭ модели
@@ -872,6 +872,12 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 // Создание узла
                 if ((it_x == 0) && (it_phi > 0)) continue;
                 model.add_node(Point(x, y, z), nbr);
+                if ((y < 0) && (z < 1e-6)) 
+                {
+                    geom.map.keel.emplace_back(nbr);
+                    if (it_x * d_psi - deg2rad(20) < deg2rad(1.5)) geom.map.break_point = nbr;
+                    if (it_x * d_psi - deg2rad(65) < deg2rad(1.5)) geom.map.sound_point = nbr;
+                }
                 ++nbr;
             }
         }
@@ -910,6 +916,10 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 z = Actual.y * sin(phi);
                 // Создание узла
                 model.add_node(Point(x, y, z), nbr);
+                if ((y < 0) && (z < 1e-6)) 
+                {
+                    geom.map.keel.emplace_back(nbr);
+                }
                 ++nbr;
             }
         }
@@ -947,6 +957,10 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 z = Actual.y  * sin(phi);
                 // Создание узла
                 model.add_node(Point(x, y, z), nbr);
+                if ((y < 0) && (z < 1e-6)) 
+                {
+                    geom.map.keel.emplace_back(nbr);
+                }
                 ++nbr;
             }
         }
@@ -983,6 +997,10 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 z = Actual.y  * sin(phi);
                 // Создание узла
                 model.add_node(Point(x, y, z), nbr);
+                if ((y < 0) && (z < 1e-6)) 
+                {
+                    geom.map.keel.emplace_back(nbr);
+                }
                 ++nbr;
             }
         }
@@ -997,6 +1015,10 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
         z = 0;
         x = geom.x_refers[3] - layer.depth(it_h);
         model.add_node(Point(x, y, z), nbr);
+        if (it_h == 0) 
+        {
+            geom.map.keel.emplace_back(nbr);
+        }
         ++nbr;
     }
 

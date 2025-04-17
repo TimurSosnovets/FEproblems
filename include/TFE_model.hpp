@@ -64,7 +64,7 @@ class TFE_model
 
         /*Решение нестационарной задачи с заданными начальными условиями, временем расчёта и шагом.*/
         Results_transient transient_analisys(const std::vector<std::pair<int, double>>& constraints, const float q) const;
-        void transient_analisys() const; 
+        std::vector<std::pair<double, Eigen::VectorXd>> transient_analisys() const; 
         Eigen::VectorXd steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation = false) const;
         /*Вывод объектов*/
         const std::vector<Node>& Nodes() const;

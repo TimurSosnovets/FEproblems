@@ -21,7 +21,8 @@ int main()
     // DM_FE.pre_calculate();
     logger::log("Successful mesh check!");
 
-    DM_FE.transient_analisys();
+    auto nodal_temps = DM_FE.transient_analisys();
     std::cin.get();
+    Save_xlsx(nodal_temps);
     return 0;
 }

@@ -19,6 +19,13 @@ int main()
     DM_FE.mesh_check();
     logger::log("Successful mesh check!");
 
+    std::cout << "Break point: " << geom.map.break_point << std::endl;
+    std::cout << "Sound point: " << geom.map.sound_point << std::endl;
+    logger::log("Keel points:");
+    for (const auto nbr : geom.map.keel)
+    {
+        std::cout << nbr << std::endl;
+    }
     /*Закрепление*/
     double constraint_temp = 300;
     std::vector<std::pair<int, double>> LBC;
