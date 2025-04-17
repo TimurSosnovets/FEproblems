@@ -11,7 +11,7 @@ void make_model(TFE_model& model, const std::array<float, 3> dimentions, const s
     int node_number = 1;
     int element_number = 1;
     bool is_surface = true;
-    float surface_area = dx * dz;
+    float surface_area = 1;
     std::vector<const Node*> vertices(8);
     double eps = 1e-6; // Для сравнения координат
 
