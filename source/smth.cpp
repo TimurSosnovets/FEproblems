@@ -143,16 +143,16 @@ double Layers::depth(int iter) const
     else return thickness[0] + thickness[1] + (iter - fragment[0] - fragment[1]) * step[2];
 }
 
-// const Material* Layers::get_material(int iter) const
-// {
-//     if (iter < fragment[0]) {return &GC_2500;}
-//     else if (iter < fragment[0] + fragment[1]) {return &TZMK_10;}
-//     else return &AMg_6;
-// }
 const Material* Layers::get_material(int iter) const
 {
-    return &AMg_6;
+    if (iter < fragment[0]) {return &GC_2500;}
+    else if (iter < fragment[0] + fragment[1]) {return &TZMK_10;}
+    else return &AMg_6;
 }
+// const Material* Layers::get_material(int iter) const
+// {
+//     return &AMg_6;
+// }
 
 std::string* Layers::get_name(int iter)
 {
