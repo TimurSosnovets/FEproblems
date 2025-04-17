@@ -368,7 +368,11 @@ void LQube::calculate_element(Element& FE) const
     FE.cache.C.resize(8, 8);
     FE.cache.SF_s.resize(heat_int_pnts.size() * heat_int_pnts.size());
     int nbr = 0, surf = 0; // Счётчики
-
+    Eigen::MatrixXd D;
+    D << 
+        1, 0, 0,
+        0, 1, 0,
+        0, 0, 1;
     /*Заполнение*/
     for (int i = 0; i < int_pnts.size(); ++i)
     {
@@ -381,7 +385,7 @@ void LQube::calculate_element(Element& FE) const
                 Eigen::MatrixXd B = J.inverse() * Grad_Mat(int_pnts[i].first, int_pnts[j].first, int_pnts[k].first);
                 double dJ = J.determinant(); 
 
-                FE.cache.B += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * B.transpose() * B * dJ;
+                FE.cache.B += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * B.transpose() * D * B * dJ;
                 FE.cache.C += int_pnts[i].second * int_pnts[j].second * int_pnts[k].second * N.transpose() * N * dJ;
                 ++nbr;
             }

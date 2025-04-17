@@ -97,7 +97,7 @@ int main()
     std::cin.get();
     model.mesh_info();
     std::cin.get();
-    model.pre_calculate();
+    // model.pre_calculate();
     
     /*Решение*/
     // Ввод значений

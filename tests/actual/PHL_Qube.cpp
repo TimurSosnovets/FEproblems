@@ -104,9 +104,16 @@ int main()
     std::cin.get();
     model.mesh_info();
     std::cin.get();
-    model.pre_calculate();
+    // model.pre_calculate();
     model.mesh_check();
     
+    for (const auto& element : model.Elements())
+    {
+        Eigen::MatrixXd H;
+        LQube instance;
+        H = instance.Cond_Mat(element, Eigen::VectorXd::Ones(8) * 300);
+        std::cout << "Element H:\n" << H << std::endl << std::endl;
+    }
     /*Решение*/
     // Ввод значений
     double constraint_temp = 300;

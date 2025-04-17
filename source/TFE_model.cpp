@@ -440,8 +440,8 @@ Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int
     }
     Lh.prune(0.0);
 
-    std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
-    std::cout << "Right hand vector:\n" << Rh << std::endl;
+    // std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
+    // std::cout << "Right hand vector:\n" << Rh << std::endl;
 
     Lh.makeCompressed();
     solver.compute(Lh);
