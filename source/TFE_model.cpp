@@ -1256,3 +1256,110 @@ void TFE_model::export_to_vtk(const std::string& filename, bool visualize) const
         interactor->Start();
     }
 }
+
+void TFE_model::export_to_vtk(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const {
+    // Validate input
+    if (transient_results.empty()) {
+        throw std::runtime_error("Transient results are empty");
+    }
+    for (const auto& result : transient_results) {
+        if (result.second.size() != _nodes.size()) {
+            throw std::runtime_error("Temperature vector size (" + std::to_string(result.second.size()) +
+                                     ") does not match node count (" + std::to_string(_nodes.size()) + ")");
+        }
+    }
+
+    // Create points
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+    points->SetNumberOfPoints(_nodes.size()); // Pre-allocate for large mesh
+    for (size_t i = 0; i < _nodes.size(); ++i) {
+        const Point& p = _nodes[i].coords();
+        points->SetPoint(i, p.x, p.y, p.z);
+    }
+
+    // Create unstructured grid
+    vtkSmartPointer<vtkUnstructuredGrid> grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
+    grid->SetPoints(points);
+    grid->Allocate(_elements.size()); // Pre-allocate for large mesh
+
+    // Add cells
+    vtkSmartPointer<vtkStringArray> layer_array = vtkSmartPointer<vtkStringArray>::New();
+    layer_array->SetName("Layer");
+    layer_array->SetNumberOfTuples(_elements.size());
+
+    size_t cell_idx = 0;
+    for (const auto& element : _elements) {
+        if (dynamic_cast<LWedge*>(element.type.get())) {
+            vtkSmartPointer<vtkWedge> wedge = vtkSmartPointer<vtkWedge>::New();
+            if (element.vertices.size() != 6) {
+                throw std::runtime_error("LWedge element " + std::to_string(element.gn) + " has " +
+                                         std::to_string(element.vertices.size()) + " vertices, expected 6");
+            }
+            for (size_t i = 0; i < element.vertices.size(); ++i) {
+                int node_idx = element.vertices[i]->global_number() - 1;
+                if (node_idx < 0 || node_idx >= static_cast<int>(_nodes.size())) {
+                    throw std::runtime_error("Invalid node index " + std::to_string(node_idx + 1) +
+                                             " in element " + std::to_string(element.gn));
+                }
+                wedge->GetPointIds()->SetId(i, node_idx);
+            }
+            grid->InsertNextCell(VTK_WEDGE, wedge->GetPointIds());
+        } else if (dynamic_cast<LQube*>(element.type.get())) {
+            vtkSmartPointer<vtkHexahedron> hex = vtkSmartPointer<vtkHexahedron>::New();
+            if (element.vertices.size() != 8) {
+                throw std::runtime_error("LQube element " + std::to_string(element.gn) + " has " +
+                                         std::to_string(element.vertices.size()) + " vertices, expected 8");
+            }
+            for (size_t i = 0; i < element.vertices.size(); ++i) {
+                int node_idx = element.vertices[i]->global_number() - 1;
+                if (node_idx < 0 || node_idx >= static_cast<int>(_nodes.size())) {
+                    throw std::runtime_error("Invalid node index " + std::to_string(node_idx + 1) +
+                                             " in element " + std::to_string(element.gn));
+                }
+                hex->GetPointIds()->SetId(i, node_idx);
+            }
+            grid->InsertNextCell(VTK_HEXAHEDRON, hex->GetPointIds());
+        } else {
+            std::cerr << "Warning: Unknown element type for element " << element.gn << ", skipping\n";
+            continue;
+        }
+        layer_array->SetValue(cell_idx, element.layer ? *element.layer : "unknown");
+        ++cell_idx;
+    }
+    grid->GetCellData()->AddArray(layer_array);
+
+    // Add time steps to FieldData
+    vtkSmartPointer<vtkDoubleArray> time_values = vtkSmartPointer<vtkDoubleArray>::New();
+    time_values->SetName("TimeValues");
+    time_values->SetNumberOfComponents(1);
+    time_values->SetNumberOfTuples(transient_results.size());
+    for (size_t t = 0; t < transient_results.size(); ++t) {
+        time_values->SetValue(t, transient_results[t].first);
+    }
+    grid->GetFieldData()->AddArray(time_values);
+
+    // Add temperature arrays for each time step
+    for (size_t t = 0; t < transient_results.size(); ++t) {
+        vtkSmartPointer<vtkDoubleArray> temperatures = vtkSmartPointer<vtkDoubleArray>::New();
+        std::ostringstream oss;
+        oss << "Temperature_t" << t;
+        temperatures->SetName(oss.str().c_str());
+        temperatures->SetNumberOfComponents(1);
+        temperatures->SetNumberOfTuples(_nodes.size());
+        for (Eigen::Index i = 0; i < transient_results[t].second.size(); ++i) {
+            temperatures->SetValue(i, transient_results[t].second(i));
+        }
+        grid->GetPointData()->AddArray(temperatures);
+    }
+
+    // Write single .vtu file
+    vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer =
+        vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
+    writer->SetFileName(filename.c_str());
+    writer->SetInputData(grid);
+    if (!writer->Write()) {
+        throw std::runtime_error("Failed to write VTK file: " + filename);
+    }
+    writer->SetDataModeToBinary();
+    writer->SetCompressorTypeToZLib();
+}

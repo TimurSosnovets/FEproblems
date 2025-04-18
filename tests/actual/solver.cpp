@@ -22,7 +22,8 @@ int main()
     logger::log("Successful mesh check!");
 
     auto nodal_temps = DM_FE.transient_analisys();
-    std::cin.get();
     Save_xlsx(nodal_temps);
+    DM_FE.export_to_vtk("mesh.vtu", nodal_temps);
+    std::cin.get();
     return 0;
 }

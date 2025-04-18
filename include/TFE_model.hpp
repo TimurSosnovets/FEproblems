@@ -34,8 +34,11 @@
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkInteractorStyleTrackballCamera.h>
-#include <vtkCellData.h>
 #include <vtkProperty.h>
+#include <vtkCellData.h>
+#include <vtkDoubleArray.h>
+#include <vtkFieldData.h>
+#include <vtkPointData.h>
 
 // Для вычисления уникальных комбинаций строка-столбец на базе КЭ сетки
 struct PairHash 
@@ -90,6 +93,8 @@ class TFE_model
         /*Вывод информации*/
         void mesh_info() const;
         void export_to_vtk(const std::string& filename, bool visualize = true) const;
+        void export_to_vtk(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
+
 };
 
 // Заполнение FE модели
