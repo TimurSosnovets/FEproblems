@@ -23,7 +23,7 @@ int main()
 
     auto nodal_temps = DM_FE.transient_analisys();
     Save_xlsx(nodal_temps);
-    DM_FE.export_to_vtk("mesh.vtu", nodal_temps);
+    DM_FE.export_to_vtk_vtu("mesh.vtu", nodal_temps);
     std::cin.get();
     return 0;
 }

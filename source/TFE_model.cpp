@@ -1363,3 +1363,124 @@ void TFE_model::export_to_vtk(const std::string& filename, const std::vector<std
     writer->SetDataModeToBinary();
     writer->SetCompressorTypeToZLib();
 }
+
+void TFE_model::export_to_vtk_vtu(const std::string& filename_prefix,
+                              const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const {
+    // Validate input
+    if (transient_results.empty()) {
+        throw std::runtime_error("Transient results are empty");
+    }
+    for (const auto& result : transient_results) {
+        if (result.second.size() != _nodes.size()) {
+            throw std::runtime_error("Temperature vector size (" + std::to_string(result.second.size()) +
+                                     ") does not match node count (" + std::to_string(_nodes.size()) + ")");
+        }
+    }
+
+    // Create points (shared across all time steps)
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+    points->SetNumberOfPoints(_nodes.size());
+    for (size_t i = 0; i < _nodes.size(); ++i) {
+        const Point& p = _nodes[i].coords();
+        points->SetPoint(i, p.x, p.y, p.z);
+    }
+
+    // Create cells (shared across all time steps)
+    vtkSmartPointer<vtkUnstructuredGrid> grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
+    grid->SetPoints(points);
+    grid->Allocate(_elements.size());
+
+    vtkSmartPointer<vtkStringArray> layer_array = vtkSmartPointer<vtkStringArray>::New();
+    layer_array->SetName("Layer");
+    layer_array->SetNumberOfTuples(_elements.size());
+
+    size_t cell_idx = 0;
+    for (const auto& element : _elements) {
+        if (dynamic_cast<LWedge*>(element.type.get())) {
+            vtkSmartPointer<vtkWedge> wedge = vtkSmartPointer<vtkWedge>::New();
+            if (element.vertices.size() != 6) {
+                throw std::runtime_error("LWedge element " + std::to_string(element.gn) + " has " +
+                                         std::to_string(element.vertices.size()) + " vertices, expected 6");
+            }
+            for (size_t i = 0; i < element.vertices.size(); ++i) {
+                int node_idx = element.vertices[i]->global_number() - 1;
+                if (node_idx < 0 || node_idx >= static_cast<int>(_nodes.size())) {
+                    throw std::runtime_error("Invalid node index " + std::to_string(node_idx + 1) +
+                                             " in element " + std::to_string(element.gn));
+                }
+                wedge->GetPointIds()->SetId(i, node_idx);
+            }
+            grid->InsertNextCell(VTK_WEDGE, wedge->GetPointIds());
+        } else if (dynamic_cast<LQube*>(element.type.get())) {
+            vtkSmartPointer<vtkHexahedron> hex = vtkSmartPointer<vtkHexahedron>::New();
+            if (element.vertices.size() != 8) {
+                throw std::runtime_error("LQube element " + std::to_string(element.gn) + " has " +
+                                         std::to_string(element.vertices.size()) + " vertices, expected 8");
+            }
+            for (size_t i = 0; i < element.vertices.size(); ++i) {
+                int node_idx = element.vertices[i]->global_number() - 1;
+                if (node_idx < 0 || node_idx >= static_cast<int>(_nodes.size())) {
+                    throw std::runtime_error("Invalid node index " + std::to_string(node_idx + 1) +
+                                             " in element " + std::to_string(element.gn));
+                }
+                hex->GetPointIds()->SetId(i, node_idx);
+            }
+            grid->InsertNextCell(VTK_HEXAHEDRON, hex->GetPointIds());
+        } else {
+            std::cerr << "Warning: Unknown element type for element " << element.gn << ", skipping\n";
+            continue;
+        }
+        layer_array->SetValue(cell_idx, element.layer ? *element.layer : "unknown");
+        ++cell_idx;
+    }
+    grid->GetCellData()->AddArray(layer_array);
+
+    // Write .vtu files for each time step
+    for (size_t t = 0; t < transient_results.size(); ++t) {
+        // Create temperature array
+        vtkSmartPointer<vtkDoubleArray> temperatures = vtkSmartPointer<vtkDoubleArray>::New();
+        temperatures->SetName("Temperature");
+        temperatures->SetNumberOfComponents(1);
+        temperatures->SetNumberOfTuples(_nodes.size());
+        for (Eigen::Index i = 0; i < transient_results[t].second.size(); ++i) {
+            temperatures->SetValue(i, transient_results[t].second(i));
+        }
+
+        // Create grid copy with this time step’s temperatures
+        vtkSmartPointer<vtkUnstructuredGrid> grid_copy = vtkSmartPointer<vtkUnstructuredGrid>::New();
+        grid_copy->DeepCopy(grid);
+        grid_copy->GetPointData()->AddArray(temperatures);
+
+        // Write .vtu file
+        std::ostringstream oss;
+        oss << filename_prefix << "_t" << std::setw(4) << std::setfill('0') << t << ".vtu";
+        vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer =
+            vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
+        writer->SetFileName(oss.str().c_str());
+        writer->SetInputData(grid_copy);
+        writer->SetDataModeToBinary();
+        writer->SetCompressorTypeToZLib();
+        if (!writer->Write()) {
+            throw std::runtime_error("Failed to write VTK file: " + oss.str());
+        }
+    }
+
+    // Write .pvd file
+    std::string pvd_filename = filename_prefix + ".pvd";
+    std::ofstream pvd_file(pvd_filename);
+    if (!pvd_file.is_open()) {
+        throw std::runtime_error("Failed to open PVD file: " + pvd_filename);
+    }
+    pvd_file << "<?xml version=\"1.0\"?>\n"
+             << "<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\">\n"
+             << "  <Collection>\n";
+    for (size_t t = 0; t < transient_results.size(); ++t) {
+        std::ostringstream oss;
+        oss << filename_prefix << "_t" << std::setw(4) << std::setfill('0') << t << ".vtu";
+        pvd_file << "    <DataSet timestep=\"" << transient_results[t].first
+                 << "\" group=\"\" part=\"0\" file=\"" << oss.str() << "\"/>\n";
+    }
+    pvd_file << "  </Collection>\n"
+             << "</VTKFile>\n";
+    pvd_file.close();
+}

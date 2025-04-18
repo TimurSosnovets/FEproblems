@@ -39,6 +39,7 @@
 #include <vtkDoubleArray.h>
 #include <vtkFieldData.h>
 #include <vtkPointData.h>
+#include <vtkZLibDataCompressor.h>
 
 // Для вычисления уникальных комбинаций строка-столбец на базе КЭ сетки
 struct PairHash 
@@ -94,6 +95,7 @@ class TFE_model
         void mesh_info() const;
         void export_to_vtk(const std::string& filename, bool visualize = true) const;
         void export_to_vtk(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
+        void export_to_vtk_vtu(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
 
 };
 
