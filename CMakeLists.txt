@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
+set(CMAKE_C_COMPILER "icx")
+set(CMAKE_CXX_COMPILER "icx")
 project(FEProblems)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -11,18 +13,16 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/output)
 
 # Define data directory path relative to project root
 set(DATA_DIR "${CMAKE_SOURCE_DIR}/Data" CACHE PATH "Path to data directory")
-# Verify data directory exists
 if(NOT EXISTS "${DATA_DIR}")
     message(WARNING "Data directory not found: ${DATA_DIR}")
 endif()
-# Pass data directory to source code
 add_definitions(-DDATA_DIR="${DATA_DIR}")
 
 # Include directories for headers
 include_directories(include)
 include_directories(lib/Eigen)  # Eigen is header-only
 
-# Find Intel MKL (assumes oneAPI is installed)
+# Find Intel MKL
 find_path(MKL_INCLUDE_DIR mkl.h
     HINTS "C:/Program Files (x86)/Intel/oneAPI/mkl/latest/include")
 find_library(MKL_CORE_LIB mkl_core
@@ -35,32 +35,39 @@ find_library(MKL_SEQUENTIAL_LIB mkl_sequential
 if(MKL_INCLUDE_DIR AND MKL_CORE_LIB)
     include_directories(${MKL_INCLUDE_DIR})
     set(MKL_LIBRARIES ${MKL_INTEL_LP64_LIB} ${MKL_SEQUENTIAL_LIB} ${MKL_CORE_LIB})
-    add_definitions(-DEIGEN_USE_MKL_ALL)  # Enable MKL in Eigen
+    add_definitions(-DEIGEN_USE_MKL_ALL)
 else()
     message(FATAL_ERROR "Intel MKL not found. Please install Intel oneAPI Base Toolkit.")
 endif()
 
+# Find VTK
+find_package(VTK 9.4 COMPONENTS
+    CommonCore
+    CommonDataModel
+    IOXML
+    RenderingCore
+    RenderingOpenGL2
+    InteractionStyle
+    REQUIRED
+)
+
 # Add OpenXLSX as a subdirectory
 add_subdirectory(lib/OpenXLSX)
 
-# Collect all source files (definitions of classes/methods)
+# Collect all source files
 file(GLOB SOURCE_FILES source/*.cpp)
 
-# Collect all test files (*.cpp) from tests/actual/ folder
+# Collect all test files
 file(GLOB TEST_FILES tests/actual/*.cpp)
 
 # Create an executable for each test file
 foreach(TEST_FILE ${TEST_FILES})
-    # Extract the filename without extension (e.g., Plate_lam_evo_test)
     get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
-
-    # Create an executable for each test
     add_executable(${TEST_NAME} ${TEST_FILE} ${SOURCE_FILES})
-
-    # Link OpenXLSX and MKL to each test executable
-    target_link_libraries(${TEST_NAME} OpenXLSX::OpenXLSX ${MKL_LIBRARIES})
+    target_link_libraries(${TEST_NAME} PRIVATE OpenXLSX::OpenXLSX ${MKL_LIBRARIES} ${VTK_LIBRARIES})
+    vtk_module_autoinit(
+        TARGETS ${TEST_NAME}
+        MODULES ${VTK_LIBRARIES}
+    )
 endforeach()
 
-# Optional: Set Intel icx as the compiler (uncomment if desired)
-set(CMAKE_C_COMPILER "icx")
-set(CMAKE_CXX_COMPILER "icx")

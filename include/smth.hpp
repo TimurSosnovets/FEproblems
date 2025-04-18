@@ -89,7 +89,8 @@ struct Geometry
     // Геометрия
     double R_sphere = 0.336;
     std::array<double, 4> x_refers = {R_sphere * (1 - cos(deg2rad(69))), (10000.0 - 4800.0 - 2320.0) / 1000.0, (10000.0 - 2320.0) / 1000.0, (10000.0) / 1000.0};
-    std::array<double, 4> r_refers = {R_sphere * sin(deg2rad(69)), R_sphere * sin(deg2rad(69)) + (x_refers[1] - x_refers[0]) * tan(deg2rad(21)), 2.0 - 2.4 * tan(deg2rad(8)), 4.0 / 2.0};
+    // std::array<double, 4> r_refers = {R_sphere * sin(deg2rad(69)), R_sphere * sin(deg2rad(69)) + (x_refers[1] - x_refers[0]) * tan(deg2rad(21)), 2.0 - 2.4 * tan(deg2rad(8)), 4.0 / 2.0};
+    std::array<double, 4> r_refers = {R_sphere * sin(deg2rad(69)), R_sphere * sin(deg2rad(69)) + (x_refers[1] - x_refers[0]) * tan(deg2rad(21)), 4.0 / 2.0, 4.0 / 2.0};
     std::array<std::string, 5> names = {"Sphere", "First cone", "Second cone", "Cylinder", "Bottom"};
 
     // КЭ разбиение

@@ -7,13 +7,13 @@ echo Setting up environment...
 echo ============================
 
 :: Clear build folder
-::rmdir /s /q build
+:: rmdir /s /q build
 
-:: Option 2: Use Intel oneAPI environment (uncomment to use icx instead of MSVC)
+:: Use Intel oneAPI environment (for icx compiler)
 call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
 if errorlevel 1 (
-     echo ❌ Failed to set up Intel oneAPI environment!
-     exit /b 1
+    echo ❌ Failed to set up Intel oneAPI environment!
+    exit /b 1
 )
 
 echo ============================
@@ -26,11 +26,11 @@ if not exist build (
 cd build
 
 echo ============================
-echo Running CMake with MSVC...
+echo Running CMake with Intel icx...
 echo ============================
 
-:: Generate with Visual Studio 2022 (MSVC)
-cmake -G "Visual Studio 17 2022" -A x64 ..
+:: Generate with Visual Studio 2022 (using icx)
+cmake -G "Visual Studio 17 2022" -A x64 -DVTK_DIR=%CD%\..\lib\vtk\lib\cmake\vtk-9.4 ..
 if errorlevel 1 (
     echo ❌ CMake configuration failed!
     exit /b 1

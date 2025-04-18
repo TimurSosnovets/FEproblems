@@ -1164,3 +1164,95 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
         base += 1;
     }
 }
+
+void TFE_model::export_to_vtk(const std::string& filename, bool visualize) const {
+    // Step 1: Create VTK points
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+    for (const auto& node : _nodes) {
+        // Assuming Point has x, y, z members
+        points->InsertNextPoint(node.point.x, node.point.y, node.point.z);
+    }
+
+    // Step 2: Create VTK unstructured grid
+    vtkSmartPointer<vtkUnstructuredGrid> grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
+    grid->SetPoints(points);
+
+    // Step 3: Add elements as cells
+    vtkSmartPointer<vtkStringArray> layer_array = vtkSmartPointer<vtkStringArray>::New();
+    layer_array->SetName("Layer");
+    points->SetNumberOfPoints(_nodes.size());
+    grid->Allocate(_elements.size());
+
+    for (const auto& element : _elements) {
+        if (dynamic_cast<LWedge*>(element.type.get())) {
+            vtkSmartPointer<vtkWedge> wedge = vtkSmartPointer<vtkWedge>::New();
+            for (size_t i = 0; i < element.vertices.size(); ++i) {
+                // Convert node pointer to 0-based index
+                int node_idx = element.vertices[i]->global_number() - 1;
+                wedge->GetPointIds()->SetId(i, node_idx);
+            }
+            grid->InsertNextCell(VTK_WEDGE, wedge->GetPointIds());
+        } else if (dynamic_cast<LQube*>(element.type.get())) {
+            vtkSmartPointer<vtkHexahedron> hex = vtkSmartPointer<vtkHexahedron>::New();
+            for (size_t i = 0; i < element.vertices.size(); ++i) {
+                int node_idx = element.vertices[i]->global_number() - 1;
+                hex->GetPointIds()->SetId(i, node_idx);
+            }
+            grid->InsertNextCell(VTK_HEXAHEDRON, hex->GetPointIds());
+        }
+        // Add layer name
+        layer_array->InsertNextValue(element.layer ? *element.layer : "unknown");
+    }
+
+    // Attach layer data to cells
+    grid->GetCellData()->AddArray(layer_array);
+
+    // Step 4: Write to .vtu file
+    vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = 
+        vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
+    writer->SetFileName(filename.c_str());
+    writer->SetInputData(grid);
+    writer->Write();
+
+    // Step 5: Visualize if requested
+    if (visualize) {
+        // Create mapper
+        vtkSmartPointer<vtkDataSetMapper> mapper = 
+            vtkSmartPointer<vtkDataSetMapper>::New();
+        mapper->SetInputData(grid);
+
+        // Create actor
+        vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+        actor->SetMapper(mapper);
+        actor->GetProperty()->SetColor(0.8, 0.8, 0.8); // Light gray
+        actor->GetProperty()->SetEdgeColor(0.0, 0.0, 0.0); // Black edges
+        actor->GetProperty()->EdgeVisibilityOn();
+
+        // Create renderer
+        vtkSmartPointer<vtkRenderer> renderer = 
+            vtkSmartPointer<vtkRenderer>::New();
+        renderer->AddActor(actor);
+        renderer->SetBackground(0.1, 0.2, 0.4); // Dark blue background
+
+        // Create render window
+        vtkSmartPointer<vtkRenderWindow> renderWindow = 
+            vtkSmartPointer<vtkRenderWindow>::New();
+        renderWindow->AddRenderer(renderer);
+        renderWindow->SetSize(800, 600);
+
+        // Create interactor
+        vtkSmartPointer<vtkRenderWindowInteractor> interactor = 
+            vtkSmartPointer<vtkRenderWindowInteractor>::New();
+        interactor->SetRenderWindow(renderWindow);
+
+        // Set trackball camera style for interaction
+        vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = 
+            vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
+        interactor->SetInteractorStyle(style);
+
+        // Start interaction
+        renderWindow->Render();
+        interactor->Initialize();
+        interactor->Start();
+    }
+}

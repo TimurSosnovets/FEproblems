@@ -19,6 +19,23 @@
 #include <algorithm>
 #include <iomanip> // for std::setprecision
 #include <omp.h>
+// VTK
+// VTK includes
+#include <vtkSmartPointer.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkXMLUnstructuredGridWriter.h>
+#include <vtkPoints.h>
+#include <vtkWedge.h>
+#include <vtkHexahedron.h>
+#include <vtkStringArray.h>
+#include <vtkDataSetMapper.h>
+#include <vtkActor.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkCellData.h>
+#include <vtkProperty.h>
 
 // Для вычисления уникальных комбинаций строка-столбец на базе КЭ сетки
 struct PairHash 
@@ -72,8 +89,10 @@ class TFE_model
 
         /*Вывод информации*/
         void mesh_info() const;
+        void export_to_vtk(const std::string& filename, bool visualize = true) const;
 };
 
 // Заполнение FE модели
 void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi);
 void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_phi);
+
