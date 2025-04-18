@@ -134,7 +134,7 @@ void Save_xlsx(const std::vector<std::pair<double, DataV>>& Data)
     // Создание файла
     XLDocument doc;
     doc.create(filename, XLForceOverwrite);
-    auto wks = doc.workbook().worksheet("Sheet1");
+    auto wks = doc.workbook().worksheet("Nodal temperatures trough time");
     
     // Запись данных
     int row; // Строка первых элементов векторов (на первой строке заголовки)

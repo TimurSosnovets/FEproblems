@@ -872,7 +872,7 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 // Создание узла
                 if ((it_x == 0) && (it_phi > 0)) continue;
                 model.add_node(Point(x, y, z), nbr);
-                if ((y < 0) && (z < 1e-6)) 
+                if ((y < 0) && (z < 1e-6) && (h == 0)) 
                 {
                     geom.map.keel.emplace_back(nbr);
                     if (it_x * d_psi - deg2rad(20) < deg2rad(1.5)) geom.map.break_point = nbr;
@@ -916,7 +916,7 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 z = Actual.y * sin(phi);
                 // Создание узла
                 model.add_node(Point(x, y, z), nbr);
-                if ((y < 0) && (z < 1e-6)) 
+                if ((y < 0) && (z < 1e-6) && (h == 0)) 
                 {
                     geom.map.keel.emplace_back(nbr);
                 }
@@ -957,7 +957,7 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 z = Actual.y  * sin(phi);
                 // Создание узла
                 model.add_node(Point(x, y, z), nbr);
-                if ((y < 0) && (z < 1e-6)) 
+                if ((y < 0) && (z < 1e-6) && (h == 0)) 
                 {
                     geom.map.keel.emplace_back(nbr);
                 }
@@ -997,7 +997,7 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 z = Actual.y  * sin(phi);
                 // Создание узла
                 model.add_node(Point(x, y, z), nbr);
-                if ((y < 0) && (z < 1e-6)) 
+                if ((y < 0) && (z < 1e-6) && (h == 0)) 
                 {
                     geom.map.keel.emplace_back(nbr);
                 }

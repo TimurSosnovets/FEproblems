@@ -5,8 +5,8 @@
 int main()
 {
     /*Геометрия*/
-    Layers layer({0.015, 0.045, 0.002}, {10, 10, 1}, true);
-    Geometry geom(23, 15, 10, 5);
+    Layers layer({0.015, 0.045, 0.002}, {1, 1, 1}, true);
+    Geometry geom(10, 1, 1, 1);
     int c_phi = 12;
     /*КЭ модель*/
     TFE_model DM_FE(geom, layer);
@@ -15,7 +15,7 @@ int main()
     std::cin.get();
 
     DM_FE.mesh_info();
-    DM_FE.export_to_vtk("mesh.vtu", false);
+    DM_FE.export_to_vtk("mesh.vtu", true);
 
     std::cin.get();
     DM_FE.mesh_check();
@@ -23,7 +23,12 @@ int main()
 
     std::cout << "Break point: " << geom.map.break_point << std::endl;
     std::cout << "Sound point: " << geom.map.sound_point << std::endl;
-    
+    logger::log("Keel nodes");
+    for (const auto& n : geom.map.keel)
+    {
+        std::cout << n << std::endl;
+    }
+
     /*Закрепление*/
     double constraint_temp = 300;
     std::vector<std::pair<int, double>> LBC;
