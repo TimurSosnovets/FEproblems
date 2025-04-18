@@ -6,15 +6,22 @@ echo ============================
 echo Setting up environment...
 echo ============================
 
-:: Clear build folder
-:: rmdir /s /q build
+:: Clear build folder (uncomment if needed)
+rmdir /s /q build
 
-:: Use Intel oneAPI environment (for icx compiler)
+:: Use Intel oneAPI environment (for icx compiler and MKL)
 call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
 if errorlevel 1 (
     echo ❌ Failed to set up Intel oneAPI environment!
     exit /b 1
 )
+
+:: Set MKL to use all available threads (16 for Ryzen 7 5800X3D)
+set MKL_NUM_THREADS=16
+:: Optimize MKL for AMD CPUs
+set MKL_DEBUG_CPU_TYPE=5
+:: Ensure OpenMP library path is included
+set LIB=%LIB%;C:\Program Files (x86)\Intel\oneAPI\compiler\latest\windows\lib
 
 echo ============================
 echo Creating build directory...

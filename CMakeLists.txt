@@ -29,15 +29,26 @@ find_library(MKL_CORE_LIB mkl_core
     HINTS "C:/Program Files (x86)/Intel/oneAPI/mkl/latest/lib/intel64")
 find_library(MKL_INTEL_LP64_LIB mkl_intel_lp64
     HINTS "C:/Program Files (x86)/Intel/oneAPI/mkl/latest/lib/intel64")
-find_library(MKL_SEQUENTIAL_LIB mkl_sequential
+find_library(MKL_INTEL_THREAD_LIB mkl_intel_thread
     HINTS "C:/Program Files (x86)/Intel/oneAPI/mkl/latest/lib/intel64")
+# Find Intel OpenMP library
+find_library(OPENMP_LIB libiomp5md
+    HINTS "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/lib")
 
-if(MKL_INCLUDE_DIR AND MKL_CORE_LIB)
+if(MKL_INCLUDE_DIR AND MKL_CORE_LIB AND MKL_INTEL_LP64_LIB AND MKL_INTEL_THREAD_LIB AND OPENMP_LIB)
     include_directories(${MKL_INCLUDE_DIR})
-    set(MKL_LIBRARIES ${MKL_INTEL_LP64_LIB} ${MKL_SEQUENTIAL_LIB} ${MKL_CORE_LIB})
+    # Form MKL libraries list with OpenMP
+    set(MKL_LIBRARIES ${MKL_INTEL_LP64_LIB} ${MKL_INTEL_THREAD_LIB} ${MKL_CORE_LIB} ${OPENMP_LIB})
     add_definitions(-DEIGEN_USE_MKL_ALL)
+    # Enable OpenMP
+    find_package(OpenMP REQUIRED)
+    if(OpenMP_CXX_FOUND)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+        # Ensure OpenMP is linked
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+    endif()
 else()
-    message(FATAL_ERROR "Intel MKL not found. Please install Intel oneAPI Base Toolkit.")
+    message(FATAL_ERROR "Intel MKL or OpenMP not found. Please install Intel oneAPI Base Toolkit and Compiler.")
 endif()
 
 # Find VTK
@@ -64,10 +75,16 @@ file(GLOB TEST_FILES tests/actual/*.cpp)
 foreach(TEST_FILE ${TEST_FILES})
     get_filename_component(TEST_NAME ${TEST_FILE} NAME_WE)
     add_executable(${TEST_NAME} ${TEST_FILE} ${SOURCE_FILES})
-    target_link_libraries(${TEST_NAME} PRIVATE OpenXLSX::OpenXLSX ${MKL_LIBRARIES} ${VTK_LIBRARIES})
+    target_link_libraries(${TEST_NAME} PRIVATE OpenXLSX::OpenXLSX ${MKL_LIBRARIES} ${VTK_LIBRARIES} OpenMP::OpenMP_CXX)
     vtk_module_autoinit(
         TARGETS ${TEST_NAME}
         MODULES ${VTK_LIBRARIES}
     )
-endforeach()
 
+    # Копирование libiomp5md.dll
+    add_custom_command(TARGET ${TEST_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/bin/libiomp5md.dll"
+        $<TARGET_FILE_DIR:${TEST_NAME}>
+    )
+endforeach()
