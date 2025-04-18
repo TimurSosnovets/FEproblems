@@ -499,6 +499,12 @@ std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() 
     std::cin >> refactor_interval;
     solver.pardisoParameterArray()[4] = 2; // хрень с переориентацией
     solver.pardisoParameterArray()[7] = 2; // iteration of refinement
+    solver.pardisoParameterArray()[1] = 3;  // Параллельный алгоритм (0 = последовательный, 2 = вложенный параллелизм, 3 = оптимальный)
+    solver.pardisoParameterArray()[2] = 8; // Число потоков (можно экспериментировать: 8, 12, 16)
+    solver.pardisoParameterArray()[10] = 1; // Использовать масштабирование
+    solver.pardisoParameterArray()[12] = 1; // Улучшенная точность для разреженных систем
+    solver.pardisoParameterArray()[23] = 1; // Параллельное численное разложение (для больших матриц)
+    solver.pardisoParameterArray()[24] = 1; // Параллельное решение (для этапа solve)
 
     /*Расчёт*/
     logger::log("Started transient analysis calculation.");

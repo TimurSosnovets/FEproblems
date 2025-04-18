@@ -17,7 +17,7 @@ if errorlevel 1 (
 )
 
 :: Set MKL to use all available threads (16 for Ryzen 7 5800X3D)
-set MKL_NUM_THREADS=16
+set MKL_NUM_THREADS=8
 :: Optimize MKL for AMD CPUs
 set MKL_DEBUG_CPU_TYPE=5
 :: Ensure OpenMP library path is included

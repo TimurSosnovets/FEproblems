@@ -7,6 +7,8 @@
 #include "Materials.hpp"
 #include "Output.hpp"
 // Eigen
+#define EIGEN_DONT_ALIGN 0
+#define EIGEN_MAX_ALIGN_BYTES 64
 #include <Dense>
 #include <Sparse>
 #include <Core>

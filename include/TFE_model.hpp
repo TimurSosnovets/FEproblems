@@ -19,7 +19,6 @@
 #include <algorithm>
 #include <iomanip> // for std::setprecision
 #include <omp.h>
-// VTK
 // VTK includes
 #include <vtkSmartPointer.h>
 #include <vtkUnstructuredGrid.h>
