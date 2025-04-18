@@ -490,7 +490,7 @@ std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() 
     Eigen::VectorXd nodal_temps = initial_temp * Eigen::VectorXd::Ones(_DOF); // Глобальный вектор узловых температур
     Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
     Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
-    std::vector<std::pair<double, Eigen::VectorXd>> results;
+    std::vector<std::pair<double, Eigen::VectorXd>> results, loads, Rh_vectors;
 
     /*Решатель и его настройки*/
     Eigen::PardisoLLT<Eigen::SparseMatrix<double>> solver;
@@ -539,6 +539,8 @@ std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() 
             // std::string header = "time " + std::to_string(t * time_step) + " s";
             double time = t * time_step;
             results.emplace_back(std::make_pair(time, nodal_temps));
+            Rh_vectors.emplace_back(std::make_pair(time, Rh));
+            loads.emplace_back(std::make_pair(time, 2 * Ball_NLV(eps_grey, vel, dens, Kn, nodal_temps)));
         }
     }    
     /*Вывод времени расчёта*/
@@ -546,7 +548,8 @@ std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() 
     std::chrono::duration<double> elapsed_seconds = end - start;
     message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
     logger::log(message);
-    // Save_xlsx(results);
+    Save_xlsx("Ball_load_vectors", loads);
+    Save_xlsx("RH_vectors", Rh_vectors);
     return results;
 }
 
@@ -689,17 +692,6 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
         return node + layer.FRNT + 1;
     };
     auto bot_iter = [layer, c_phi] (int node) -> int {return node - (layer.FRNT + 1);};
-    
-    // // Вывод информации об узлах
-    // for (const auto& node : model.Nodes())
-    // {
-    //     std::cout << std::fixed << std::setprecision(2) 
-    //     << "Node: " << node.global_number() 
-    //     << " X = " << node.coords().x * 1000 << ", Y = " << node.coords().y * 1000 << ", Z = " << node.coords().z * 1000<< ".\n"; 
-    //     std::cout << "next_x " << next_x(node.global_number()) << std::endl;
-    //     std::cout << "next_h " << next_h(node.global_number()) << std::endl;
-    //     std::cout << "next_phi " << next_phi(node.global_number()) << std::endl << std::endl;
-    // }
     
     /*Заполнение массива элементов*/
     std::vector<const Node*> vts;
