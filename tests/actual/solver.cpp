@@ -6,9 +6,9 @@
 int main()
 {
     /*Геометрия*/
-    Layers layer({0.015, 0.045, 0.002}, {10, 10, 4});
-    Geometry geom(23, 15, 10, 10);
-    int c_phi = 18;
+    Layers layer({0.015, 0.045, 0.002}, {10, 10, 1});
+    Geometry geom(23, 12, 15, 10);
+    int c_phi = 36;
     /*КЭ модель*/
     TFE_model DM_FE(geom, layer);
     make_model_advance(DM_FE, layer, geom, c_phi);
@@ -18,12 +18,12 @@ int main()
     DM_FE.mesh_info();
 
     DM_FE.mesh_check();
-    // DM_FE.pre_calculate();
+
     logger::log("Successful mesh check!");
 
     auto nodal_temps = DM_FE.transient_analisys();
-    Save_xlsx(nodal_temps);
     DM_FE.export_to_vtk_vtu("mesh.vtu", nodal_temps);
+    Save_xlsx(nodal_temps);
     std::cin.get();
     return 0;
 }

@@ -545,8 +545,8 @@ std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() 
             // std::string header = "time " + std::to_string(t * time_step) + " s";
             double time = t * time_step;
             results.emplace_back(std::make_pair(time, nodal_temps));
-            Rh_vectors.emplace_back(std::make_pair(time, Rh));
-            loads.emplace_back(std::make_pair(time, 2 * Ball_NLV(eps_grey, vel, dens, Kn, nodal_temps)));
+            // Rh_vectors.emplace_back(std::make_pair(time, Rh));
+            // loads.emplace_back(std::make_pair(time, 2 * Ball_NLV(eps_grey, vel, dens, Kn, nodal_temps)));
         }
     }    
     /*Вывод времени расчёта*/
@@ -554,8 +554,8 @@ std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() 
     std::chrono::duration<double> elapsed_seconds = end - start;
     message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
     logger::log(message);
-    Save_xlsx("Ball_load_vectors", loads);
-    Save_xlsx("RH_vectors", Rh_vectors);
+    // Save_xlsx("Ball_load_vectors", loads);
+    // Save_xlsx("RH_vectors", Rh_vectors);
     return results;
 }
 
@@ -1362,7 +1362,7 @@ void TFE_model::export_to_vtk(const std::string& filename, const std::vector<std
     writer->SetCompressorTypeToZLib();
 }
 
-void TFE_model::export_to_vtk_vtu(const std::string& filename_prefix,
+void TFE_model::create_mesh_file(const std::string& filename_prefix,
                               const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const {
     // Validate input
     if (transient_results.empty()) {
@@ -1387,10 +1387,6 @@ void TFE_model::export_to_vtk_vtu(const std::string& filename_prefix,
     vtkSmartPointer<vtkUnstructuredGrid> grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
     grid->SetPoints(points);
     grid->Allocate(_elements.size());
-
-    vtkSmartPointer<vtkStringArray> layer_array = vtkSmartPointer<vtkStringArray>::New();
-    layer_array->SetName("Layer");
-    layer_array->SetNumberOfTuples(_elements.size());
 
     size_t cell_idx = 0;
     for (const auto& element : _elements) {
@@ -1428,10 +1424,8 @@ void TFE_model::export_to_vtk_vtu(const std::string& filename_prefix,
             std::cerr << "Warning: Unknown element type for element " << element.gn << ", skipping\n";
             continue;
         }
-        layer_array->SetValue(cell_idx, element.layer ? *element.layer : "unknown");
         ++cell_idx;
     }
-    grid->GetCellData()->AddArray(layer_array);
 
     // Write .vtu files for each time step
     for (size_t t = 0; t < transient_results.size(); ++t) {

@@ -351,7 +351,7 @@ Eigen::VectorXd LQube::Ball_heat_load(const Element& FE, const Geometry& geom, c
             Point integr = Mapping(heat_int_pnts[i].first, heat_int_pnts[j].first, -1.0, FE);
             angle = heat_angle(integr.x, integr.y, integr.z, geom);
             heat_flux = heat_load(vel, dens, Kn, angle) + eps * sigma * pow(T_env, 4.0);
-            if (heat_flux - eps * sigma * pow(T_surf, 4.0) < 0) {std::cout << "Element has negative flux: " << FE.gn << std::endl;}
+            // if (heat_flux - eps * sigma * pow(T_surf, 4.0) < 0) {std::cout << "Element has negative flux: " << FE.gn << std::endl;}
             T_surf = Point_Temp(heat_int_pnts[i].first, heat_int_pnts[j].first, -1, nodal_temps);
 
             F += (1.0/4.0) * heat_int_pnts[i].second * heat_int_pnts[j].second * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * FE.surface_area * J_surf; 
