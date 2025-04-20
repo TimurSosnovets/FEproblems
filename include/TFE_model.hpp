@@ -86,6 +86,8 @@ class TFE_model
         Results_transient transient_analisys(const std::vector<std::pair<int, double>>& constraints, const float q) const;
         std::vector<std::pair<double, Eigen::VectorXd>> transient_analisys() const; 
         Eigen::VectorXd steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation = false) const;
+        /*Для отладки*/
+        Eigen::VectorXd jacobian_check() const;
         /*Вывод объектов*/
         const std::vector<Node>& Nodes() const;
         const std::vector<Element>& Elements() const;
@@ -95,6 +97,7 @@ class TFE_model
         void export_to_vtk(const std::string& filename, bool visualize = true) const;
         void export_to_vtk(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
         void create_mesh_file(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
+        void create_static_mesh_file(const std::string& filename, const Eigen::VectorXd& jacobians) const;
 
 };
 

@@ -5,9 +5,9 @@
 int main()
 {
     /*Геометрия*/
-    Layers layer({0.015, 0.045, 0.002}, {1, 1, 1}, true);
-    Geometry geom(10, 1, 1, 1);
-    int c_phi = 12;
+    Layers layer({0.015, 0.045, 0.002}, {10, 10, 1}, true);
+    Geometry geom(23, 12, 15, 10);
+    int c_phi = 36;
     /*КЭ модель*/
     TFE_model DM_FE(geom, layer);
     make_model_advance(DM_FE, layer, geom, c_phi);
@@ -15,6 +15,8 @@ int main()
     std::cin.get();
 
     DM_FE.mesh_info();
+    Eigen::VectorXd Jacobians = DM_FE.jacobian_check();
+    DM_FE.create_static_mesh_file("mesh_Jacobians", Jacobians);
     DM_FE.export_to_vtk("mesh.vtu", true);
 
     std::cin.get();

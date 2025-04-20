@@ -29,12 +29,12 @@ class Isoparametric_3D
         // Функция отображения
         virtual Point Mapping(const double xi, const double eta, const double zeta, const Element& FE) const = 0;
 
-        // Якобиан преобразования
-        virtual Eigen::Matrix3d Jacobian(const double xi, const double eta, const double zeta, const Element& FE) const = 0;
-
     public:
         virtual ~Isoparametric_3D() = default;
 
+        // Якобиан преобразования
+        virtual Eigen::Matrix3d Jacobian(const double xi, const double eta, const double zeta, const Element& FE) const = 0;
+        
         /*Предрасчёт характеристик*/
         virtual void calculate_element(Element& FE) const = 0;
 

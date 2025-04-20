@@ -1476,3 +1476,100 @@ void TFE_model::create_mesh_file(const std::string& filename_prefix,
              << "</VTKFile>\n";
     pvd_file.close();
 }
+
+Eigen::VectorXd TFE_model::jacobian_check() const
+{
+    Eigen::VectorXd Jacobians;
+    Jacobians.resize(_elements.size());
+    for (const auto& element : _elements)
+    {
+        Eigen::Matrix3d J = element.type->Jacobian(0, 0, 0, element);
+        double dJ = J.determinant();
+        Jacobians[element.gn - 1] = dJ;
+    }
+    return Jacobians;
+}
+
+void TFE_model::create_static_mesh_file(const std::string& filename, const Eigen::VectorXd& jacobians) const
+{
+    // Validate input
+    if (jacobians.size() != _elements.size()) {
+        throw std::runtime_error("Jacobian vector size (" + std::to_string(jacobians.size()) +
+                                 ") does not match element count (" + std::to_string(_elements.size()) + ")");
+    }
+
+    // Create points
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+    points->SetNumberOfPoints(_nodes.size());
+    for (size_t i = 0; i < _nodes.size(); ++i) {
+        const Point& p = _nodes[i].coords();
+        points->SetPoint(i, p.x, p.y, p.z);
+    }
+
+    // Create cells
+    vtkSmartPointer<vtkUnstructuredGrid> grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
+    grid->SetPoints(points);
+    grid->Allocate(_elements.size());
+
+    size_t cell_idx = 0;
+    for (const auto& element : _elements) {
+        if (dynamic_cast<LWedge*>(element.type.get())) {
+            vtkSmartPointer<vtkWedge> wedge = vtkSmartPointer<vtkWedge>::New();
+            if (element.vertices.size() != 6) {
+                throw std::runtime_error("LWedge element " + std::to_string(element.gn) + " has " +
+                                         std::to_string(element.vertices.size()) + " vertices, expected 6");
+            }
+            for (size_t i = 0; i < element.vertices.size(); ++i) {
+                int node_idx = element.vertices[i]->global_number() - 1;
+                if (node_idx < 0 || node_idx >= static_cast<int>(_nodes.size())) {
+                    throw std::runtime_error("Invalid node index " + std::to_string(node_idx + 1) +
+                                             " in element " + std::to_string(element.gn));
+                }
+                wedge->GetPointIds()->SetId(i, node_idx);
+            }
+            grid->InsertNextCell(VTK_WEDGE, wedge->GetPointIds());
+        } else if (dynamic_cast<LQube*>(element.type.get())) {
+            vtkSmartPointer<vtkHexahedron> hex = vtkSmartPointer<vtkHexahedron>::New();
+            if (element.vertices.size() != 8) {
+                throw std::runtime_error("LQube element " + std::to_string(element.gn) + " has " +
+                                         std::to_string(element.vertices.size()) + " vertices, expected 8");
+            }
+            for (size_t i = 0; i < element.vertices.size(); ++i) {
+                int node_idx = element.vertices[i]->global_number() - 1;
+                if (node_idx < 0 || node_idx >= static_cast<int>(_nodes.size())) {
+                    throw std::runtime_error("Invalid node index " + std::to_string(node_idx + 1) +
+                                             " in element " + std::to_string(element.gn));
+                }
+                hex->GetPointIds()->SetId(i, node_idx);
+            }
+            grid->InsertNextCell(VTK_HEXAHEDRON, hex->GetPointIds());
+        } else {
+            std::cerr << "Warning: Unknown element type for element " << element.gn << ", skipping\n";
+            continue;
+        }
+        ++cell_idx;
+    }
+
+    // Create Jacobian array (cell data)
+    vtkSmartPointer<vtkDoubleArray> jacobian_array = vtkSmartPointer<vtkDoubleArray>::New();
+    jacobian_array->SetName("Jacobian");
+    jacobian_array->SetNumberOfComponents(1);
+    jacobian_array->SetNumberOfTuples(_elements.size());
+    for (Eigen::Index i = 0; i < jacobians.size(); ++i) {
+        jacobian_array->SetValue(i, jacobians(i));
+    }
+
+    // Add Jacobian array to cell data
+    grid->GetCellData()->AddArray(jacobian_array);
+
+    // Write .vtu file
+    std::string vtu_filename = filename + ".vtu";
+    vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
+    writer->SetFileName(vtu_filename.c_str());
+    writer->SetInputData(grid);
+    writer->SetDataModeToBinary();
+    writer->SetCompressorTypeToZLib();
+    if (!writer->Write()) {
+        throw std::runtime_error("Failed to write VTK file: " + vtu_filename);
+    }
+}

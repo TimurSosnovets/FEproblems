@@ -32,12 +32,12 @@ class LQube : public Isoparametric_3D
         // Функция отображения
         Point Mapping(const double xi, const double eta, const double zeta, const Element& FE) const override;
 
-        // Якобиан преобразования
-        Eigen::Matrix3d Jacobian(const double xi, const double eta, const double zeta, const Element& FE) const override;
-
     public:
         /*Предрасчёт характеристик*/
         void calculate_element(Element& FE) const override;
+
+        // Якобиан преобразования
+        Eigen::Matrix3d Jacobian(const double xi, const double eta, const double zeta, const Element& FE) const override;
 
         /*Матрицы элемента*/
         // Матрица теплопроводности
@@ -52,5 +52,6 @@ class LQube : public Isoparametric_3D
         // Температура заданной точке элемента
         double Point_Temp(const double xi, const double eta, const double zeta, const Eigen::VectorXd& nodal_temps) const override;
         // Репрезентативная температура элемента 
-        double Element_Temp(const Eigen::VectorXd& nodal_temps) const override; 
+        double Element_Temp(const Eigen::VectorXd& nodal_temps) const override;
+        friend class TFE_model; 
 };
