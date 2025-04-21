@@ -1375,6 +1375,11 @@ void TFE_model::create_mesh_file(const std::string& filename_prefix,
         }
     }
 
+    // Create output directory
+    std::string dir_name = "mesh_nodes_" + std::to_string(_nodes.size());
+    std::filesystem::create_directories(dir_name);
+    std::string full_prefix = dir_name + "/" + filename_prefix;
+
     // Create points (shared across all time steps)
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
     points->SetNumberOfPoints(_nodes.size());
@@ -1388,7 +1393,6 @@ void TFE_model::create_mesh_file(const std::string& filename_prefix,
     grid->SetPoints(points);
     grid->Allocate(_elements.size());
 
-    size_t cell_idx = 0;
     for (const auto& element : _elements) {
         if (dynamic_cast<LWedge*>(element.type.get())) {
             vtkSmartPointer<vtkWedge> wedge = vtkSmartPointer<vtkWedge>::New();
@@ -1424,18 +1428,17 @@ void TFE_model::create_mesh_file(const std::string& filename_prefix,
             std::cerr << "Warning: Unknown element type for element " << element.gn << ", skipping\n";
             continue;
         }
-        ++cell_idx;
     }
 
     // Write .vtu files for each time step
     for (size_t t = 0; t < transient_results.size(); ++t) {
         // Create temperature array
-        vtkSmartPointer<vtkDoubleArray> temperatures = vtkSmartPointer<vtkDoubleArray>::New();
+        vtkSmartPointer<vtkFloatArray> temperatures = vtkSmartPointer<vtkFloatArray>::New();
         temperatures->SetName("Temperature");
         temperatures->SetNumberOfComponents(1);
         temperatures->SetNumberOfTuples(_nodes.size());
         for (Eigen::Index i = 0; i < transient_results[t].second.size(); ++i) {
-            temperatures->SetValue(i, transient_results[t].second(i));
+            temperatures->SetValue(i, static_cast<float>(transient_results[t].second(i)));
         }
 
         // Create grid copy with this time step’s temperatures
@@ -1445,7 +1448,7 @@ void TFE_model::create_mesh_file(const std::string& filename_prefix,
 
         // Write .vtu file
         std::ostringstream oss;
-        oss << filename_prefix << "_t" << std::setw(4) << std::setfill('0') << t << ".vtu";
+        oss << full_prefix << "_nodes" << _nodes.size() << "_t" << std::setw(4) << std::setfill('0') << t << ".vtu";
         vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer =
             vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
         writer->SetFileName(oss.str().c_str());
@@ -1458,7 +1461,7 @@ void TFE_model::create_mesh_file(const std::string& filename_prefix,
     }
 
     // Write .pvd file
-    std::string pvd_filename = filename_prefix + ".pvd";
+    std::string pvd_filename = full_prefix + "_nodes" + std::to_string(_nodes.size()) + ".pvd";
     std::ofstream pvd_file(pvd_filename);
     if (!pvd_file.is_open()) {
         throw std::runtime_error("Failed to open PVD file: " + pvd_filename);
@@ -1468,8 +1471,8 @@ void TFE_model::create_mesh_file(const std::string& filename_prefix,
              << "  <Collection>\n";
     for (size_t t = 0; t < transient_results.size(); ++t) {
         std::ostringstream oss;
-        oss << filename_prefix << "_t" << std::setw(4) << std::setfill('0') << t << ".vtu";
-        pvd_file << "    <DataSet timestep=\"" << transient_results[t].first
+        oss << filename_prefix << "_nodes" << _nodes.size() << "_t" << std::setw(4) << std::setfill('0') << t << ".vtu";
+        pvd_file << "    <DataSet timestep=\"" << static_cast<float>(transient_results[t].first)
                  << "\" group=\"\" part=\"0\" file=\"" << oss.str() << "\"/>\n";
     }
     pvd_file << "  </Collection>\n"

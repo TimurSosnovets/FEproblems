@@ -36,6 +36,7 @@
 #include <vtkProperty.h>
 #include <vtkCellData.h>
 #include <vtkDoubleArray.h>
+#include <vtkFloatArray.h>
 #include <vtkFieldData.h>
 #include <vtkPointData.h>
 #include <vtkZLibDataCompressor.h>

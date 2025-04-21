@@ -335,10 +335,15 @@ Eigen::VectorXd LWedge::Ball_heat_load(const Element& FE, const Geometry& geom, 
         }
         Point integr = Mapping(heat_triang_int[t].first, heat_triang_int[t].second, -1.0, FE);
         angle = heat_angle(integr.x, integr.y, integr.z, geom);
-        heat_flux = heat_load(vel, dens, Kn, angle) + eps * sigma * pow(T_env, 4.0);
-        T_surf = Point_Temp(heat_triang_int[t].first, heat_triang_int[t].second, -1, nodal_temps);
+        // heat_flux = heat_load(vel, dens, Kn, angle) + eps * sigma * pow(T_env, 4.0);
+        // T_surf = Point_Temp(heat_triang_int[t].first, heat_triang_int[t].second, -1, nodal_temps);
 
-        F += heat_triang_weigth[t] * (1.0/2.0) * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * J_surf;
+        // F += heat_triang_weigth[t] * (1.0/2.0) * (heat_flux - eps * sigma * pow(T_surf, 4.0)) * N_T * J_surf;
+
+        heat_flux = heat_load(vel, dens, Kn, angle);
+        heat_flux = 1e5;
+
+        F += heat_triang_weigth[t] * (1.0/2.0) * (heat_flux) * N_T * abs(J_surf);
     }
     
     return F;
