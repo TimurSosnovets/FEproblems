@@ -30,12 +30,13 @@ class LWedge : public Isoparametric_3D
         // Матрица градиентов
         Eigen::MatrixXd Grad_Mat(const double xi, const double eta, const double zeta) const override;
 
-        // Функция отображения
-        Point Mapping(const double xi, const double eta, const double zeta, const Element& FE) const override;
 
     public:
         // Якобиан преобразования
         Eigen::Matrix3d Jacobian(const double xi, const double eta, const double zeta, const Element& FE) const override;
+        
+        // Функция отображения
+        Point Mapping(const double xi, const double eta, const double zeta, const Element& FE) const override;
         
         /*Предрасчёт характеристик*/
         void calculate_element(Element& FE) const override;

@@ -28,6 +28,8 @@ void Element::set_layer(std::string* lr) {layer = lr;}
 void Element::set_primitive(std::string* pr) {primitive = pr;}
 // Наличие предрасчитанных значений
 bool Element::has_cache() const {return !cache.SF_s.empty();}
+// Является ли поверхностным
+bool Element::surface_check() const {return is_surface;}
 // Информация об элементе
 void Element::get_info(const bool to_console, const std::string& filename) const
 {   

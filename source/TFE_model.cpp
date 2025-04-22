@@ -1493,6 +1493,53 @@ Eigen::VectorXd TFE_model::jacobian_check() const
     return Jacobians;
 }
 
+Eigen::VectorXd TFE_model::get_surface_load(double t) const
+{
+    /*Подготовка значений*/
+    Ballistic_data data("Ballistics_CD.csv");
+    double vel = data.get_Velocity(t), dens = data.get_Density(t), Kn = data.get_Knudsen(t);
+    std::array<std::pair<double, double>, 4> qube_points = {{ {0.861136312, 0.347854845}, {-0.861136312, 0.347854845}, {0.339981044, 0.652145155}, {-0.339981044, 0.652145155} }};
+    std::array<std::pair<double, double>, 3> triang_points = {{ {1/2.0, 1/2.0}, {1/2.0, 0}, {0, 1/2.0} }};
+    Eigen::VectorXd Ballistic_load;
+    Ballistic_load.resize(_elements.size());
+    /*Интерации по времени*/
+    // Вычисление значений на шаге
+    for (const auto& element : _elements)
+    {   
+        double element_load = 0;
+        LWedge Wedge_instance;
+        LQube Qube_instance;
+        // Для куба
+        if (dynamic_cast<LQube*>(element.type.get()))
+        {
+            for (int i = 0; i < 4; ++i)
+            {
+                for (int j = 0; j < 4; ++i)
+                {
+                    Point Mapped = Qube_instance.Mapping(qube_points[i].first, qube_points[j].first, -1, element);
+                    double angle = heat_angle(Mapped.x, Mapped.y, Mapped.z, geometry);
+                    double point_heat = heat_load(vel, dens, Kn, angle);
+                    element_load += point_heat * qube_points[i].second * qube_points[j].second;
+                }
+            }
+        }
+        // Для клина
+        if (dynamic_cast<LWedge*>(element.type.get()))
+        {
+            for (int i = 0; i < 3; ++i)
+            {
+                Point Mapped = Wedge_instance.Mapping(triang_points[i].first, triang_points[i].second, -1, element);
+                double angle = heat_angle(Mapped.x, Mapped.y, Mapped.z, geometry);
+                double point_heat = heat_load(vel, dens, Kn, angle);
+                element_load += point_heat * 1.0/6.0;
+            }
+        }
+        Ballistic_load[element.gn - 1] = element_load;
+    }
+
+    return Ballistic_load;
+}
+
 void TFE_model::create_static_mesh_file(const std::string& filename, const Eigen::VectorXd& jacobians) const
 {
     // Validate input
@@ -1575,4 +1622,148 @@ void TFE_model::create_static_mesh_file(const std::string& filename, const Eigen
     if (!writer->Write()) {
         throw std::runtime_error("Failed to write VTK file: " + vtu_filename);
     }
+}
+
+void TFE_model::create_surface_mesh_file(const std::string& filename_prefix,
+                                              const std::vector<std::pair<double, Eigen::VectorXd>>& elemental_load) const {
+    // Validate input
+    if (elemental_load.empty()) {
+        throw std::runtime_error("Elemental load data is empty");
+    }
+
+    // Step 1: Extract surface faces
+    std::vector<std::pair<std::vector<const Node*>, bool>> surface_faces; // (nodes, is_triangle)
+    for (const auto& element : _elements) {
+        if (!element.is_surface) {
+            continue; // Skip non-surface elements
+        }
+
+        if (dynamic_cast<LWedge*>(element.type.get())) {
+            // Wedge: Surface face is the first 3 nodes (triangle: nodes 0, 1, 2)
+            if (element.vertices.size() != 6) {
+                throw std::runtime_error("LWedge element " + std::to_string(element.gn) + " has " +
+                                         std::to_string(element.vertices.size()) + " vertices, expected 6");
+            }
+            surface_faces.push_back({{element.vertices[0], element.vertices[1], element.vertices[2]}, true});
+        } else if (dynamic_cast<LQube*>(element.type.get())) {
+            // Hexahedron: Surface face is the first 4 nodes (quad: nodes 0, 1, 2, 3)
+            if (element.vertices.size() != 8) {
+                throw std::runtime_error("LQube element " + std::to_string(element.gn) + " has " +
+                                         std::to_string(element.vertices.size()) + " vertices, expected 8");
+            }
+            surface_faces.push_back({{element.vertices[0], element.vertices[1], element.vertices[2], element.vertices[3]}, false});
+        } else {
+            std::cerr << "Warning: Unknown element type for element " << element.gn << ", skipping\n";
+            continue;
+        }
+    }
+
+    if (surface_faces.empty()) {
+        throw std::runtime_error("No surface faces found");
+    }
+
+    // Validate elemental_load size
+    for (const auto& load : elemental_load) {
+        if (load.second.size() != surface_faces.size()) {
+            throw std::runtime_error("Heat load vector size (" + std::to_string(load.second.size()) +
+                                     ") does not match surface face count (" + std::to_string(surface_faces.size()) + ")");
+        }
+    }
+
+    // Step 2: Create a mapping of global nodes to surface mesh nodes
+    std::map<int, vtkIdType> global_to_surface_idx; // global node number -> surface mesh node index
+    std::vector<const Node*> surface_nodes;
+    for (const auto& face : surface_faces) {
+        for (const auto& node : face.first) {
+            int global_idx = node->global_number() - 1; // Adjust for 0-based indexing
+            if (global_to_surface_idx.find(global_idx) == global_to_surface_idx.end()) {
+                global_to_surface_idx[global_idx] = surface_nodes.size();
+                surface_nodes.push_back(node);
+            }
+        }
+    }
+
+    // Step 3: Create VTK points for the surface mesh
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+    points->SetNumberOfPoints(surface_nodes.size());
+    for (size_t i = 0; i < surface_nodes.size(); ++i) {
+        const Point& p = surface_nodes[i]->coords();
+        points->SetPoint(i, p.x, p.y, p.z);
+    }
+
+    // Step 4: Create VTK cells (triangles or quads) for the surface mesh
+    vtkSmartPointer<vtkUnstructuredGrid> grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
+    grid->SetPoints(points);
+    grid->Allocate(surface_faces.size());
+
+    for (const auto& face : surface_faces) {
+        if (face.second) { // Triangle
+            vtkSmartPointer<vtkTriangle> triangle = vtkSmartPointer<vtkTriangle>::New();
+            for (size_t i = 0; i < 3; ++i) {
+                int global_idx = face.first[i]->global_number() - 1;
+                triangle->GetPointIds()->SetId(i, global_to_surface_idx[global_idx]);
+            }
+            grid->InsertNextCell(VTK_TRIANGLE, triangle->GetPointIds());
+        } else { // Quad
+            vtkSmartPointer<vtkQuad> quad = vtkSmartPointer<vtkQuad>::New();
+            for (size_t i = 0; i < 4; ++i) {
+                int global_idx = face.first[i]->global_number() - 1;
+                quad->GetPointIds()->SetId(i, global_to_surface_idx[global_idx]);
+            }
+            grid->InsertNextCell(VTK_QUAD, quad->GetPointIds());
+        }
+    }
+
+    // Step 5: Create output directory
+    std::string dir_name = "surface_mesh_nodes_" + std::to_string(_nodes.size());
+    std::filesystem::create_directories(dir_name);
+    std::string full_prefix = dir_name + "/" + filename_prefix;
+
+    // Step 6: Write .vtu files for each time step
+    for (size_t t = 0; t < elemental_load.size(); ++t) {
+        // Create heat load array
+        vtkSmartPointer<vtkFloatArray> loads = vtkSmartPointer<vtkFloatArray>::New();
+        loads->SetName("HeatLoad");
+        loads->SetNumberOfComponents(1);
+        loads->SetNumberOfTuples(surface_faces.size());
+        for (Eigen::Index i = 0; i < elemental_load[t].second.size(); ++i) {
+            loads->SetValue(i, static_cast<float>(elemental_load[t].second(i)));
+        }
+
+        // Create grid copy with this time step's heat loads
+        vtkSmartPointer<vtkUnstructuredGrid> grid_copy = vtkSmartPointer<vtkUnstructuredGrid>::New();
+        grid_copy->DeepCopy(grid);
+        grid_copy->GetCellData()->AddArray(loads);
+
+        // Write .vtu file
+        std::ostringstream oss;
+        oss << full_prefix << "_cells" << surface_faces.size() << "_t" << std::setw(4) << std::setfill('0') << t << ".vtu";
+        vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
+        writer->SetFileName(oss.str().c_str());
+        writer->SetInputData(grid_copy);
+        writer->SetDataModeToBinary();
+        writer->SetCompressorTypeToZLib();
+        if (!writer->Write()) {
+            throw std::runtime_error("Failed to write VTK file: " + oss.str());
+        }
+    }
+
+    // Step 7: Write .pvd file
+    std::string pvd_filename = full_prefix + "_cells" + std::to_string(surface_faces.size()) + ".pvd";
+    std::ofstream pvd_file(pvd_filename);
+    if (!pvd_file.is_open()) {
+        throw std::runtime_error("Failed to open PVD file: " + pvd_filename);
+    }
+    pvd_file << "<?xml version=\"1.0\"?>\n"
+             << "<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\">\n"
+             << "  <Collection>\n";
+    for (size_t t = 0; t < elemental_load.size(); ++t) {
+        std::ostringstream oss;
+        oss << filename_prefix << "_cells" << surface_faces.size() << "_t" << std::setw(4) << std::setfill('0') << t << ".vtu";
+        pvd_file << "    <DataSet timestep=\"" << static_cast<float>(elemental_load[t].first)
+                 << "\" group=\"\" part=\"0\" file=\"" << oss.str() << "\"/>\n";
+    }
+    pvd_file << "  </Collection>\n"
+             << "</VTKFile>\n";
+    pvd_file.close();
 }

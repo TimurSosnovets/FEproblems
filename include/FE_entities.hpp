@@ -103,6 +103,8 @@ class Element
 
         // Данные об элементе
         void get_info(const bool to_console, const std::string& filename) const;
+
+        bool surface_check() const;
         
         // Друзья
         friend class LQube;

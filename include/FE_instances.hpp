@@ -26,14 +26,14 @@ class Isoparametric_3D
         // Матрица градиентов
         virtual Eigen::MatrixXd Grad_Mat(const double xi, const double eta, const double zeta) const = 0;
 
-        // Функция отображения
-        virtual Point Mapping(const double xi, const double eta, const double zeta, const Element& FE) const = 0;
-
     public:
         virtual ~Isoparametric_3D() = default;
 
         // Якобиан преобразования
         virtual Eigen::Matrix3d Jacobian(const double xi, const double eta, const double zeta, const Element& FE) const = 0;
+
+        // Функция отображения
+        virtual Point Mapping(const double xi, const double eta, const double zeta, const Element& FE) const = 0;
         
         /*Предрасчёт характеристик*/
         virtual void calculate_element(Element& FE) const = 0;

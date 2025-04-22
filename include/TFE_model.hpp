@@ -26,6 +26,8 @@
 #include <vtkPoints.h>
 #include <vtkWedge.h>
 #include <vtkHexahedron.h>
+#include <vtkTriangle.h>
+#include <vtkQuad.h>
 #include <vtkStringArray.h>
 #include <vtkDataSetMapper.h>
 #include <vtkActor.h>
@@ -89,6 +91,7 @@ class TFE_model
         Eigen::VectorXd steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation = false) const;
         /*Для отладки*/
         Eigen::VectorXd jacobian_check() const;
+        Eigen::VectorXd get_surface_load(double t) const;
         /*Вывод объектов*/
         const std::vector<Node>& Nodes() const;
         const std::vector<Element>& Elements() const;
@@ -99,6 +102,7 @@ class TFE_model
         void export_to_vtk(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
         void create_mesh_file(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
         void create_static_mesh_file(const std::string& filename, const Eigen::VectorXd& jacobians) const;
+        void create_surface_mesh_file(const std::string& filename_prefix, const std::vector<std::pair<double, Eigen::VectorXd>>& elemental_load) const;
 
 };
 
