@@ -31,8 +31,8 @@ int main()
     }
     while (time < max_time)
     {
-        // Eigen::VectorXd step_load = DM_FE.get_surface_load(time);
-        Eigen::VectorXd step_load = Eigen::VectorXd::Ones(surf_elem);
+        Eigen::VectorXd step_load = DM_FE.get_surface_load(time);
+        // Eigen::VectorXd step_load = Eigen::VectorXd::Ones(surf_elem);
         elemental_load.emplace_back(time, step_load);
         time += time_step;
     }

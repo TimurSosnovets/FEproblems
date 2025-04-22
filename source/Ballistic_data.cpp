@@ -42,7 +42,7 @@ std::filesystem::path Ballistic_data::find_data_file(const std::string& filename
 Ballistic_data::Ballistic_data(const std::string& csv_filename)
 {
     std::filesystem::path file_path = find_data_file(csv_filename);
-    std::cout << "Loading ballistic data from: " << file_path << std::endl;
+    // std::cout << "Loading ballistic data from: " << file_path << std::endl;
     parse_CSV(file_path);
     
     if (velocities.empty()) {

@@ -1500,23 +1500,29 @@ Eigen::VectorXd TFE_model::get_surface_load(double t) const
     double vel = data.get_Velocity(t), dens = data.get_Density(t), Kn = data.get_Knudsen(t);
     std::array<std::pair<double, double>, 4> qube_points = {{ {0.861136312, 0.347854845}, {-0.861136312, 0.347854845}, {0.339981044, 0.652145155}, {-0.339981044, 0.652145155} }};
     std::array<std::pair<double, double>, 3> triang_points = {{ {1/2.0, 1/2.0}, {1/2.0, 0}, {0, 1/2.0} }};
-    Eigen::VectorXd Ballistic_load;
-    Ballistic_load.resize(_elements.size());
+    
+    int surf_elem = 0;
+    for (const auto& element : _elements)
+    {
+        if (element.surface_check()) {++surf_elem;}
+    }
+    Eigen::VectorXd Ballistic_load = Eigen::VectorXd::Zero(surf_elem);
+    // logger::log("Data parsed correctly!");
+    surf_elem = 0;
     /*Интерации по времени*/
     // Вычисление значений на шаге
     for (const auto& element : _elements)
     {   
+        if (!element.is_surface) {continue;}
         double element_load = 0;
-        LWedge Wedge_instance;
-        LQube Qube_instance;
         // Для куба
         if (dynamic_cast<LQube*>(element.type.get()))
         {
-            for (int i = 0; i < 4; ++i)
+            for (int i = 0; i < qube_points.size(); ++i)
             {
-                for (int j = 0; j < 4; ++i)
+                for (int j = 0; j < qube_points.size(); ++j)
                 {
-                    Point Mapped = Qube_instance.Mapping(qube_points[i].first, qube_points[j].first, -1, element);
+                    Point Mapped = element.type->Mapping(qube_points[i].first, qube_points[j].first, -1, element);
                     double angle = heat_angle(Mapped.x, Mapped.y, Mapped.z, geometry);
                     double point_heat = heat_load(vel, dens, Kn, angle);
                     element_load += point_heat * qube_points[i].second * qube_points[j].second;
@@ -1526,15 +1532,16 @@ Eigen::VectorXd TFE_model::get_surface_load(double t) const
         // Для клина
         if (dynamic_cast<LWedge*>(element.type.get()))
         {
-            for (int i = 0; i < 3; ++i)
+            for (int i = 0; i < triang_points.size(); ++i)
             {
-                Point Mapped = Wedge_instance.Mapping(triang_points[i].first, triang_points[i].second, -1, element);
+                Point Mapped = element.type->Mapping(triang_points[i].first, triang_points[i].second, -1, element);
                 double angle = heat_angle(Mapped.x, Mapped.y, Mapped.z, geometry);
                 double point_heat = heat_load(vel, dens, Kn, angle);
-                element_load += point_heat * 1.0/6.0;
+                element_load += point_heat * 1.0/3.0;
             }
         }
-        Ballistic_load[element.gn - 1] = element_load;
+        Ballistic_load[surf_elem] = element_load;
+        ++surf_elem;
     }
 
     return Ballistic_load;
