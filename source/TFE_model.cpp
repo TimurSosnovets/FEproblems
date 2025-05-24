@@ -258,306 +258,6 @@ Eigen::SparseVector<double> TFE_model::Ball_NLV(const double eps, const double v
 
     return NLV;
 }
-// Динамический расчет 
-Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int, double>>& constraints, const float q) const
-{
-    /*Инициализация ввода данных*/
-    float max_time, time_step, time_step_output, initial_temp;
-    std::vector<size_t> node_samples;
-    size_t node_sample;
-    std::vector<float> time_samples;
-    float time_sample;
-    float eps = 1e-6;
-
-    /*Непосредственный ввод данных*/
-    logger::log("Enter initial temperature (K):");
-    std::cin >> initial_temp;
-
-    logger::log("Enter the calculation time interval (s):");
-    std::cin >> max_time;
-
-    logger::log("Enter time step (s):");
-    std::cin >> time_step;
-
-    logger::log("Enter numbers of nodes (1 based) you want to check through time (-1 to finish input)");
-    while (true) {
-        std::cin >> node_sample;
-
-        // Проверка адекватности введённого значения по типу
-        if (std::cin.fail()) 
-        {
-            std::cin.clear(); 
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
-            logger::log("Invalid input. Please enter an integer.");
-            continue; 
-        }
-
-        // Проверка адекватности введённого значения по диапазону
-        if (node_sample != -1 && (node_sample < 1 || node_sample > _nodes.size() + 1)) 
-        {
-            std::cin.setstate(std::ios::failbit); // Force cin to fail
-            logger::log("Value out of range. Should be above 0 and below " + std::to_string(_nodes.size() + 1) + ".");
-            continue;
-        }
-
-        if (node_sample == -1) {break;}
-
-        node_samples.push_back(node_sample);
-    }
-
-    logger::log("Enter time step for outputed values (s) (better be a multiple of actual time step for computation):");
-    std::cin >> time_step_output;
-
-    logger::log("Enter specific time moments (s) in which you want nodal temperatures to be outputed (-1 to finish input):");
-    while (true) {
-        std::cin >> time_sample;
-
-        if (time_sample == -1) {break;}
-
-        // Проверка адекватности введённого значения по типу
-        if (std::cin.fail()) 
-        {
-            std::cin.clear(); 
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
-            logger::log("Invalid input. Please enter an integer or float value.");
-            continue; 
-        }
-
-        // Проверка адекватности введённого значения по диапазону
-        if (time_sample != -1 && (time_sample <= 0 || time_sample > max_time)) 
-        {
-            std::cin.setstate(std::ios::failbit); // Force cin to fail
-            logger::log("Value out of range. Please enter value above zero and below " + std::to_string(max_time) + " seconds.");
-            continue;
-        }
-
-        time_samples.push_back(time_sample);
-    }
-    // Сортировка значений времени по возрастанию
-    std::sort(time_samples.begin(), time_samples.end(), [](float a, float b) {return abs(a) < abs(b);});
-    float* t_ptr = time_samples.data();
-    float* last_t = t_ptr + time_samples.size() - 1;
-
-    /*Инициализация расчёта*/
-    auto start = std::chrono::high_resolution_clock::now(); // Таймер
-    std::string message;
-    Eigen::VectorXd nodal_temps = initial_temp * Eigen::VectorXd::Ones(_DOF); // Глобальный вектор узловых температур
-    Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
-    Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
-    Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver; // Решатель
-    // Заготовка под вывод значений
-    Results_transient results(time_samples, node_samples, _DOF, static_cast<size_t>(std::ceil(max_time / time_step_output)));
- 
-    /*Расчёт*/
-    logger::log("Started transient analysis calculation.");
-    for (size_t t = 1; (t-1) * time_step < max_time; ++t)
-    {
-        // Вычисление значений на шаге
-        Lh = GCM(nodal_temps) + (2 / time_step) * (GDM(nodal_temps));
-        Rh = ((2 / time_step) * GDM(nodal_temps) - GCM(nodal_temps)) * nodal_temps - 2 * NLV(q, 0.0, nodal_temps);
-
-        // Закрепление системы
-        if (!constraints.empty())
-        {
-            for (const auto& LBC : constraints)
-            {
-                Rh(LBC.first) = LBC.second;
-                //for (Eigen::SparseMatrix<double>::InnerIterator it(Lh, LBC.first); it; ++it) {it.valueRef() = 0;}
-                for (int col = 0; col < Lh.cols(); ++col) {
-                    Lh.coeffRef(LBC.first, col) = 0; // Explicitly set all elements in the row to 0
-                }
-                Lh.coeffRef(LBC.first, LBC.first) = 1;
-            }
-        }
-        Lh.prune(0.0);
-        Lh.makeCompressed();
-        // Решение матричного уравнения
-        solver.compute(Lh);
-        if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
-        nodal_temps = solver.solve(Rh);
-        if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
-        else 
-        {
-            std::cout << "\rProgress: " << std::fixed << std::setprecision(2)
-              << (100.0 * t * time_step / max_time) << "% " << std::flush;
-        }
-        
-        // Запись значений
-        if (abs(*t_ptr - t * time_step) < eps)
-        {
-            results.VNT_samples.emplace_back(std::make_pair(*t_ptr, nodal_temps));
-            if (t_ptr != last_t) {++t_ptr;}
-        }
-
-        if (t % static_cast<int>(time_step_output / time_step) < eps)
-        {
-            for (int i = 0; i < node_samples.size(); ++i)
-            {
-                results.NT_samples[i].second.emplace_back(nodal_temps(node_samples[i] - 1));
-            }
-        }
-    }    
-
-    /*Вывод времени расчёта*/
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
-    logger::log(message);
-    std::cin.get();
-
-    return results;
-}
-
-Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation) const
-{
-    /*Инициализация*/
-    auto start = std::chrono::high_resolution_clock::now(); // Таймер
-    std::string message;
-    Eigen::VectorXd nodal_temps; // Глобальный вектор узловых температур
-    Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
-    Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
-    // Eigen::PardisoLDLT<Eigen::SparseMatrix<double>> solver;
-    Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
-    logger::log("Started steady state analysis calculation.");
-    double eps = 0;
-    if (radiation) {eps = 0.9;}
-    Lh = GCM(300 * Eigen::VectorXd::Ones(_DOF));
-    logger::log("Lh was setted!");
-    Rh = NLV(q, eps, 300 * Eigen::VectorXd::Ones(_DOF));
-    logger::log("Rh was setted!");
-
-    // Закрепления
-    if (!constraints.empty())
-    {
-        for (const auto& LBC : constraints)
-        {
-            Rh(LBC.first) = LBC.second;
-            for (int col = 0; col < Lh.cols(); ++col) {
-                Lh.coeffRef(LBC.first, col) = 0; // Explicitly set all elements in the row to 0
-            }
-            Lh.coeffRef(LBC.first, LBC.first) = 1;
-        }
-    }
-    Lh.prune(0.0);
-
-    // std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
-    // std::cout << "Right hand vector:\n" << Rh << std::endl;
-
-    Lh.makeCompressed();
-    solver.compute(Lh);
-    if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
-    nodal_temps = solver.solve(Rh);
-    if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
-
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
-    logger::log(message);
-    std::cin.get();
-
-    return nodal_temps;
-}
-
-std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() const
-{
-    /*Инициализация ввода данных*/
-    float max_time, time_step, time_step_output, initial_temp;
-    std::vector<float> time_samples;
-    float time_sample;
-    float eps = 1e-6;
-
-    /*Непосредственный ввод данных*/
-    logger::log("Enter initial temperature (K):");
-    std::cin >> initial_temp;
-
-    logger::log("Enter the calculation time interval (s):");
-    std::cin >> max_time;
-
-    logger::log("Enter time step (s):");
-    std::cin >> time_step;
-
-    logger::log("Enter time step for outputed values (s) (better be a multiple of actual time step for computation):");
-    std::cin >> time_step_output;
-
-    // Сортировка значений времени по возрастанию
-    std::sort(time_samples.begin(), time_samples.end(), [](float a, float b) {return abs(a) < abs(b);});
-    float* t_ptr = time_samples.data();
-    float* last_t = t_ptr + time_samples.size() - 1;
-
-    /*Инициализация расчёта*/
-    auto start = std::chrono::high_resolution_clock::now(); // Таймер
-    std::string message;
-    Eigen::VectorXd nodal_temps = initial_temp * Eigen::VectorXd::Ones(_DOF); // Глобальный вектор узловых температур
-    Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
-    Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
-    std::vector<std::pair<double, Eigen::VectorXd>> results, loads, Rh_vectors;
-
-    /*Решатель и его настройки*/
-    Eigen::PardisoLLT<Eigen::SparseMatrix<double>> solver;
-    int refactor_interval;
-    std::cout << "Enter refactor interval:\n";
-    std::cin >> refactor_interval;
-    solver.pardisoParameterArray()[4] = 2; // хрень с переориентацией
-    solver.pardisoParameterArray()[7] = 2; // iteration of refinement
-    solver.pardisoParameterArray()[1] = 3;  // Параллельный алгоритм (0 = последовательный, 2 = вложенный параллелизм, 3 = оптимальный)
-    solver.pardisoParameterArray()[2] = 8; // Число потоков (можно экспериментировать: 8, 12, 16)
-    solver.pardisoParameterArray()[10] = 1; // Использовать масштабирование
-    solver.pardisoParameterArray()[12] = 1; // Улучшенная точность для разреженных систем
-    solver.pardisoParameterArray()[23] = 1; // Параллельное численное разложение (для больших матриц)
-    solver.pardisoParameterArray()[24] = 1; // Параллельное решение (для этапа solve)
-
-    /*Расчёт*/
-    logger::log("Started transient analysis calculation.");
-    Ballistic_data data("Ballistics_CD.csv");
-    double vel, dens, Kn, eps_grey = 0.9;
-    for (size_t t = 1; (t-1) * time_step < max_time; ++t)
-    {
-        // Вычисление значений на шаге
-        vel = data.get_Velocity(t * time_step);
-        dens = data.get_Density(t * time_step);
-        Kn = data.get_Knudsen(t * time_step);
-        Lh = GCM(nodal_temps) + (2 / time_step) * (GDM(nodal_temps));
-        Rh = ((2 / time_step) * GDM(nodal_temps) - GCM(nodal_temps)) * nodal_temps + 2 * Ball_NLV(eps_grey, vel, dens, Kn, nodal_temps);
-        
-        // Решение матричного уравнения
-        Lh.makeCompressed();
-        Lh = Lh.triangularView<Eigen::Upper>();
-
-        if ((t % refactor_interval == 0) || (t == 1)) {
-            solver.compute(Lh);
-            if (solver.info() != Eigen::Success) {
-                std::cerr << "PARDISO factorization failed at t = " << t << "!\n";
-                std::cin.get();
-            }
-        }
-
-        if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
-        nodal_temps = solver.solve(Rh);
-        if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
-        else 
-        {
-            std::cout << "\rProgress: " << std::fixed << std::setprecision(2)
-              << (100.0 * t * time_step / max_time) << "% " << std::flush;
-        }
-        
-        if (t % static_cast<int>(time_step_output / time_step) < eps)
-        {
-            // std::string header = "time " + std::to_string(t * time_step) + " s";
-            double time = t * time_step;
-            results.emplace_back(std::make_pair(time, nodal_temps));
-            // Rh_vectors.emplace_back(std::make_pair(time, Rh));
-            // loads.emplace_back(std::make_pair(time, 2 * Ball_NLV(eps_grey, vel, dens, Kn, nodal_temps)));
-        }
-    }    
-    /*Вывод времени расчёта*/
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
-    logger::log(message);
-    // Save_xlsx("Ball_load_vectors", loads);
-    // Save_xlsx("RH_vectors", Rh_vectors);
-    return results;
-}
 
 // Заполнение КЭ модели
 void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
@@ -1163,6 +863,77 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
     }
 }
 
+// Чек якобианов
+Eigen::VectorXd TFE_model::jacobian_check() const
+{
+    Eigen::VectorXd Jacobians;
+    Jacobians.resize(_elements.size());
+    for (const auto& element : _elements)
+    {
+        Eigen::Matrix3d J = element.type->Jacobian(0, 0, 0, element);
+        double dJ = J.determinant();
+        Jacobians[element.gn - 1] = dJ;
+    }
+    return Jacobians;
+}
+
+// Выловить нагрузку на поверхности
+Eigen::VectorXd TFE_model::get_surface_load(double t) const
+{
+    /*Подготовка значений*/
+    Ballistic_data data("Ballistics_CD.csv");
+    double vel = data.get_Velocity(t), dens = data.get_Density(t), Kn = data.get_Knudsen(t);
+    std::array<std::pair<double, double>, 4> qube_points = {{ {0.861136312, 0.347854845}, {-0.861136312, 0.347854845}, {0.339981044, 0.652145155}, {-0.339981044, 0.652145155} }};
+    std::array<std::pair<double, double>, 3> triang_points = {{ {1/2.0, 1/2.0}, {1/2.0, 0}, {0, 1/2.0} }};
+    
+    int surf_elem = 0;
+    for (const auto& element : _elements)
+    {
+        if (element.surface_check()) {++surf_elem;}
+    }
+    Eigen::VectorXd Ballistic_load = Eigen::VectorXd::Zero(surf_elem);
+    // logger::log("Data parsed correctly!");
+    surf_elem = 0;
+    /*Интерации по времени*/
+    // Вычисление значений на шаге
+    for (const auto& element : _elements)
+    {   
+        if (!element.is_surface) {continue;}
+        double element_load = 0;
+        // Для куба
+        if (dynamic_cast<LQube*>(element.type.get()))
+        {
+            for (int i = 0; i < qube_points.size(); ++i)
+            {
+                for (int j = 0; j < qube_points.size(); ++j)
+                {
+                    Point Mapped = element.type->Mapping(qube_points[i].first, qube_points[j].first, -1, element);
+                    double angle = heat_angle(Mapped.x, Mapped.y, Mapped.z, geometry);
+                    double point_heat = heat_load(vel, dens, Kn, angle);
+                    element_load += point_heat * qube_points[i].second * qube_points[j].second;
+                }
+            }
+        }
+        // Для клина
+        if (dynamic_cast<LWedge*>(element.type.get()))
+        {
+            for (int i = 0; i < triang_points.size(); ++i)
+            {
+                Point Mapped = element.type->Mapping(triang_points[i].first, triang_points[i].second, -1, element);
+                double angle = heat_angle(Mapped.x, Mapped.y, Mapped.z, geometry);
+                double point_heat = heat_load(vel, dens, Kn, angle);
+                element_load += point_heat * 1.0/3.0;
+            }
+        }
+        Ballistic_load[surf_elem] = element_load;
+        ++surf_elem;
+    }
+
+    return Ballistic_load;
+}
+
+/*Мешки*/
+// С визуализацией
 void TFE_model::export_to_vtk(const std::string& filename, bool visualize) const {
     // Step 1: Create VTK points
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
@@ -1255,6 +1026,7 @@ void TFE_model::export_to_vtk(const std::string& filename, bool visualize) const
     }
 }
 
+// Архивная
 void TFE_model::export_to_vtk(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const {
     // Validate input
     if (transient_results.empty()) {
@@ -1362,6 +1134,7 @@ void TFE_model::export_to_vtk(const std::string& filename, const std::vector<std
     writer->SetCompressorTypeToZLib();
 }
 
+// Основная с сохранением в папку
 void TFE_model::create_mesh_file(const std::string& filename_prefix,
                               const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const {
     // Validate input
@@ -1480,73 +1253,7 @@ void TFE_model::create_mesh_file(const std::string& filename_prefix,
     pvd_file.close();
 }
 
-Eigen::VectorXd TFE_model::jacobian_check() const
-{
-    Eigen::VectorXd Jacobians;
-    Jacobians.resize(_elements.size());
-    for (const auto& element : _elements)
-    {
-        Eigen::Matrix3d J = element.type->Jacobian(0, 0, 0, element);
-        double dJ = J.determinant();
-        Jacobians[element.gn - 1] = dJ;
-    }
-    return Jacobians;
-}
-
-Eigen::VectorXd TFE_model::get_surface_load(double t) const
-{
-    /*Подготовка значений*/
-    Ballistic_data data("Ballistics_CD.csv");
-    double vel = data.get_Velocity(t), dens = data.get_Density(t), Kn = data.get_Knudsen(t);
-    std::array<std::pair<double, double>, 4> qube_points = {{ {0.861136312, 0.347854845}, {-0.861136312, 0.347854845}, {0.339981044, 0.652145155}, {-0.339981044, 0.652145155} }};
-    std::array<std::pair<double, double>, 3> triang_points = {{ {1/2.0, 1/2.0}, {1/2.0, 0}, {0, 1/2.0} }};
-    
-    int surf_elem = 0;
-    for (const auto& element : _elements)
-    {
-        if (element.surface_check()) {++surf_elem;}
-    }
-    Eigen::VectorXd Ballistic_load = Eigen::VectorXd::Zero(surf_elem);
-    // logger::log("Data parsed correctly!");
-    surf_elem = 0;
-    /*Интерации по времени*/
-    // Вычисление значений на шаге
-    for (const auto& element : _elements)
-    {   
-        if (!element.is_surface) {continue;}
-        double element_load = 0;
-        // Для куба
-        if (dynamic_cast<LQube*>(element.type.get()))
-        {
-            for (int i = 0; i < qube_points.size(); ++i)
-            {
-                for (int j = 0; j < qube_points.size(); ++j)
-                {
-                    Point Mapped = element.type->Mapping(qube_points[i].first, qube_points[j].first, -1, element);
-                    double angle = heat_angle(Mapped.x, Mapped.y, Mapped.z, geometry);
-                    double point_heat = heat_load(vel, dens, Kn, angle);
-                    element_load += point_heat * qube_points[i].second * qube_points[j].second;
-                }
-            }
-        }
-        // Для клина
-        if (dynamic_cast<LWedge*>(element.type.get()))
-        {
-            for (int i = 0; i < triang_points.size(); ++i)
-            {
-                Point Mapped = element.type->Mapping(triang_points[i].first, triang_points[i].second, -1, element);
-                double angle = heat_angle(Mapped.x, Mapped.y, Mapped.z, geometry);
-                double point_heat = heat_load(vel, dens, Kn, angle);
-                element_load += point_heat * 1.0/3.0;
-            }
-        }
-        Ballistic_load[surf_elem] = element_load;
-        ++surf_elem;
-    }
-
-    return Ballistic_load;
-}
-
+// Статическая
 void TFE_model::create_static_mesh_file(const std::string& filename, const Eigen::VectorXd& jacobians) const
 {
     // Validate input
@@ -1631,6 +1338,7 @@ void TFE_model::create_static_mesh_file(const std::string& filename, const Eigen
     }
 }
 
+// Поверхность
 void TFE_model::create_surface_mesh_file(const std::string& filename_prefix,
                                               const std::vector<std::pair<double, Eigen::VectorXd>>& elemental_load) const {
     // Validate input
@@ -1773,4 +1481,308 @@ void TFE_model::create_surface_mesh_file(const std::string& filename_prefix,
     pvd_file << "  </Collection>\n"
              << "</VTKFile>\n";
     pvd_file.close();
+}
+
+/*Расчёты*/
+// Динамический расчет (старый)
+Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int, double>>& constraints, const float q) const
+{
+    /*Инициализация ввода данных*/
+    float max_time, time_step, time_step_output, initial_temp;
+    std::vector<size_t> node_samples;
+    size_t node_sample;
+    std::vector<float> time_samples;
+    float time_sample;
+    float eps = 1e-6;
+
+    /*Непосредственный ввод данных*/
+    logger::log("Enter initial temperature (K):");
+    std::cin >> initial_temp;
+
+    logger::log("Enter the calculation time interval (s):");
+    std::cin >> max_time;
+
+    logger::log("Enter time step (s):");
+    std::cin >> time_step;
+
+    logger::log("Enter numbers of nodes (1 based) you want to check through time (-1 to finish input)");
+    while (true) {
+        std::cin >> node_sample;
+
+        // Проверка адекватности введённого значения по типу
+        if (std::cin.fail()) 
+        {
+            std::cin.clear(); 
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
+            logger::log("Invalid input. Please enter an integer.");
+            continue; 
+        }
+
+        // Проверка адекватности введённого значения по диапазону
+        if (node_sample != -1 && (node_sample < 1 || node_sample > _nodes.size() + 1)) 
+        {
+            std::cin.setstate(std::ios::failbit); // Force cin to fail
+            logger::log("Value out of range. Should be above 0 and below " + std::to_string(_nodes.size() + 1) + ".");
+            continue;
+        }
+
+        if (node_sample == -1) {break;}
+
+        node_samples.push_back(node_sample);
+    }
+
+    logger::log("Enter time step for outputed values (s) (better be a multiple of actual time step for computation):");
+    std::cin >> time_step_output;
+
+    logger::log("Enter specific time moments (s) in which you want nodal temperatures to be outputed (-1 to finish input):");
+    while (true) {
+        std::cin >> time_sample;
+
+        if (time_sample == -1) {break;}
+
+        // Проверка адекватности введённого значения по типу
+        if (std::cin.fail()) 
+        {
+            std::cin.clear(); 
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
+            logger::log("Invalid input. Please enter an integer or float value.");
+            continue; 
+        }
+
+        // Проверка адекватности введённого значения по диапазону
+        if (time_sample != -1 && (time_sample <= 0 || time_sample > max_time)) 
+        {
+            std::cin.setstate(std::ios::failbit); // Force cin to fail
+            logger::log("Value out of range. Please enter value above zero and below " + std::to_string(max_time) + " seconds.");
+            continue;
+        }
+
+        time_samples.push_back(time_sample);
+    }
+    // Сортировка значений времени по возрастанию
+    std::sort(time_samples.begin(), time_samples.end(), [](float a, float b) {return abs(a) < abs(b);});
+    float* t_ptr = time_samples.data();
+    float* last_t = t_ptr + time_samples.size() - 1;
+
+    /*Инициализация расчёта*/
+    auto start = std::chrono::high_resolution_clock::now(); // Таймер
+    std::string message;
+    Eigen::VectorXd nodal_temps = initial_temp * Eigen::VectorXd::Ones(_DOF); // Глобальный вектор узловых температур
+    Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
+    Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
+    Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver; // Решатель
+    // Заготовка под вывод значений
+    Results_transient results(time_samples, node_samples, _DOF, static_cast<size_t>(std::ceil(max_time / time_step_output)));
+ 
+    /*Расчёт*/
+    logger::log("Started transient analysis calculation.");
+    for (size_t t = 1; (t-1) * time_step < max_time; ++t)
+    {
+        // Вычисление значений на шаге
+        Lh = GCM(nodal_temps) + (2 / time_step) * (GDM(nodal_temps));
+        Rh = ((2 / time_step) * GDM(nodal_temps) - GCM(nodal_temps)) * nodal_temps - 2 * NLV(q, 0.0, nodal_temps);
+
+        // Закрепление системы
+        if (!constraints.empty())
+        {
+            for (const auto& LBC : constraints)
+            {
+                Rh(LBC.first) = LBC.second;
+                //for (Eigen::SparseMatrix<double>::InnerIterator it(Lh, LBC.first); it; ++it) {it.valueRef() = 0;}
+                for (int col = 0; col < Lh.cols(); ++col) {
+                    Lh.coeffRef(LBC.first, col) = 0; // Explicitly set all elements in the row to 0
+                }
+                Lh.coeffRef(LBC.first, LBC.first) = 1;
+            }
+        }
+        Lh.prune(0.0);
+        Lh.makeCompressed();
+        // Решение матричного уравнения
+        solver.compute(Lh);
+        if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
+        nodal_temps = solver.solve(Rh);
+        if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
+        else 
+        {
+            std::cout << "\rProgress: " << std::fixed << std::setprecision(2)
+              << (100.0 * t * time_step / max_time) << "% " << std::flush;
+        }
+        
+        // Запись значений
+        if (abs(*t_ptr - t * time_step) < eps)
+        {
+            results.VNT_samples.emplace_back(std::make_pair(*t_ptr, nodal_temps));
+            if (t_ptr != last_t) {++t_ptr;}
+        }
+
+        if (t % static_cast<int>(time_step_output / time_step) < eps)
+        {
+            for (int i = 0; i < node_samples.size(); ++i)
+            {
+                results.NT_samples[i].second.emplace_back(nodal_temps(node_samples[i] - 1));
+            }
+        }
+    }    
+
+    /*Вывод времени расчёта*/
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
+    logger::log(message);
+    std::cin.get();
+
+    return results;
+}
+
+// Динамический расчёт 
+std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() const
+{
+    /*Инициализация ввода данных*/
+    float max_time, time_step, time_step_output, initial_temp;
+    std::vector<float> time_samples;
+    float time_sample;
+    float eps = 1e-6;
+
+    /*Непосредственный ввод данных*/
+    logger::log("Enter initial temperature (K):");
+    std::cin >> initial_temp;
+
+    logger::log("Enter the calculation time interval (s):");
+    std::cin >> max_time;
+
+    logger::log("Enter time step (s):");
+    std::cin >> time_step;
+
+    logger::log("Enter time step for outputed values (s) (better be a multiple of actual time step for computation):");
+    std::cin >> time_step_output;
+
+    // Сортировка значений времени по возрастанию
+    std::sort(time_samples.begin(), time_samples.end(), [](float a, float b) {return abs(a) < abs(b);});
+    float* t_ptr = time_samples.data();
+    float* last_t = t_ptr + time_samples.size() - 1;
+
+    /*Инициализация расчёта*/
+    auto start = std::chrono::high_resolution_clock::now(); // Таймер
+    std::string message;
+    Eigen::VectorXd nodal_temps = initial_temp * Eigen::VectorXd::Ones(_DOF); // Глобальный вектор узловых температур
+    Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
+    Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
+    std::vector<std::pair<double, Eigen::VectorXd>> results, loads, Rh_vectors;
+
+    /*Решатель и его настройки*/
+    Eigen::PardisoLLT<Eigen::SparseMatrix<double>> solver;
+    int refactor_interval;
+    std::cout << "Enter refactor interval:\n";
+    std::cin >> refactor_interval;
+    solver.pardisoParameterArray()[4] = 2; // хрень с переориентацией
+    solver.pardisoParameterArray()[7] = 2; // iteration of refinement
+    solver.pardisoParameterArray()[1] = 3;  // Параллельный алгоритм (0 = последовательный, 2 = вложенный параллелизм, 3 = оптимальный)
+    solver.pardisoParameterArray()[2] = 8; // Число потоков (можно экспериментировать: 8, 12, 16)
+    solver.pardisoParameterArray()[10] = 1; // Использовать масштабирование
+    solver.pardisoParameterArray()[12] = 1; // Улучшенная точность для разреженных систем
+    solver.pardisoParameterArray()[23] = 1; // Параллельное численное разложение (для больших матриц)
+    solver.pardisoParameterArray()[24] = 1; // Параллельное решение (для этапа solve)
+
+    /*Расчёт*/
+    logger::log("Started transient analysis calculation.");
+    Ballistic_data data("Ballistics_CD.csv");
+    double vel, dens, Kn, eps_grey = 0.9;
+    for (size_t t = 1; (t-1) * time_step < max_time; ++t)
+    {
+        // Вычисление значений на шаге
+        vel = data.get_Velocity(t * time_step);
+        dens = data.get_Density(t * time_step);
+        Kn = data.get_Knudsen(t * time_step);
+        Lh = GCM(nodal_temps) + (2 / time_step) * (GDM(nodal_temps));
+        Rh = ((2 / time_step) * GDM(nodal_temps) - GCM(nodal_temps)) * nodal_temps + 2 * Ball_NLV(eps_grey, vel, dens, Kn, nodal_temps);
+        
+        // Решение матричного уравнения
+        Lh.makeCompressed();
+        Lh = Lh.triangularView<Eigen::Upper>();
+
+        if ((t % refactor_interval == 0) || (t == 1)) {
+            solver.compute(Lh);
+            if (solver.info() != Eigen::Success) {
+                std::cerr << "PARDISO factorization failed at t = " << t << "!\n";
+                std::cin.get();
+            }
+        }
+
+        if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
+        nodal_temps = solver.solve(Rh);
+        if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
+        else 
+        {
+            std::cout << "\rProgress: " << std::fixed << std::setprecision(2)
+              << (100.0 * t * time_step / max_time) << "% " << std::flush;
+        }
+        
+        if (t % static_cast<int>(time_step_output / time_step) < eps)
+        {
+            // std::string header = "time " + std::to_string(t * time_step) + " s";
+            double time = t * time_step;
+            results.emplace_back(std::make_pair(time, nodal_temps));
+            // Rh_vectors.emplace_back(std::make_pair(time, Rh));
+            // loads.emplace_back(std::make_pair(time, 2 * Ball_NLV(eps_grey, vel, dens, Kn, nodal_temps)));
+        }
+    }    
+    /*Вывод времени расчёта*/
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
+    logger::log(message);
+    // Save_xlsx("Ball_load_vectors", loads);
+    // Save_xlsx("RH_vectors", Rh_vectors);
+    return results;
+}
+
+// Статический расчёт 
+Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation) const
+{
+    /*Инициализация*/
+    auto start = std::chrono::high_resolution_clock::now(); // Таймер
+    std::string message;
+    Eigen::VectorXd nodal_temps; // Глобальный вектор узловых температур
+    Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
+    Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
+    // Eigen::PardisoLDLT<Eigen::SparseMatrix<double>> solver;
+    Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
+    logger::log("Started steady state analysis calculation.");
+    double eps = 0;
+    if (radiation) {eps = 0.9;}
+    Lh = GCM(300 * Eigen::VectorXd::Ones(_DOF));
+    logger::log("Lh was setted!");
+    Rh = NLV(q, eps, 300 * Eigen::VectorXd::Ones(_DOF));
+    logger::log("Rh was setted!");
+
+    // Закрепления
+    if (!constraints.empty())
+    {
+        for (const auto& LBC : constraints)
+        {
+            Rh(LBC.first) = LBC.second;
+            for (int col = 0; col < Lh.cols(); ++col) {
+                Lh.coeffRef(LBC.first, col) = 0; // Explicitly set all elements in the row to 0
+            }
+            Lh.coeffRef(LBC.first, LBC.first) = 1;
+        }
+    }
+    Lh.prune(0.0);
+
+    // std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
+    // std::cout << "Right hand vector:\n" << Rh << std::endl;
+
+    Lh.makeCompressed();
+    solver.compute(Lh);
+    if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
+    nodal_temps = solver.solve(Rh);
+    if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
+    logger::log(message);
+    std::cin.get();
+
+    return nodal_temps;
 }
