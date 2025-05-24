@@ -1,9 +1,32 @@
 //Current project
 #include "TFE_model.hpp"
 #include "Output.hpp"
+#include "INIReader.h"
+#include "Parser_helpers.hpp"
 
 // Конструктор класса
-TFE_model::TFE_model(Geometry& g, Layers& l) : geometry(g), layers(l) {}
+TFE_model::TFE_model(Geometry g, Layers l) : geometry(g), layers(l) {}
+
+TFE_model::TFE_model(const std::string& config_path)
+    : TFE_model( // delegate to the other constructor
+        Geometry(
+            INIReader(config_path).GetInteger("Geometry", "sphere", 0),
+            INIReader(config_path).GetInteger("Geometry", "cone1", 0),
+            INIReader(config_path).GetInteger("Geometry", "cone2", 0),
+            INIReader(config_path).GetInteger("Geometry", "cylinder", 0)
+        ),
+        Layers(
+            parse_doubles<3>(INIReader(config_path).Get("Layers", "thicknesses", "")),
+            parse_ints<3>(INIReader(config_path).Get("Layers", "elements", ""))
+        )
+    )
+{
+    // c_phi and any post-init logic
+    INIReader reader(config_path);
+    int c_phi = reader.GetInteger("Simulation", "c_phi", 0);
+    make_model_advance(*this, layers, geometry, c_phi);
+}
+
 
 // Вывод объектов
 const std::vector<Node>& TFE_model::Nodes() const {return _nodes;}

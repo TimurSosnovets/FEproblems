@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <iomanip> // for std::setprecision
 #include <omp.h>
+#include <sstream>
 // VTK includes
 #include <vtkSmartPointer.h>
 #include <vtkUnstructuredGrid.h>
@@ -59,15 +60,16 @@ class TFE_model
         size_t _DOF = 0; // Степень свободы модели (в данном случае оно же - количество узлов)
         size_t unique_DOF = 0; // Количество ненулевых значений в матрицах (зависит только от сетки)
         size_t unique_DOF_surf = 0; // Количество ненулевых значений в векторе нагрузок (зависит только от сетки)
-        const Geometry& geometry;
-        const Layers& layers;
+        Geometry geometry;
+        Layers layers;
 
         /*Внутренние методы*/
         void assembly(std::vector<Eigen::Triplet<double>>& t, const Eigen::MatrixXd& a, const Element& FE) const; // Ассамблирование матрицы A размерности [DOF x DOF] из меньшей матрицы a
 
     public:
         /*Конструктор класса*/
-        TFE_model(Geometry& g, Layers& l); // Инициализация сетки с заданным количеством элементов по каждому направлению
+        TFE_model(Geometry g, Layers l); // Инициализация сетки с заданным количеством элементов по каждому направлению
+        TFE_model(const std::string& config_path); // Конструктор модели через конфиг файл
 
         /*Добавление структурных единиц*/
         void add_node(const Point p, const int g_nbr);
@@ -109,4 +111,5 @@ class TFE_model
 // Заполнение FE модели
 void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi);
 void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_phi);
+
 
