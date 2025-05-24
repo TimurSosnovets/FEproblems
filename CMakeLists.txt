@@ -22,6 +22,11 @@ add_definitions(-DDATA_DIR="${DATA_DIR}")
 include_directories(include)
 include_directories(lib/Eigen)  # Eigen is header-only
 
+# Копирование всех .csv файлов из папки data в build/output
+file(GLOB CSV_FILES "${CMAKE_SOURCE_DIR}/Data/*.csv")
+file(COPY ${CSV_FILES} DESTINATION ${CMAKE_BINARY_DIR}/output/release)
+
+
 # Find Intel MKL
 find_path(MKL_INCLUDE_DIR mkl.h
     HINTS "C:/Program Files (x86)/Intel/oneAPI/mkl/latest/include")
