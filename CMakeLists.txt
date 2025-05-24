@@ -62,8 +62,25 @@ find_package(VTK 9.4 COMPONENTS
     REQUIRED
 )
 
-# Add OpenXLSX as a subdirectory
-add_subdirectory(lib/OpenXLSX)
+# Find prebuilt OpenXLSX library
+find_library(OPENXLSX_LIB
+    NAMES OpenXLSX
+    HINTS "${CMAKE_SOURCE_DIR}/lib/OpenXLSX/lib"
+    REQUIRED
+)
+
+# Check for OpenXLSX headers
+find_path(OPENXLSX_INCLUDE_DIR OpenXLSX.hpp
+    HINTS "${CMAKE_SOURCE_DIR}/lib/OpenXLSX"
+    REQUIRED
+)
+
+# Create an imported target for the prebuilt OpenXLSX library
+add_library(OpenXLSX::OpenXLSX STATIC IMPORTED)
+set_target_properties(OpenXLSX::OpenXLSX PROPERTIES
+    IMPORTED_LOCATION "${OPENXLSX_LIB}"
+    INTERFACE_INCLUDE_DIRECTORIES "${OPENXLSX_INCLUDE_DIR};${CMAKE_SOURCE_DIR}/lib/OpenXLSX/headers"
+)
 
 # Collect all source files
 file(GLOB SOURCE_FILES source/*.cpp)
@@ -81,7 +98,7 @@ foreach(TEST_FILE ${TEST_FILES})
         MODULES ${VTK_LIBRARIES}
     )
 
-    # Копирование libiomp5md.dll
+    # Copy libiomp5md.dll
     add_custom_command(TARGET ${TEST_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/bin/libiomp5md.dll"
