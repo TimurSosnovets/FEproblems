@@ -1085,7 +1085,7 @@ void TFE_model::create_mesh_file(const std::string& results_dir, const std::stri
              << "  <Collection>\n";
     for (size_t t = 0; t < transient_results.size(); ++t) {
         std::ostringstream time_oss;
-        time_oss << std::fixed << std::setprecision(6) << transient_results[t].first;
+        time_oss << std::fixed << std::setprecision(2) << transient_results[t].first;
         std::string time_str = time_oss.str();
         std::replace(time_str.begin(), time_str.end(), '.', '_'); // Replace . with _
         std::ostringstream oss;
@@ -1295,7 +1295,7 @@ void TFE_model::create_surface_mesh_file(const std::string& results_dir, const s
 
         // Format time as string (replace decimal point with underscore for valid filename)
         std::ostringstream time_oss;
-        time_oss << std::fixed << std::setprecision(6) << elemental_load[t].first;
+        time_oss << std::fixed << std::setprecision(2) << elemental_load[t].first;
         std::string time_str = time_oss.str();
         std::replace(time_str.begin(), time_str.end(), '.', '_'); // Replace . with _
 
@@ -1323,7 +1323,7 @@ void TFE_model::create_surface_mesh_file(const std::string& results_dir, const s
              << "  <Collection>\n";
     for (size_t t = 0; t < elemental_load.size(); ++t) {
         std::ostringstream time_oss;
-        time_oss << std::fixed << std::setprecision(6) << elemental_load[t].first;
+        time_oss << std::fixed << std::setprecision(2) << elemental_load[t].first;
         std::string time_str = time_oss.str();
         std::replace(time_str.begin(), time_str.end(), '.', '_'); // Replace . with _
         std::ostringstream oss;

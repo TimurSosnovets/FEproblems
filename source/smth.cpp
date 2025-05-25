@@ -145,7 +145,7 @@ double Layers::depth(int iter) const
 
 const Material* Layers::get_material(int iter) const
 {   
-    if (force_AMg) return &AMg_6;
+    // if (force_AMg) return &AMg_6;
     if (iter < fragment[0]) {return &GC_2500;}
     else if (iter < fragment[0] + fragment[1]) {return &TZMK_10;}
     else return &AMg_6;
@@ -241,7 +241,6 @@ double heat_load(const double vel, const double dens, const double Kn, const dou
     double q_r = 2.195 * 1e-22 * pow(vel, 7.9) * pow(dens, 1.2) * pow(Dm, 0.49);
 
     if (angle > M_PI / 2.0) {return q_r;}
-    // if (angle > M_PI / 2.0) {return q_r + 3.3 * 1e-5 * pow(vel, 3.2) * sqrt(dens / Dm) * 0.1;}
 
     /*Конвективная составляющая*/
     double q_lam = 3.3 * 1e-5 * pow(vel, 3.2) * sqrt(dens / Dm) * (0.1 + 0.9 * pow(cos(angle), 2));
@@ -251,6 +250,7 @@ double heat_load(const double vel, const double dens, const double Kn, const dou
     if (q_lam >= q_turb)
     { q_conv_dens = q_lam; } else { q_conv_dens = q_turb; }
 
+    if (angle > M_PI / 2.0) {q_conv_dens = 3.3 * 1e-5 * pow(vel, 3.2) * sqrt(dens / Dm) * 0.1;}
     if (Kn < 0.01) { return q_conv_dens + q_r; }
 
     double q_conv_amend = 0.5 * dens * pow(vel, 3.0) * pow(cos(angle), 3.0);
