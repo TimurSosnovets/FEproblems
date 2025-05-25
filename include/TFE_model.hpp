@@ -88,8 +88,13 @@ class TFE_model
         Eigen::SparseVector<double> Ball_NLV(const double eps, const double vel, const double dens, const double Kn, const Eigen::VectorXd& nodal_temps) const; // Вектор узловых нагрузок
 
         /*Решение нестационарной задачи с заданными начальными условиями, временем расчёта и шагом.*/
+        // Старый вариант
         Results_transient transient_analisys(const std::vector<std::pair<int, double>>& constraints, const float q) const;
-        std::vector<std::pair<double, Eigen::VectorXd>> transient_analisys() const; 
+        // Ввод параметров с консоли
+        std::vector<std::pair<double, Eigen::VectorXd>> transient_analisys() const;
+        // Ввод параметров с помощью лог файла
+        std::vector<std::pair<double, Eigen::VectorXd>> transient_analisys(const std::string& config_path) const;
+        /*Решение стационарной задачи*/
         Eigen::VectorXd steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation = false) const;
         /*Для отладки*/
         Eigen::VectorXd jacobian_check() const;

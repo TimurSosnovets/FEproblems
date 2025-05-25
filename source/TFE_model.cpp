@@ -23,8 +23,9 @@ TFE_model::TFE_model(const std::string& config_path)
 {
     // c_phi and any post-init logic
     INIReader reader(config_path);
-    int c_phi = reader.GetInteger("Simulation", "c_phi", 0);
+    int c_phi = reader.GetInteger("Geometry", "c_phi", 0);
     make_model_advance(*this, layers, geometry, c_phi);
+    logger::log("TFE model has been successfully created from file " + config_path);
 }
 
 
@@ -36,10 +37,11 @@ const std::vector<Element>& TFE_model::Elements() const {return _elements;}
 void TFE_model::mesh_info() const
 {
     /*Инициализация*/
+    logger::log("Creating mesh info file...");
     std::string message;
     std::string filename;
     bool to_console;
-    if (_elements.size() > 30) {filename = "log.txt"; to_console = false;}
+    if (_elements.size() > 30) {filename = "mesh_info.txt"; to_console = false;}
     else {filename = ""; to_console = true;}
 
     /*Общая информация*/
@@ -67,6 +69,7 @@ void TFE_model::mesh_info() const
     {
         element.get_info(to_console, filename);
     }
+    logger::log("Mesh info file with name " + filename + " has be created!");
 }
 
 // Добавление узла
@@ -118,6 +121,7 @@ void TFE_model::assembly(std::vector<Eigen::Triplet<double>>& t , const Eigen::M
 void TFE_model::mesh_check()
 {
     _DOF = _nodes.size();
+    logger::log("Mesh check has been successfully performed with DOF = " + std::to_string(_DOF));
     // std::unordered_set<std::pair<int, int>, PairHash> nnz_entries;
 
     // for (const auto& element : _elements)
@@ -1507,6 +1511,57 @@ void TFE_model::create_surface_mesh_file(const std::string& filename_prefix,
 }
 
 /*Расчёты*/
+// Статический расчёт 
+Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation) const
+{
+    /*Инициализация*/
+    auto start = std::chrono::high_resolution_clock::now(); // Таймер
+    std::string message;
+    Eigen::VectorXd nodal_temps; // Глобальный вектор узловых температур
+    Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
+    Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
+    // Eigen::PardisoLDLT<Eigen::SparseMatrix<double>> solver;
+    Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
+    logger::log("Started steady state analysis calculation.");
+    double eps = 0;
+    if (radiation) {eps = 0.9;}
+    Lh = GCM(300 * Eigen::VectorXd::Ones(_DOF));
+    logger::log("Lh was setted!");
+    Rh = NLV(q, eps, 300 * Eigen::VectorXd::Ones(_DOF));
+    logger::log("Rh was setted!");
+
+    // Закрепления
+    if (!constraints.empty())
+    {
+        for (const auto& LBC : constraints)
+        {
+            Rh(LBC.first) = LBC.second;
+            for (int col = 0; col < Lh.cols(); ++col) {
+                Lh.coeffRef(LBC.first, col) = 0; // Explicitly set all elements in the row to 0
+            }
+            Lh.coeffRef(LBC.first, LBC.first) = 1;
+        }
+    }
+    Lh.prune(0.0);
+
+    // std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
+    // std::cout << "Right hand vector:\n" << Rh << std::endl;
+
+    Lh.makeCompressed();
+    solver.compute(Lh);
+    if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
+    nodal_temps = solver.solve(Rh);
+    if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
+    logger::log(message);
+    std::cin.get();
+
+    return nodal_temps;
+}
+
 // Динамический расчет (старый)
 Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int, double>>& constraints, const float q) const
 {
@@ -1657,7 +1712,7 @@ Results_transient TFE_model::transient_analisys(const std::vector<std::pair<int,
     return results;
 }
 
-// Динамический расчёт 
+// Динамический расчёт (из консоли)
 std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() const
 {
     /*Инициализация ввода данных*/
@@ -1685,7 +1740,7 @@ std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() 
     float* last_t = t_ptr + time_samples.size() - 1;
 
     /*Инициализация расчёта*/
-    auto start = std::chrono::high_resolution_clock::now(); // Таймер
+    auto start = std::chrono::system_clock::now(); // Таймер
     std::string message;
     Eigen::VectorXd nodal_temps = initial_temp * Eigen::VectorXd::Ones(_DOF); // Глобальный вектор узловых температур
     Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
@@ -1694,9 +1749,11 @@ std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() 
 
     /*Решатель и его настройки*/
     Eigen::PardisoLLT<Eigen::SparseMatrix<double>> solver;
+
     int refactor_interval;
     std::cout << "Enter refactor interval:\n";
     std::cin >> refactor_interval;
+
     solver.pardisoParameterArray()[4] = 2; // хрень с переориентацией
     solver.pardisoParameterArray()[7] = 2; // iteration of refinement
     solver.pardisoParameterArray()[1] = 3;  // Параллельный алгоритм (0 = последовательный, 2 = вложенный параллелизм, 3 = оптимальный)
@@ -1707,7 +1764,7 @@ std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() 
     solver.pardisoParameterArray()[24] = 1; // Параллельное решение (для этапа solve)
 
     /*Расчёт*/
-    logger::log("Started transient analysis calculation.");
+    logger::log("Started transient analysis calculation!");
     Ballistic_data data("Ballistics_CD.csv");
     double vel, dens, Kn, eps_grey = 0.9;
     for (size_t t = 1; (t-1) * time_step < max_time; ++t)
@@ -1750,62 +1807,128 @@ std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() 
         }
     }    
     /*Вывод времени расчёта*/
-    auto end = std::chrono::high_resolution_clock::now();
+    auto end = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsed_seconds = end - start;
-    message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
-    logger::log(message);
+    auto start_sys = std::chrono::time_point_cast<std::chrono::system_clock::duration>(start);
+    auto end_sys = std::chrono::time_point_cast<std::chrono::system_clock::duration>(end);
+    std::string time_log = 
+        "Start time: " + format_time(start_sys) + "\n" +
+        "End time: " + format_time(end_sys) + "\n" +
+        "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
+    logger::log(time_log, true, "TA_log.txt");
     // Save_xlsx("Ball_load_vectors", loads);
     // Save_xlsx("RH_vectors", Rh_vectors);
     return results;
 }
 
-// Статический расчёт 
-Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation) const
+// Динамический расчёт (из конфиг-файла)
+std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys(const std::string& config_path) const
 {
-    /*Инициализация*/
-    auto start = std::chrono::high_resolution_clock::now(); // Таймер
+    /*Инициализация ввода данных*/
+    INIReader reader(config_path);
+    if (reader.ParseError() < 0) {
+        throw std::runtime_error("Can't load config file: " + config_path);
+    }
+
+    /*Непосредственный ввод данных из конфиг файла*/
+    float initial_temp      = reader.GetReal("Calculation", "initial_temp", 300.0);
+    float max_time          = reader.GetReal("Calculation", "max_time", 10.0);
+    float time_step         = reader.GetReal("Calculation", "time_step", 0.01);
+    float time_step_output  = reader.GetReal("Calculation", "time_step_output", 0.1);
+    float eps               = reader.GetReal("Calculation", "precision", 1e-6);
+    double eps_grey          = reader.GetReal("Calculation", "emissivity", 0.9);
+    int refactor_interval   = reader.GetInteger("Calculation", "refactor_interval", 1);
+    std::string load_file   = reader.Get("Calculation", "load_file", "");
+
+    if (load_file.empty()) {
+        throw std::runtime_error("Missing 'load_file' in [Calculation] section.");
+    }
+
+    /*Ввод параметров решателя из конфиг файла*/
+    int pardiso_reordering         = reader.GetInteger("Solver", "reordering", 2);
+    int pardiso_refinement         = reader.GetInteger("Solver", "refinement_iterations", 2);
+    int pardiso_parallel_algorithm = reader.GetInteger("Solver", "parallel_algorithm", 3);
+    int pardiso_threads            = reader.GetInteger("Solver", "num_threads", 8);
+    int pardiso_scaling            = reader.GetInteger("Solver", "scaling", 1);
+    int pardiso_precision          = reader.GetInteger("Solver", "improved_precision", 1);
+    int pardiso_parallel_factor    = reader.GetInteger("Solver", "parallel_factorization", 1);
+    int pardiso_parallel_solve     = reader.GetInteger("Solver", "parallel_solve", 1);
+
+    /*Инициализация расчёта*/
+    auto start = std::chrono::system_clock::now(); // Таймер
     std::string message;
-    Eigen::VectorXd nodal_temps; // Глобальный вектор узловых температур
+    Eigen::VectorXd nodal_temps = initial_temp * Eigen::VectorXd::Ones(_DOF); // Глобальный вектор узловых температур
     Eigen::SparseMatrix<double> Lh(_DOF, _DOF); // Матрица левой части матричного уравнения
     Eigen::VectorXd Rh(_DOF); // Вектор правой части матричного уравнения
-    // Eigen::PardisoLDLT<Eigen::SparseMatrix<double>> solver;
-    Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
-    logger::log("Started steady state analysis calculation.");
-    double eps = 0;
-    if (radiation) {eps = 0.9;}
-    Lh = GCM(300 * Eigen::VectorXd::Ones(_DOF));
-    logger::log("Lh was setted!");
-    Rh = NLV(q, eps, 300 * Eigen::VectorXd::Ones(_DOF));
-    logger::log("Rh was setted!");
+    std::vector<std::pair<double, Eigen::VectorXd>> results, loads, Rh_vectors;
 
-    // Закрепления
-    if (!constraints.empty())
+    /*Решатель и его настройки*/
+    Eigen::PardisoLLT<Eigen::SparseMatrix<double>> solver;
+
+    solver.pardisoParameterArray()[4]  = pardiso_reordering;         // Reordering
+    solver.pardisoParameterArray()[7]  = pardiso_refinement;         // Iteration of refinement
+    solver.pardisoParameterArray()[1]  = pardiso_parallel_algorithm; // Parallel algorithm (0 = sequential, 2 = nested parallelism, 3 = optimal)
+    solver.pardisoParameterArray()[2]  = pardiso_threads;            // Number of threads
+    solver.pardisoParameterArray()[10] = pardiso_scaling;            // Use scaling
+    solver.pardisoParameterArray()[12] = pardiso_precision;          // Improved precision for sparse systems
+    solver.pardisoParameterArray()[23] = pardiso_parallel_factor;    // Parallel numerical factorization
+    solver.pardisoParameterArray()[24] = pardiso_parallel_solve;     // Parallel solve
+
+    /*Расчёт*/
+    logger::log("Started transient analysis calculation!");
+    Ballistic_data data(load_file);
+    double vel, dens, Kn;
+    for (size_t t = 1; (t-1) * time_step < max_time; ++t)
     {
-        for (const auto& LBC : constraints)
-        {
-            Rh(LBC.first) = LBC.second;
-            for (int col = 0; col < Lh.cols(); ++col) {
-                Lh.coeffRef(LBC.first, col) = 0; // Explicitly set all elements in the row to 0
+        // Вычисление значений на шаге
+        vel = data.get_Velocity(t * time_step);
+        dens = data.get_Density(t * time_step);
+        Kn = data.get_Knudsen(t * time_step);
+        Lh = GCM(nodal_temps) + (2 / time_step) * (GDM(nodal_temps));
+        Rh = ((2 / time_step) * GDM(nodal_temps) - GCM(nodal_temps)) * nodal_temps + 2 * Ball_NLV(eps_grey, vel, dens, Kn, nodal_temps);
+        
+        // Решение матричного уравнения
+        Lh.makeCompressed();
+        Lh = Lh.triangularView<Eigen::Upper>();
+
+        if ((t % refactor_interval == 0) || (t == 1)) {
+            solver.compute(Lh);
+            if (solver.info() != Eigen::Success) {
+                std::cerr << "PARDISO factorization failed at t = " << t << "!\n";
+                std::cin.get();
             }
-            Lh.coeffRef(LBC.first, LBC.first) = 1;
         }
-    }
-    Lh.prune(0.0);
 
-    // std::cout << "Left hand matrix:\n" << Lh.toDense() << std::endl;
-    // std::cout << "Right hand vector:\n" << Rh << std::endl;
+        if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
+        nodal_temps = solver.solve(Rh);
+        if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
+        else 
+        {
+            std::cout << "\rProgress: " << std::fixed << std::setprecision(2)
+              << (100.0 * t * time_step / max_time) << "% " << std::flush;
+        }
+        
+        if (t % static_cast<int>(time_step_output / time_step) < eps)
+        {
+            double time = t * time_step;
+            results.emplace_back(std::make_pair(time, nodal_temps));
+        }
+    }    
+    /*Вывод времени расчёта*/
+    auto end = std::chrono::system_clock::now();
 
-    Lh.makeCompressed();
-    solver.compute(Lh);
-    if (solver.info() != Eigen::Success) {std::cerr << "Solver setup failed!\n";}
-    nodal_temps = solver.solve(Rh);
-    if (solver.info() != Eigen::Success) {std::cerr << "Solving failed!\n";}
-
-    auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_seconds = end - start;
-    message = "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
-    logger::log(message);
-    std::cin.get();
 
-    return nodal_temps;
+    auto start_sys = std::chrono::time_point_cast<std::chrono::system_clock::duration>(start);
+    auto end_sys = std::chrono::time_point_cast<std::chrono::system_clock::duration>(end);
+
+    std::string time_log = 
+        "Start time: " + format_time(start_sys) + "\n" +
+        "End time: " + format_time(end_sys) + "\n" +
+        "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
+    logger::log(time_log, true, "TA_log.txt");
+    // Save_xlsx("Ball_load_vectors", loads);
+    // Save_xlsx("RH_vectors", Rh_vectors);
+    return results;
 }
+

@@ -1,9 +1,12 @@
 #pragma once
 // STL
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <ctime>
+#include <chrono>
 // Eigen
 #include "Dense"
 // OpenXLSX
@@ -36,6 +39,14 @@ class logger
             }
         }
 };
+
+// Форматирование временных точек
+inline std::string format_time(std::chrono::system_clock::time_point tp) {
+    std::time_t time = std::chrono::system_clock::to_time_t(tp);
+    std::ostringstream oss;
+    oss << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S");
+    return oss.str();
+}
 
 // Контейнер результатов
 struct Results_transient
