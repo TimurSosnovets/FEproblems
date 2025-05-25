@@ -908,10 +908,16 @@ Eigen::VectorXd TFE_model::jacobian_check() const
 }
 
 // Выловить нагрузку на поверхности
-Eigen::VectorXd TFE_model::get_surface_load(double t) const
+Eigen::VectorXd TFE_model::get_surface_load(const std::string& config_path, double t) const
 {
     /*Подготовка значений*/
-    Ballistic_data data("Ballistics_CD.csv");
+    /*Инициализация ввода данных*/
+    INIReader reader(config_path);
+    if (reader.ParseError() < 0) {
+        throw std::runtime_error("Can't load config file: " + config_path);
+    }
+    std::string load_file   = reader.Get("Calculation", "load_file", "");
+    Ballistic_data data(load_file);
     double vel = data.get_Velocity(t), dens = data.get_Density(t), Kn = data.get_Knudsen(t);
     std::array<std::pair<double, double>, 4> qube_points = {{ {0.861136312, 0.347854845}, {-0.861136312, 0.347854845}, {0.339981044, 0.652145155}, {-0.339981044, 0.652145155} }};
     std::array<std::pair<double, double>, 3> triang_points = {{ {1/2.0, 1/2.0}, {1/2.0, 0}, {0, 1/2.0} }};

@@ -98,7 +98,7 @@ class TFE_model
         Eigen::VectorXd steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation = false) const;
         /*Для отладки*/
         Eigen::VectorXd jacobian_check() const;
-        Eigen::VectorXd get_surface_load(double t) const;
+        Eigen::VectorXd get_surface_load(const std::string& config_path, double t) const;
         /*Вывод объектов*/
         const std::vector<Node>& Nodes() const;
         const std::vector<Element>& Elements() const;
