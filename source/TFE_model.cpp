@@ -1056,7 +1056,7 @@ void TFE_model::create_mesh_file(const std::string& results_dir, const std::stri
 
         // Format time as string (replace decimal point with underscore for valid filename)
         std::ostringstream time_oss;
-        time_oss << std::fixed << std::setprecision(6) << transient_results[t].first;
+        time_oss << std::fixed << std::setprecision(2) << transient_results[t].first;
         std::string time_str = time_oss.str();
         std::replace(time_str.begin(), time_str.end(), '.', '_'); // Replace . with _
 

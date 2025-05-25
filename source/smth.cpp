@@ -241,6 +241,7 @@ double heat_load(const double vel, const double dens, const double Kn, const dou
     double q_r = 2.195 * 1e-22 * pow(vel, 7.9) * pow(dens, 1.2) * pow(Dm, 0.49);
 
     if (angle > M_PI / 2.0) {return q_r;}
+    // if (angle > M_PI / 2.0) {return q_r + 3.3 * 1e-5 * pow(vel, 3.2) * sqrt(dens / Dm) * 0.1;}
 
     /*Конвективная составляющая*/
     double q_lam = 3.3 * 1e-5 * pow(vel, 3.2) * sqrt(dens / Dm) * (0.1 + 0.9 * pow(cos(angle), 2));

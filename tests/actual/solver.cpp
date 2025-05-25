@@ -5,10 +5,6 @@
 
 int main()
 {
-    // /*Создание дириктории с результатами*/
-    // if (!filesystem_utils::create_directory()) {
-    //     std::cerr << "Failed to create Results directory. Continuing without logging to file." << std::endl;
-    // }
 
     /*Создание модели*/
     TFE_model DM_FE("solver_config.ini");
@@ -20,6 +16,7 @@ int main()
 
     /*Запись решения*/
     DM_FE.create_mesh_file("Results", "", nodal_temps);
+    // DM_FE.create_mesh_file("Results", nodal_temps);
     // Save_xlsx(nodal_temps);
 
     /*Финиш*/

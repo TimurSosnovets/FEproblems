@@ -2,16 +2,26 @@
 #include "Output.hpp"
 #include "smth.hpp"
 #include "Ballistic_data.hpp"
+#include "INIReader.h"
+#include "Parser_helpers.hpp"
 
 int main() 
 {
+    /*Инициализация ввода данных*/
+    INIReader reader("solver_config.ini");
+    if (reader.ParseError() < 0) {
+        throw std::runtime_error("Can't load config file: solver_config.ini");
+    }
+    double max_time         = reader.GetReal("Calculation", "max_time", 10.0);
+    float time_step         = reader.GetReal("Calculation", "time_step", 0.01);
+
     /*Создание модели*/
     TFE_model DM_FE("solver_config.ini");
     DM_FE.mesh_info("Results/mesh_log.txt");
     DM_FE.mesh_check();
 
     std::vector<std::pair<double, Eigen::VectorXd>> elemental_load;
-    double time = 0, time_step = 1.0, max_time = 2140.0;
+    double time = 0;
     int step_count = static_cast<int>(max_time / time_step);
     elemental_load.reserve(step_count);
     int surf_elem = 0;

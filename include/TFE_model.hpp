@@ -108,7 +108,8 @@ class TFE_model
         void create_mesh_file(const std::string& results_dir, const std::string& filename_prefix, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
         void create_static_mesh_file(const std::string& filename, const Eigen::VectorXd& jacobians) const;
         void create_surface_mesh_file(const std::string& results_dir, const std::string& filename_prefix, const std::vector<std::pair<double, Eigen::VectorXd>>& elemental_load) const;
-
+        void create_mesh_file(const std::string& filename_prefix,
+            const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
 };
 
 // Заполнение FE модели
