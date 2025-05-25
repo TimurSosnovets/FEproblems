@@ -34,23 +34,26 @@ const std::vector<Node>& TFE_model::Nodes() const {return _nodes;}
 const std::vector<Element>& TFE_model::Elements() const {return _elements;}
 
 // Информация о сетке
-void TFE_model::mesh_info() const
+void TFE_model::mesh_info(const std::string& log_path) const
 {
     /*Инициализация*/
+    std::filesystem::path file_path(log_path);
+    if (file_path.has_parent_path()) {
+        std::filesystem::create_directories(file_path.parent_path());
+    }
     logger::log("Creating mesh info file...");
     std::string message;
-    std::string filename;
     bool to_console;
-    if (_elements.size() > 30) {filename = "mesh_info.txt"; to_console = false;}
-    else {filename = ""; to_console = true;}
+    if (_elements.size() > 30) {to_console = false;}
+    else {to_console = true;}
 
     /*Общая информация*/
     message = "TFE model: " + std::to_string(_nodes.size()) + " nodes, " + std::to_string(_elements.size()) + " elements.\n";
-    logger::log(message, true, filename);
+    logger::log(message, true, log_path);
 
     /*Вывод информации по узлам*/
     message = "============\nNode info\n============\n";
-    logger::log(message, to_console, filename);
+    logger::log(message, to_console, log_path);
     std::string gn, x, y, z;
     for (const auto& node : _nodes)
     {   
@@ -59,17 +62,17 @@ void TFE_model::mesh_info() const
         y = std::to_string(node.point.y);
         z = std::to_string(node.point.z);
         message = "Node " + gn + " : {" + x + ", " + y + ", " + z + "}";
-        logger::log(message, to_console, filename); 
+        logger::log(message, to_console, log_path); 
     }
 
     /*Вывод информации по элементам*/
     message = "============\nElement info\n============\n";
-    logger::log(message, to_console, filename);
+    logger::log(message, to_console, log_path);
     for (const auto& element : _elements)
     {
-        element.get_info(to_console, filename);
+        element.get_info(to_console, log_path);
     }
-    logger::log("Mesh info file with name " + filename + " has be created!");
+    logger::log("Mesh info file with name " + log_path + " has be created!");
 }
 
 // Добавление узла
@@ -1822,7 +1825,7 @@ std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys() 
 }
 
 // Динамический расчёт (из конфиг-файла)
-std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys(const std::string& config_path) const
+std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys(const std::string& config_path, const std::string& log_path) const
 {
     /*Инициализация ввода данных*/
     INIReader reader(config_path);
@@ -1926,7 +1929,7 @@ std::vector<std::pair<double, Eigen::VectorXd>> TFE_model::transient_analisys(co
         "Start time: " + format_time(start_sys) + "\n" +
         "End time: " + format_time(end_sys) + "\n" +
         "Execution time: " + std::to_string(elapsed_seconds.count()) + " seconds.";
-    logger::log(time_log, true, "TA_log.txt");
+    logger::log(time_log, true, log_path);
     // Save_xlsx("Ball_load_vectors", loads);
     // Save_xlsx("RH_vectors", Rh_vectors);
     return results;

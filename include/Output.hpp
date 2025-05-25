@@ -13,31 +13,53 @@
 #include "OpenXLSX.hpp"
 #include "XLCellReference.hpp"
 
+#include <filesystem>
+#include <string>
+
+namespace filesystem_utils {
+    // Creates the "Results" directory if it doesn't exist
+    inline bool create_directory(const std::string& folder = "Results") {
+        try {
+            std::filesystem::create_directories(folder);
+            return true;
+        } catch (const std::filesystem::filesystem_error& e) {
+            std::cerr << "Error creating directory " << folder << ": " << e.what() << std::endl;
+            return false;
+        }
+    }
+}
+
 /*Запись логов*/
 class logger
 {
-    public:
-        // Вывод требуемого сообщения
-        static void log(const std::string& message, bool to_console = true, const std::string& filename = "")
-        {   
-            /*Вывод сообщения в консоль*/
-            if (to_console) {std::cout << message << std::endl;}
+public:
+    // Вывод требуемого сообщения
+    static void log(const std::string& message, bool to_console = true, const std::string& filename = "")
+    {   
+        /*Вывод сообщения в консоль*/
+        if (to_console) { std::cout << message << std::endl; }
 
-            /*Вывод сообщения в файл*/
-            if (!filename.empty()) 
+        /*Вывод сообщения в файл*/
+        if (!filename.empty()) 
+        {
+            // Create parent directory if it doesn't exist
+            std::filesystem::path file_path(filename);
+            if (file_path.has_parent_path()) {
+                std::filesystem::create_directories(file_path.parent_path());
+            }
+
+            std::ofstream file(filename, std::ios::app);
+            if (file.is_open()) 
             {
-                std::ofstream file(filename, std::ios::app);
-                if (file.is_open()) 
-                {
-                    file << message << std::endl;
-                    file.close();
-                } 
-                else 
-                {
-                    std::cerr << "Error: unable to open log file.\n";
-                }
+                file << message << std::endl;
+                file.close();
+            } 
+            else 
+            {
+                std::cerr << "Error: unable to open log file: " << filename << std::endl;
             }
         }
+    }
 };
 
 // Форматирование временных точек

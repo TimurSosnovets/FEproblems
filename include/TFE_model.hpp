@@ -93,7 +93,7 @@ class TFE_model
         // Ввод параметров с консоли
         std::vector<std::pair<double, Eigen::VectorXd>> transient_analisys() const;
         // Ввод параметров с помощью лог файла
-        std::vector<std::pair<double, Eigen::VectorXd>> transient_analisys(const std::string& config_path) const;
+        std::vector<std::pair<double, Eigen::VectorXd>> transient_analisys(const std::string& config_path, const std::string& log_path) const;
         /*Решение стационарной задачи*/
         Eigen::VectorXd steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation = false) const;
         /*Для отладки*/
@@ -104,7 +104,7 @@ class TFE_model
         const std::vector<Element>& Elements() const;
 
         /*Вывод информации*/
-        void mesh_info() const;
+        void mesh_info(const std::string& log_path) const;
         void export_to_vtk(const std::string& filename, bool visualize = true) const;
         void export_to_vtk(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
         void create_mesh_file(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
