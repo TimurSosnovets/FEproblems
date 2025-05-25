@@ -19,7 +19,7 @@ int main()
     auto nodal_temps = DM_FE.transient_analisys("solver_config.ini", "Results/time_log.txt");
 
     /*Запись решения*/
-    DM_FE.create_mesh_file("const_heat.vtu", nodal_temps);
+    DM_FE.create_mesh_file("Results", "", nodal_temps);
     // Save_xlsx(nodal_temps);
 
     /*Финиш*/

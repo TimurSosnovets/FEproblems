@@ -22,27 +22,27 @@
 #include <sstream>
 // VTK includes
 #include <vtkSmartPointer.h>
-#include <vtkUnstructuredGrid.h>
-#include <vtkXMLUnstructuredGridWriter.h>
 #include <vtkPoints.h>
-#include <vtkWedge.h>
-#include <vtkHexahedron.h>
-#include <vtkTriangle.h>
-#include <vtkQuad.h>
-#include <vtkStringArray.h>
-#include <vtkDataSetMapper.h>
-#include <vtkActor.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderWindowInteractor.h>
-#include <vtkInteractorStyleTrackballCamera.h>
-#include <vtkProperty.h>
-#include <vtkCellData.h>
-#include <vtkDoubleArray.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkWedge.h> // For create_mesh_file
+#include <vtkHexahedron.h> // For create_mesh_file
+#include <vtkTriangle.h> // For create_surface_mesh_file
+#include <vtkQuad.h> // For create_surface_mesh_file
 #include <vtkFloatArray.h>
-#include <vtkFieldData.h>
-#include <vtkPointData.h>
+#include <vtkDoubleArray.h>
+#include <vtkPointData.h> // For create_mesh_file
+#include <vtkCellData.h> // For create_surface_mesh_file
+#include <vtkXMLUnstructuredGridWriter.h>
 #include <vtkZLibDataCompressor.h>
+#include <filesystem>
+#include <sstream>
+#include <iomanip>
+#include <stdexcept>
+#include <string>
+#include <vector>
+#include <map> // For create_surface_mesh_file
+#include <iostream>
+#include <algorithm>
 
 // Для вычисления уникальных комбинаций строка-столбец на базе КЭ сетки
 struct PairHash 
@@ -105,11 +105,9 @@ class TFE_model
 
         /*Вывод информации*/
         void mesh_info(const std::string& log_path) const;
-        void export_to_vtk(const std::string& filename, bool visualize = true) const;
-        void export_to_vtk(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
-        void create_mesh_file(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
+        void create_mesh_file(const std::string& results_dir, const std::string& filename_prefix, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const;
         void create_static_mesh_file(const std::string& filename, const Eigen::VectorXd& jacobians) const;
-        void create_surface_mesh_file(const std::string& filename_prefix, const std::vector<std::pair<double, Eigen::VectorXd>>& elemental_load) const;
+        void create_surface_mesh_file(const std::string& results_dir, const std::string& filename_prefix, const std::vector<std::pair<double, Eigen::VectorXd>>& elemental_load) const;
 
 };
 

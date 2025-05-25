@@ -963,210 +963,9 @@ Eigen::VectorXd TFE_model::get_surface_load(double t) const
 }
 
 /*Мешки*/
-// С визуализацией
-void TFE_model::export_to_vtk(const std::string& filename, bool visualize) const {
-    // Step 1: Create VTK points
-    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-    for (const auto& node : _nodes) {
-        // Assuming Point has x, y, z members
-        points->InsertNextPoint(node.point.x, node.point.y, node.point.z);
-    }
-
-    // Step 2: Create VTK unstructured grid
-    vtkSmartPointer<vtkUnstructuredGrid> grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
-    grid->SetPoints(points);
-
-    // Step 3: Add elements as cells
-    vtkSmartPointer<vtkStringArray> layer_array = vtkSmartPointer<vtkStringArray>::New();
-    layer_array->SetName("Layer");
-    points->SetNumberOfPoints(_nodes.size());
-    grid->Allocate(_elements.size());
-
-    for (const auto& element : _elements) {
-        if (dynamic_cast<LWedge*>(element.type.get())) {
-            vtkSmartPointer<vtkWedge> wedge = vtkSmartPointer<vtkWedge>::New();
-            for (size_t i = 0; i < element.vertices.size(); ++i) {
-                // Convert node pointer to 0-based index
-                int node_idx = element.vertices[i]->global_number() - 1;
-                wedge->GetPointIds()->SetId(i, node_idx);
-            }
-            grid->InsertNextCell(VTK_WEDGE, wedge->GetPointIds());
-        } else if (dynamic_cast<LQube*>(element.type.get())) {
-            vtkSmartPointer<vtkHexahedron> hex = vtkSmartPointer<vtkHexahedron>::New();
-            for (size_t i = 0; i < element.vertices.size(); ++i) {
-                int node_idx = element.vertices[i]->global_number() - 1;
-                hex->GetPointIds()->SetId(i, node_idx);
-            }
-            grid->InsertNextCell(VTK_HEXAHEDRON, hex->GetPointIds());
-        }
-        // Add layer name
-        layer_array->InsertNextValue(element.layer ? *element.layer : "unknown");
-    }
-
-    // Attach layer data to cells
-    grid->GetCellData()->AddArray(layer_array);
-
-    // Step 4: Write to .vtu file
-    vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = 
-        vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
-    writer->SetFileName(filename.c_str());
-    writer->SetInputData(grid);
-    writer->Write();
-
-    // Step 5: Visualize if requested
-    if (visualize) {
-        // Create mapper
-        vtkSmartPointer<vtkDataSetMapper> mapper = 
-            vtkSmartPointer<vtkDataSetMapper>::New();
-        mapper->SetInputData(grid);
-
-        // Create actor
-        vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-        actor->SetMapper(mapper);
-        actor->GetProperty()->SetColor(0.8, 0.8, 0.8); // Light gray
-        actor->GetProperty()->SetEdgeColor(0.0, 0.0, 0.0); // Black edges
-        actor->GetProperty()->EdgeVisibilityOn();
-
-        // Create renderer
-        vtkSmartPointer<vtkRenderer> renderer = 
-            vtkSmartPointer<vtkRenderer>::New();
-        renderer->AddActor(actor);
-        renderer->SetBackground(0.1, 0.2, 0.4); // Dark blue background
-
-        // Create render window
-        vtkSmartPointer<vtkRenderWindow> renderWindow = 
-            vtkSmartPointer<vtkRenderWindow>::New();
-        renderWindow->AddRenderer(renderer);
-        renderWindow->SetSize(800, 600);
-
-        // Create interactor
-        vtkSmartPointer<vtkRenderWindowInteractor> interactor = 
-            vtkSmartPointer<vtkRenderWindowInteractor>::New();
-        interactor->SetRenderWindow(renderWindow);
-
-        // Set trackball camera style for interaction
-        vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = 
-            vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
-        interactor->SetInteractorStyle(style);
-
-        // Start interaction
-        renderWindow->Render();
-        interactor->Initialize();
-        interactor->Start();
-    }
-}
-
-// Архивная
-void TFE_model::export_to_vtk(const std::string& filename, const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const {
-    // Validate input
-    if (transient_results.empty()) {
-        throw std::runtime_error("Transient results are empty");
-    }
-    for (const auto& result : transient_results) {
-        if (result.second.size() != _nodes.size()) {
-            throw std::runtime_error("Temperature vector size (" + std::to_string(result.second.size()) +
-                                     ") does not match node count (" + std::to_string(_nodes.size()) + ")");
-        }
-    }
-
-    // Create points
-    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-    points->SetNumberOfPoints(_nodes.size()); // Pre-allocate for large mesh
-    for (size_t i = 0; i < _nodes.size(); ++i) {
-        const Point& p = _nodes[i].coords();
-        points->SetPoint(i, p.x, p.y, p.z);
-    }
-
-    // Create unstructured grid
-    vtkSmartPointer<vtkUnstructuredGrid> grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
-    grid->SetPoints(points);
-    grid->Allocate(_elements.size()); // Pre-allocate for large mesh
-
-    // Add cells
-    vtkSmartPointer<vtkStringArray> layer_array = vtkSmartPointer<vtkStringArray>::New();
-    layer_array->SetName("Layer");
-    layer_array->SetNumberOfTuples(_elements.size());
-
-    size_t cell_idx = 0;
-    for (const auto& element : _elements) {
-        if (dynamic_cast<LWedge*>(element.type.get())) {
-            vtkSmartPointer<vtkWedge> wedge = vtkSmartPointer<vtkWedge>::New();
-            if (element.vertices.size() != 6) {
-                throw std::runtime_error("LWedge element " + std::to_string(element.gn) + " has " +
-                                         std::to_string(element.vertices.size()) + " vertices, expected 6");
-            }
-            for (size_t i = 0; i < element.vertices.size(); ++i) {
-                int node_idx = element.vertices[i]->global_number() - 1;
-                if (node_idx < 0 || node_idx >= static_cast<int>(_nodes.size())) {
-                    throw std::runtime_error("Invalid node index " + std::to_string(node_idx + 1) +
-                                             " in element " + std::to_string(element.gn));
-                }
-                wedge->GetPointIds()->SetId(i, node_idx);
-            }
-            grid->InsertNextCell(VTK_WEDGE, wedge->GetPointIds());
-        } else if (dynamic_cast<LQube*>(element.type.get())) {
-            vtkSmartPointer<vtkHexahedron> hex = vtkSmartPointer<vtkHexahedron>::New();
-            if (element.vertices.size() != 8) {
-                throw std::runtime_error("LQube element " + std::to_string(element.gn) + " has " +
-                                         std::to_string(element.vertices.size()) + " vertices, expected 8");
-            }
-            for (size_t i = 0; i < element.vertices.size(); ++i) {
-                int node_idx = element.vertices[i]->global_number() - 1;
-                if (node_idx < 0 || node_idx >= static_cast<int>(_nodes.size())) {
-                    throw std::runtime_error("Invalid node index " + std::to_string(node_idx + 1) +
-                                             " in element " + std::to_string(element.gn));
-                }
-                hex->GetPointIds()->SetId(i, node_idx);
-            }
-            grid->InsertNextCell(VTK_HEXAHEDRON, hex->GetPointIds());
-        } else {
-            std::cerr << "Warning: Unknown element type for element " << element.gn << ", skipping\n";
-            continue;
-        }
-        layer_array->SetValue(cell_idx, element.layer ? *element.layer : "unknown");
-        ++cell_idx;
-    }
-    grid->GetCellData()->AddArray(layer_array);
-
-    // Add time steps to FieldData
-    vtkSmartPointer<vtkDoubleArray> time_values = vtkSmartPointer<vtkDoubleArray>::New();
-    time_values->SetName("TimeValues");
-    time_values->SetNumberOfComponents(1);
-    time_values->SetNumberOfTuples(transient_results.size());
-    for (size_t t = 0; t < transient_results.size(); ++t) {
-        time_values->SetValue(t, transient_results[t].first);
-    }
-    grid->GetFieldData()->AddArray(time_values);
-
-    // Add temperature arrays for each time step
-    for (size_t t = 0; t < transient_results.size(); ++t) {
-        vtkSmartPointer<vtkDoubleArray> temperatures = vtkSmartPointer<vtkDoubleArray>::New();
-        std::ostringstream oss;
-        oss << "Temperature_t" << t;
-        temperatures->SetName(oss.str().c_str());
-        temperatures->SetNumberOfComponents(1);
-        temperatures->SetNumberOfTuples(_nodes.size());
-        for (Eigen::Index i = 0; i < transient_results[t].second.size(); ++i) {
-            temperatures->SetValue(i, transient_results[t].second(i));
-        }
-        grid->GetPointData()->AddArray(temperatures);
-    }
-
-    // Write single .vtu file
-    vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer =
-        vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
-    writer->SetFileName(filename.c_str());
-    writer->SetInputData(grid);
-    if (!writer->Write()) {
-        throw std::runtime_error("Failed to write VTK file: " + filename);
-    }
-    writer->SetDataModeToBinary();
-    writer->SetCompressorTypeToZLib();
-}
-
 // Основная с сохранением в папку
-void TFE_model::create_mesh_file(const std::string& filename_prefix,
-                              const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const {
+void TFE_model::create_mesh_file(const std::string& results_dir, const std::string& filename_prefix,
+                                const std::vector<std::pair<double, Eigen::VectorXd>>& transient_results) const {
     // Validate input
     if (transient_results.empty()) {
         throw std::runtime_error("Transient results are empty");
@@ -1178,8 +977,8 @@ void TFE_model::create_mesh_file(const std::string& filename_prefix,
         }
     }
 
-    // Create output directory
-    std::string dir_name = "mesh_nodes_" + std::to_string(_nodes.size());
+    // Create output directory: results_dir/paraView
+    std::string dir_name = results_dir + "/paraView";
     std::filesystem::create_directories(dir_name);
     std::string full_prefix = dir_name + "/" + filename_prefix;
 
@@ -1249,9 +1048,15 @@ void TFE_model::create_mesh_file(const std::string& filename_prefix,
         grid_copy->DeepCopy(grid);
         grid_copy->GetPointData()->AddArray(temperatures);
 
+        // Format time as string (replace decimal point with underscore for valid filename)
+        std::ostringstream time_oss;
+        time_oss << std::fixed << std::setprecision(6) << transient_results[t].first;
+        std::string time_str = time_oss.str();
+        std::replace(time_str.begin(), time_str.end(), '.', '_'); // Replace . with _
+
         // Write .vtu file
         std::ostringstream oss;
-        oss << full_prefix << "_nodes" << _nodes.size() << "_t" << std::setw(4) << std::setfill('0') << t << ".vtu";
+        oss << full_prefix << "_nodes" << _nodes.size() << "_t" << time_str << ".vtu";
         vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer =
             vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
         writer->SetFileName(oss.str().c_str());
@@ -1273,8 +1078,12 @@ void TFE_model::create_mesh_file(const std::string& filename_prefix,
              << "<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\">\n"
              << "  <Collection>\n";
     for (size_t t = 0; t < transient_results.size(); ++t) {
+        std::ostringstream time_oss;
+        time_oss << std::fixed << std::setprecision(6) << transient_results[t].first;
+        std::string time_str = time_oss.str();
+        std::replace(time_str.begin(), time_str.end(), '.', '_'); // Replace . with _
         std::ostringstream oss;
-        oss << filename_prefix << "_nodes" << _nodes.size() << "_t" << std::setw(4) << std::setfill('0') << t << ".vtu";
+        oss << filename_prefix << "_nodes" << _nodes.size() << "_t" << time_str << ".vtu";
         pvd_file << "    <DataSet timestep=\"" << static_cast<float>(transient_results[t].first)
                  << "\" group=\"\" part=\"0\" file=\"" << oss.str() << "\"/>\n";
     }
@@ -1369,8 +1178,8 @@ void TFE_model::create_static_mesh_file(const std::string& filename, const Eigen
 }
 
 // Поверхность
-void TFE_model::create_surface_mesh_file(const std::string& filename_prefix,
-                                              const std::vector<std::pair<double, Eigen::VectorXd>>& elemental_load) const {
+void TFE_model::create_surface_mesh_file(const std::string& results_dir, const std::string& filename_prefix,
+                                        const std::vector<std::pair<double, Eigen::VectorXd>>& elemental_load) const {
     // Validate input
     if (elemental_load.empty()) {
         throw std::runtime_error("Elemental load data is empty");
@@ -1384,14 +1193,12 @@ void TFE_model::create_surface_mesh_file(const std::string& filename_prefix,
         }
 
         if (dynamic_cast<LWedge*>(element.type.get())) {
-            // Wedge: Surface face is the first 3 nodes (triangle: nodes 0, 1, 2)
             if (element.vertices.size() != 6) {
                 throw std::runtime_error("LWedge element " + std::to_string(element.gn) + " has " +
                                          std::to_string(element.vertices.size()) + " vertices, expected 6");
             }
             surface_faces.push_back({{element.vertices[0], element.vertices[1], element.vertices[2]}, true});
         } else if (dynamic_cast<LQube*>(element.type.get())) {
-            // Hexahedron: Surface face is the first 4 nodes (quad: nodes 0, 1, 2, 3)
             if (element.vertices.size() != 8) {
                 throw std::runtime_error("LQube element " + std::to_string(element.gn) + " has " +
                                          std::to_string(element.vertices.size()) + " vertices, expected 8");
@@ -1459,8 +1266,8 @@ void TFE_model::create_surface_mesh_file(const std::string& filename_prefix,
         }
     }
 
-    // Step 5: Create output directory
-    std::string dir_name = "surface_mesh_nodes_" + std::to_string(_nodes.size());
+    // Step 5: Create output directory: results_dir/paraView
+    std::string dir_name = results_dir + "/paraView";
     std::filesystem::create_directories(dir_name);
     std::string full_prefix = dir_name + "/" + filename_prefix;
 
@@ -1480,9 +1287,15 @@ void TFE_model::create_surface_mesh_file(const std::string& filename_prefix,
         grid_copy->DeepCopy(grid);
         grid_copy->GetCellData()->AddArray(loads);
 
+        // Format time as string (replace decimal point with underscore for valid filename)
+        std::ostringstream time_oss;
+        time_oss << std::fixed << std::setprecision(6) << elemental_load[t].first;
+        std::string time_str = time_oss.str();
+        std::replace(time_str.begin(), time_str.end(), '.', '_'); // Replace . with _
+
         // Write .vtu file
         std::ostringstream oss;
-        oss << full_prefix << "_cells" << surface_faces.size() << "_t" << std::setw(4) << std::setfill('0') << t << ".vtu";
+        oss << full_prefix << "_cells" << surface_faces.size() << "_t" << time_str << ".vtu";
         vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
         writer->SetFileName(oss.str().c_str());
         writer->SetInputData(grid_copy);
@@ -1503,8 +1316,12 @@ void TFE_model::create_surface_mesh_file(const std::string& filename_prefix,
              << "<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\">\n"
              << "  <Collection>\n";
     for (size_t t = 0; t < elemental_load.size(); ++t) {
+        std::ostringstream time_oss;
+        time_oss << std::fixed << std::setprecision(6) << elemental_load[t].first;
+        std::string time_str = time_oss.str();
+        std::replace(time_str.begin(), time_str.end(), '.', '_'); // Replace . with _
         std::ostringstream oss;
-        oss << filename_prefix << "_cells" << surface_faces.size() << "_t" << std::setw(4) << std::setfill('0') << t << ".vtu";
+        oss << filename_prefix << "_cells" << surface_faces.size() << "_t" << time_str << ".vtu";
         pvd_file << "    <DataSet timestep=\"" << static_cast<float>(elemental_load[t].first)
                  << "\" group=\"\" part=\"0\" file=\"" << oss.str() << "\"/>\n";
     }
@@ -1512,7 +1329,6 @@ void TFE_model::create_surface_mesh_file(const std::string& filename_prefix,
              << "</VTKFile>\n";
     pvd_file.close();
 }
-
 /*Расчёты*/
 // Статический расчёт 
 Eigen::VectorXd TFE_model::steady_state_analysis(const std::vector<std::pair<int, double>>& constraints, const float q, const bool radiation) const
