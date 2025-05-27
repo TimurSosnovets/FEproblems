@@ -83,6 +83,13 @@ struct nodes_map
     std::vector<int> keel;
 };
 
+struct output_nodes
+{
+    std::vector<std::pair<std::string, int>> all_time_nodes;
+    std::vector<std::pair<std::string, std::vector<int>>> sequences;
+    std::vector<double> times;
+};
+
 // Модель геометрии
 struct Geometry
 {

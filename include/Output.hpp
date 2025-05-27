@@ -70,6 +70,84 @@ inline std::string format_time(std::chrono::system_clock::time_point tp) {
     return oss.str();
 }
 
+// Template function to create the JSON file
+template <typename T>
+bool create_node_selection_json(const T& nodes, const std::string& node_count) {
+    // Static_assert to ensure the struct has the required members with correct types
+    static_assert(std::is_same_v<decltype(nodes.all_time_nodes), std::vector<std::pair<std::string, int>>>,
+                  "all_time_nodes must be std::vector<std::pair<std::string, int>>");
+    static_assert(std::is_same_v<decltype(nodes.sequences), std::vector<std::pair<std::string, std::vector<int>>>>,
+                  "sequences must be std::vector<std::pair<std::string, std::vector<int>>>");
+    static_assert(std::is_same_v<decltype(nodes.times), std::vector<double>>,
+                  "times must be std::vector<double>");
+
+    // Construct the output file path
+    std::string file_path = "node_selection.json";
+
+    // Open the output JSON file
+    std::ofstream outFile(file_path);
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Could not open file for writing at " << file_path << "!" << std::endl;
+        return false;
+    }
+
+    // Start the JSON object
+    outFile << "{\n";
+
+    // Write the config section
+    outFile << "  \"config\": {\n";
+    outFile << "    \"node_count\": \"" << node_count << "\"\n";
+    outFile << "  },\n";
+
+    // Write the all_time_nodes section (swapped order: name, then node_id)
+    outFile << "  \"all_time_nodes\": [\n";
+    for (size_t i = 0; i < nodes.all_time_nodes.size(); ++i) {
+        outFile << "    {\"name\": \"" << nodes.all_time_nodes[i].first 
+                << "\", \"node_id\": " << nodes.all_time_nodes[i].second << "}";
+        if (i < nodes.all_time_nodes.size() - 1) outFile << ",";
+        outFile << "\n";
+    }
+    outFile << "  ],\n";
+
+    // Write the sequences section
+    outFile << "  \"sequences\": [\n";
+    for (size_t i = 0; i < nodes.sequences.size(); ++i) {
+        outFile << "    {\n";
+        outFile << "      \"name\": \"" << nodes.sequences[i].first << "\",\n";
+
+        // Convert the vector of node IDs to a space-separated string
+        std::stringstream nodes_ss;
+        const auto& node_ids = nodes.sequences[i].second;
+        for (size_t j = 0; j < node_ids.size(); ++j) {
+            nodes_ss << node_ids[j];
+            if (j < node_ids.size() - 1) nodes_ss << " ";
+        }
+        outFile << "      \"nodes\": \"" << nodes_ss.str() << "\",\n";
+
+        // Write the times array
+        outFile << "      \"times\": [";
+        for (size_t j = 0; j < nodes.times.size(); ++j) {
+            outFile << nodes.times[j];
+            if (j < nodes.times.size() - 1) outFile << ", ";
+        }
+        outFile << "]\n";
+
+        outFile << "    }";
+        if (i < nodes.sequences.size() - 1) outFile << ",";
+        outFile << "\n";
+    }
+    outFile << "  ]\n";
+
+    // Close the JSON object
+    outFile << "}\n";
+
+    // Close the file
+    outFile.close();
+
+    std::cout << "JSON file created successfully at " << file_path << std::endl;
+    return true;
+}
+
 // Контейнер результатов
 struct Results_transient
 {

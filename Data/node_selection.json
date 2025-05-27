@@ -1,0 +1,16 @@
+{
+    "config": {
+      "node_count": "37638"
+    },
+    "all_time_nodes": [
+      {"node_id": 10, "name": "break_point"},
+      {"node_id": 14, "name": "sound_point"}
+    ],
+    "sequences": [
+      {
+        "name": "sequence_1",
+        "nodes": "100 101 102 103 104 105",
+        "times": [1.0, 2.0, 5.0, 10.0]
+      }
+    ]
+  }

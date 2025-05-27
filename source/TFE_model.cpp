@@ -561,6 +561,9 @@ void make_model(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
 // Заполнение КЭ модели
 void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_phi)
 {
+    /*Создание файла с номером узлов*/
+    std::vector<int> GC_keel, TZMK_keel, AMG_keel;
+    std::vector<int> BP_under, SP_under;
     /*Геометрия*/
     double R_sph = 0.336;
     double x_sph = R_sph * (1 - cos(deg2rad(69.0)));
@@ -600,11 +603,16 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 // Создание узла
                 if ((it_x == 0) && (it_phi > 0)) continue;
                 model.add_node(Point(x, y, z), nbr);
-                if ((y < 0) && (z < 1e-6) && (h == 0)) 
+
+                // Запись нужных узлов для вывода
+                if ((y <= 0) && (abs(z) < 1e-6)) 
                 {
-                    geom.map.keel.emplace_back(nbr);
-                    if (it_x * d_psi - deg2rad(20) < deg2rad(1.5)) geom.map.break_point = nbr;
-                    if (it_x * d_psi - deg2rad(65) < deg2rad(1.5)) geom.map.sound_point = nbr;
+                    if (h == 0) GC_keel.emplace_back(nbr);
+                    if (h == layer.thickness[0]) TZMK_keel.emplace_back(nbr);
+                    if (h == layer.thickness[0] + layer.thickness[1]) AMG_keel.emplace_back(nbr);
+
+                    if (abs(it_x * d_psi - deg2rad(20)) < deg2rad(1.5)) BP_under.emplace_back(nbr);
+                    if (abs(it_x * d_psi - deg2rad(65)) < deg2rad(1.5)) SP_under.emplace_back(nbr);
                 }
                 ++nbr;
             }
@@ -644,9 +652,13 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 z = Actual.y * sin(phi);
                 // Создание узла
                 model.add_node(Point(x, y, z), nbr);
-                if ((y < 0) && (z < 1e-6) && (h == 0)) 
+                
+                // Запись нужных узлов для вывода
+                if ((y < 0) && (abs(z) < 1e-6)) 
                 {
-                    geom.map.keel.emplace_back(nbr);
+                    if (h == 0) GC_keel.emplace_back(nbr);
+                    if (h == layer.thickness[0]) TZMK_keel.emplace_back(nbr);
+                    if (h == layer.thickness[0] + layer.thickness[1]) AMG_keel.emplace_back(nbr);
                 }
                 ++nbr;
             }
@@ -685,9 +697,13 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 z = Actual.y  * sin(phi);
                 // Создание узла
                 model.add_node(Point(x, y, z), nbr);
-                if ((y < 0) && (z < 1e-6) && (h == 0)) 
+                
+                // Запись нужных узлов для вывода
+                if ((y < 0) && (abs(z) < 1e-6)) 
                 {
-                    geom.map.keel.emplace_back(nbr);
+                    if (h == 0) GC_keel.emplace_back(nbr);
+                    if (h == layer.thickness[0]) TZMK_keel.emplace_back(nbr);
+                    if (h == layer.thickness[0] + layer.thickness[1]) AMG_keel.emplace_back(nbr);
                 }
                 ++nbr;
             }
@@ -725,9 +741,13 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
                 z = Actual.y  * sin(phi);
                 // Создание узла
                 model.add_node(Point(x, y, z), nbr);
-                if ((y < 0) && (z < 1e-6) && (h == 0)) 
+                
+                // Запись нужных узлов для вывода
+                if ((y < 0) && (abs(z) < 1e-6)) 
                 {
-                    geom.map.keel.emplace_back(nbr);
+                    if (h == 0) GC_keel.emplace_back(nbr);
+                    if (h == layer.thickness[0]) TZMK_keel.emplace_back(nbr);
+                    if (h == layer.thickness[0] + layer.thickness[1]) AMG_keel.emplace_back(nbr);
                 }
                 ++nbr;
             }
@@ -743,10 +763,11 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
         z = 0;
         x = geom.x_refers[3] - layer.depth(it_h);
         model.add_node(Point(x, y, z), nbr);
-        if (it_h == 0) 
-        {
-            geom.map.keel.emplace_back(nbr);
-        }
+        
+        // Запись нужных узлов для вывода
+        // if (h == 0) GC_keel.emplace_back(nbr);
+        // if (h == layer.thickness[0]) TZMK_keel.emplace_back(nbr);
+        // if (h == layer.thickness[0] + layer.thickness[1]) AMG_keel.emplace_back(nbr);
         ++nbr;
     }
 
@@ -891,6 +912,24 @@ void make_model_advance(TFE_model& model, Layers& layer, Geometry& geom, int c_p
         }
         base += 1;
     }
+
+    /*Создание файла .json*/
+    output_nodes ON;
+    if (!BP_under.empty())
+    {
+        ON.all_time_nodes.emplace_back(std::make_pair("Break point", BP_under[0]));
+        ON.sequences.emplace_back(std::make_pair("BP under", BP_under));
+    }
+    if (!SP_under.empty())
+    {
+        ON.all_time_nodes.emplace_back(std::make_pair("Sound point", SP_under[0]));
+        ON.sequences.emplace_back(std::make_pair("SP under", SP_under));
+    }
+    ON.sequences.emplace_back(std::make_pair("GC keel", GC_keel));
+    ON.sequences.emplace_back(std::make_pair("TZMK keel", TZMK_keel));
+    ON.sequences.emplace_back(std::make_pair("AMG keel", AMG_keel));
+    std::string dof = std::to_string(model.Nodes().size());
+    create_node_selection_json(ON, dof);
 }
 
 // Чек якобианов
